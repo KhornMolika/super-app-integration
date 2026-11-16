@@ -32,6 +32,16 @@ describe('ScanSourceController', () => {
     expect(res.headers['Content-Type']).toBe('application/zip');
   });
 
+  it('streams Native SDK .aar artifact with correct content type', async () => {
+    const { controller, storage, res } = setup({
+      id: ID,
+      integrationConfig: { androidMinioKey: 'pending/sdk/1.0.0/vendor.aar' },
+    });
+    await controller.archive(ID, signScanTicket(ID, 'live'), res);
+    expect(storage.getObjectBuffer).toHaveBeenCalledWith('bucket', 'pending/sdk/1.0.0/vendor.aar');
+    expect(res.headers['Content-Type']).toBe('application/octet-stream');
+  });
+
   it('a revision ticket streams the new version\'s archive', async () => {
     const { controller, storage, res } = setup({
       id: ID,

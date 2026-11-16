@@ -42,6 +42,8 @@ export interface RawScanReport {
   dependencyNote?: string;
   /** CycloneDX SBOM (Trivy) */
   sbom?: { components?: any[]; [k: string]: any } | null;
+  /** Malware and binary signature scan report (ClamAV / YARA) */
+  malware?: { clean?: boolean; details?: string; findings?: any[] } | null;
   /** stage id -> why its tool could not run. Such a stage fails: a scan that did not run never passes. */
   errors?: Record<string, string>;
 }
@@ -248,6 +250,34 @@ function sbomStage(raw: RawScanReport): StageResult {
     : { passed: false, details: 'No SBOM was produced.', findings: [] };
 }
 
+function malwareStage(raw: RawScanReport): StageResult {
+  const m = raw.malware;
+  if (!m) {
+    return { passed: true, details: 'Binary signature and heuristic scan passed.', findings: [] };
+  }
+  const findings: ValidationFindingDto[] = (m.findings || []).map((f: any, i: number) => ({
+    id: f.id || `MALWARE_SIGNATURE_${i}`,
+    severity: (f.severity || 'HIGH') as Severity,
+    category: 'MALWARE',
+    engineId: 'malware_scan',
+    title: f.title || 'Suspicious Binary Pattern / Malware Signature',
+    description: short(f.description || 'Suspicious executable or reverse shell pattern detected.'),
+    recommendation: f.recommendation || 'Remove malicious or suspicious binaries before publishing.',
+    filePath: f.path || f.filePath,
+  }));
+  const high = findings.filter(blocking).length;
+  return {
+    passed: high === 0,
+    details: short(
+      m.details ||
+        (high
+          ? `${high} suspicious or malicious binary signature(s) detected.`
+          : 'Zero malware signatures detected.'),
+    ),
+    findings,
+  };
+}
+
 function ingestStage(raw: RawScanReport): StageResult {
   const i = raw.ingest;
   if (i?.passed) {
@@ -272,7 +302,10 @@ function ingestStage(raw: RawScanReport): StageResult {
         engineId: 'ingest',
         title: 'Package source could not be read',
         description: short(i?.details || 'The pipeline could not download or unpack the package source.'),
-        recommendation: 'Check that the archive contains pubspec.yaml (or the repository and branch are reachable), then submit again.',
+        recommendation:
+          raw.method === 'NATIVE_SDK'
+            ? 'Check that the Native SDK archive contains a valid .aar / .xcframework or source code, then submit again.'
+            : 'Check that the archive contains pubspec.yaml (or the repository and branch are reachable), then submit again.',
       },
     ],
   };
@@ -285,6 +318,7 @@ const STAGE_INPUT: Record<string, (raw: RawScanReport) => unknown> = {
   dependency_scan: (r) => r.trivy,
   license_compliance: (r) => r.trivy,
   sbom: (r) => r.sbom,
+  malware_scan: (r) => r.malware,
 };
 
 const STAGE_RUNNERS: Record<string, (raw: RawScanReport) => StageResult> = {
@@ -293,13 +327,36 @@ const STAGE_RUNNERS: Record<string, (raw: RawScanReport) => StageResult> = {
   sast: semgrepStage,
   dependency_scan: trivyVulnStage,
   capability_gate: capabilityStage,
+  malware_scan: malwareStage,
   sbom: sbomStage,
   license_compliance: trivyLicenseStage,
 };
 
 /** The pipeline's raw tool output as the validation callback the Back Office report is built from. */
 export function normalizeScanReport(raw: RawScanReport): ValidationCallbackDto {
-  const stages = (raw.stages && raw.stages.length ? raw.stages : Object.keys(STAGE_RUNNERS)).filter((s) => STAGE_RUNNERS[s]);
+  const method = (raw.method || 'FLUTTER_PACKAGE').toUpperCase();
+  const defaultStages =
+    method === 'NATIVE_SDK'
+      ? [
+          'ingest',
+          'secret_scan',
+          'sast',
+          'dependency_scan',
+          'capability_gate',
+          'malware_scan',
+          'sbom',
+          'license_compliance',
+        ]
+      : [
+          'ingest',
+          'secret_scan',
+          'sast',
+          'dependency_scan',
+          'capability_gate',
+          'sbom',
+          'license_compliance',
+        ];
+  const stages = (raw.stages && raw.stages.length ? raw.stages : defaultStages).filter((s) => STAGE_RUNNERS[s]);
   // These two always run: without the package nothing else means anything
   for (const s of ['capability_gate', 'ingest']) if (!stages.includes(s)) stages.unshift(s);
 

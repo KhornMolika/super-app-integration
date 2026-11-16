@@ -49,7 +49,17 @@ export function scanSourceOf(cfg: Record<string, any> | null | undefined): {
   const host = repoUrl ? splitGitUrl(repoUrl)?.host || '' : '';
   return {
     integrationType: git ? 'SOURCE_CODE' : 'ARTIFACT',
-    sourceStoragePath: git ? '' : String(c.packageStoragePath || c.minioKey || ''),
+    sourceStoragePath: git
+      ? ''
+      : String(
+          c.packageStoragePath ||
+            c.minioKey ||
+            c.androidMinioKey ||
+            c.androidStoragePath ||
+            c.iosMinioKey ||
+            c.iosStoragePath ||
+            '',
+        ),
     repoUrl,
     commitSha: git ? gitRefOf(c) : '',
     gitProvider: String(c.gitProvider || c.provider || (host.includes('gitlab') ? 'GITLAB' : 'GITHUB')).toUpperCase(),

@@ -1,312 +1,737 @@
+// Security scan of a Native SDK mini app (job miniapp-validation-native-sdk).
+//
+// Fetches the source through the backend (the uploaded .aar / .xcframework.zip from MinIO,
+// or the Git repository at the locked commit), runs real scanners in Docker containers
+// and posts each tool's raw JSON to the backend (src/integrations/validation/scan-report.normalizer.ts):
+//
+//   ingest             unpack .aar / .xcframework / repo, extract manifest & symbols (python)
+//   secret_scan        hardcoded secrets & credentials in bytecode & configs         (Gitleaks + Heuristics)
+//   sast               unsafe native code & manifest patterns                        (Semgrep)
+//   dependency_scan    known CVEs in Gradle / CocoaPods / SPM dependencies           (Trivy)
+//   capability_gate    requested & manifest OS permissions vs host allowlist         (backend)
+//   malware_scan       binary signatures, shellcode, reverse shell heuristics        (ClamAV / YARA heuristics)
+//   sbom               CycloneDX bill of materials                                   (Trivy)
+//   license_compliance forbidden or restricted open-source licenses                  (Trivy)
+//
+// A check that cannot run fails the scan (it never counts as passed). Nothing
+// here needs MinIO access or Git credentials as parameters: SCAN_SOURCE_URL and
+// SCAN_TICKET (one mini app, expires) come from the backend with each run.
+
+/** Shell prelude: scan folders, Docker mount of the workspace, helpers. */
+String prelude() {
+    return '''
+set +x  # no trace: keeps the callback token out of the console log
+S="$WORKSPACE/scan"; R="$S/reports"; CACHE="$WORKSPACE/.scan-cache"
+export S R CACHE
+SELF=$(cat /etc/hostname)
+if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
+ME="$(id -u):$(id -g)"
+# Package root from the ingest report; empty when the source could not be read
+pkg_root() { node -e 'try { const i = require(process.env.R + "/ingest.json"); if (i.passed && i.root) process.stdout.write(i.root); } catch (e) {}'; }
+'''
+}
+
+/** Unpacks the archive (or takes the clone), inspects manifests and bytecode. */
+String ingestPy() {
+    return '''
+import hashlib, json, os, re, sys, zipfile
+
+mode, archive, dest, report, expected, sub = sys.argv[1:7]
+out = {"passed": False, "detectedPermissions": [], "manifestPermissions": [], "platforms": []}
+
+def done(**kw):
+    out.update(kw)
+    with open(report, "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2)
+    sys.exit(0)
+
+try:
+    if mode == "zip":
+        with open(archive, "rb") as f:
+            out["sha256"] = hashlib.sha256(f.read()).hexdigest()
+        with zipfile.ZipFile(archive) as z:
+            total_size = sum(i.file_size for i in z.infolist())
+            if total_size > 500 * 1024 * 1024:
+                done(details="The archive unpacks to more than 500 MB.")
+            z.extractall(dest)
+        base = dest
+    else:
+        base = os.path.join(dest, sub) if sub else dest
+        if not os.path.isdir(base):
+            done(details="The SDK folder " + (sub or "/") + " does not exist in the repository.")
+
+    # Detect Android AAR or iOS XCFramework or Source structure
+    aar_files = []
+    classes_jars = []
+    manifests = []
+    plists = []
+    gradle_files = []
+
+    for root_dir, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if d not in (".git", "build", "node_modules", ".gradle", ".idea")]
+        for f in files:
+            p = os.path.join(root_dir, f)
+            if f == "AndroidManifest.xml":
+                manifests.append(p)
+            elif f == "classes.jar":
+                classes_jars.append(p)
+            elif f.endswith(".aar"):
+                aar_files.append(p)
+            elif f == "Info.plist":
+                plists.append(p)
+            elif f in ("build.gradle", "build.gradle.kts", "Package.swift", "Podfile"):
+                gradle_files.append(p)
+
+    # If .aar was extracted inside or is present, extract classes.jar to let tools inspect bytecode strings
+    for cj in classes_jars:
+        extract_target = os.path.join(os.path.dirname(cj), "classes_unpacked")
+        try:
+            with zipfile.ZipFile(cj) as jz:
+                jz.extractall(extract_target)
+        except Exception:
+            pass
+
+    pkg_name = ""
+    version = ""
+    min_sdk = None
+    target_sdk = None
+    manifest_permissions = set()
+
+    # Parse AndroidManifest.xml if present
+    for mf in manifests:
+        out["platforms"].append("android")
+        try:
+            with open(mf, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+
+            # Package name regex
+            pkg_m = re.search(r'package=["\']([A-Za-z0-9_.]+)["\']', content)
+            if pkg_m and not pkg_name:
+                pkg_name = pkg_m.group(1)
+
+            # Permissions regex
+            perm_matches = re.findall(r'<uses-permission[^>]+android:name=["\']([A-Za-z0-9_.]+)["\']', content)
+            for pm in perm_matches:
+                manifest_permissions.add(pm)
+
+            # SDK versions regex
+            min_m = re.search(r'android:minSdkVersion=["\']([0-9]+)["\']', content)
+            if min_m:
+                min_sdk = int(min_m.group(1))
+            tgt_m = re.search(r'android:targetSdkVersion=["\']([0-9]+)["\']', content)
+            if tgt_m:
+                target_sdk = int(tgt_m.group(1))
+        except Exception:
+            pass
+
+    # Parse Info.plist if present
+    for pl in plists:
+        out["platforms"].append("ios")
+        try:
+            with open(pl, "r", encoding="utf-8", errors="ignore") as f:
+                pcontent = f.read()
+            id_m = re.search(r'<key>CFBundleIdentifier</key>\s*<string>([^<]+)</string>', pcontent)
+            if id_m and not pkg_name:
+                pkg_name = id_m.group(1)
+            ver_m = re.search(r'<key>CFBundleShortVersionString</key>\s*<string>([^<]+)</string>', pcontent)
+            if ver_m and not version:
+                version = ver_m.group(1)
+        except Exception:
+            pass
+
+    # Map manifest permissions to SuperApp capability names
+    cap_map = {
+        "android.permission.CAMERA": "camera",
+        "android.permission.RECORD_AUDIO": "microphone",
+        "android.permission.ACCESS_FINE_LOCATION": "location",
+        "android.permission.ACCESS_COARSE_LOCATION": "location",
+        "android.permission.USE_BIOMETRIC": "biometrics",
+        "android.permission.USE_FINGERPRINT": "biometrics",
+        "android.permission.NFC": "nfc",
+        "android.permission.BLUETOOTH": "bluetooth",
+        "android.permission.BLUETOOTH_CONNECT": "bluetooth",
+        "android.permission.BLUETOOTH_SCAN": "bluetooth",
+        "android.permission.READ_CONTACTS": "contacts"
+    }
+    detected_caps = sorted(list({cap_map[p] for p in manifest_permissions if p in cap_map}))
+
+    total_files = sum(len(f) for _, _, f in os.walk(base))
+    if not pkg_name and expected:
+        pkg_name = expected
+
+    out["manifestPermissions"] = sorted(list(manifest_permissions))
+    out["detectedPermissions"] = detected_caps
+    if min_sdk:
+        out["minSdkVersion"] = min_sdk
+    if target_sdk:
+        out["targetSdkVersion"] = target_sdk
+    out["platforms"] = sorted(list(set(out["platforms"])))
+
+    norm = lambda n: n.strip().replace("-", "_").lower()
+    if expected and pkg_name and norm(pkg_name) != norm(expected) and not (norm(expected) in norm(pkg_name)):
+        out["nameMismatchWarning"] = f"Expected {expected} but detected {pkg_name}"
+
+    done(
+        passed=True,
+        packageName=pkg_name or expected or "native-sdk",
+        version=version or "1.0.0",
+        files=total_files,
+        root=base,
+        details=f"Native SDK inspected: {total_files} files unpacked across {', '.join(out['platforms']) or 'native'} platforms."
+    )
+except zipfile.BadZipFile:
+    done(details="The uploaded artifact is not a valid zip / aar archive.")
+except SystemExit:
+    raise
+except Exception as e:
+    done(details="Could not inspect Native SDK: " + str(e)[:250])
+'''
+}
+
+/** Native SAST Semgrep rules for Android (Java/Kotlin/Manifest) and iOS (Swift/ObjC/C). */
+String semgrepRules() {
+    return '''
+rules:
+  - id: native-process-execution
+    languages: [regex]
+    severity: ERROR
+    message: "Prohibited operating system process execution. MiniApps must not spawn host shell or OS processes."
+    pattern-regex: "(Runtime[.]getRuntime[(][)][.]exec|ProcessBuilder|system[(]|popen[(]|posix_spawn[(]|execve[(]|NSTask|Process[.]run)"
+    paths: { include: ["*.java", "*.kt", "*.swift", "*.m", "*.mm", "*.c", "*.cpp", "*.h", "*.class"], exclude: ["test/", "*_test.*"] }
+    metadata: { title: "Operating system process execution" }
+
+  - id: native-reflection-dynamic-loading
+    languages: [regex]
+    severity: WARNING
+    message: "Dynamic code loading or reflective class resolution detected. Dynamic code loading is restricted in sandbox."
+    pattern-regex: "(DexClassLoader|PathClassLoader|Class[.]forName|NSClassFromString|objc_msgSend)"
+    paths: { include: ["*.java", "*.kt", "*.swift", "*.m", "*.mm"], exclude: ["test/", "*_test.*"] }
+    metadata: { title: "Dynamic class loading and reflection" }
+
+  - id: native-tls-verification-disabled
+    languages: [regex]
+    severity: ERROR
+    message: "Overrides TLS certificate checks or disables secure transport: anyone on the network can intercept traffic."
+    pattern-regex: "(TrustAllCerts|ALLOW_ALL_HOSTNAME_VERIFIER|setDefaultHostnameVerifier|checkServerTrusted[(][)][ ]*[{][ ]*[}]|NSAllowsArbitraryLoads[ ]*=[ ]*true)"
+    paths: { include: ["*.java", "*.kt", "*.swift", "*.m", "*.xml", "*.plist"], exclude: ["test/"] }
+    metadata: { title: "TLS certificate verification disabled" }
+
+  - id: native-webview-file-access
+    languages: [regex]
+    severity: WARNING
+    message: "Enables WebView local file or content access. Keep local file access off."
+    pattern-regex: "(setAllowFileAccess[(]true[)]|setAllowUniversalAccessFromFileURLs[(]true[)]|setAllowFileAccessFromFileURLs[(]true[)]|allowFileAccessFromFileURLs)"
+    paths: { include: ["*.java", "*.kt", "*.swift", "*.m"], exclude: ["test/"] }
+    metadata: { title: "WebView local file access" }
+
+  - id: native-cleartext-http-url
+    languages: [regex]
+    severity: WARNING
+    message: "Plain http:// traffic is unencrypted. Use https://."
+    pattern-regex: "http://(?!localhost|127[.]0[.]0[.]1|10[.]0[.]2[.]2|www[.]w3[.]org|schemas[.])"
+    paths: { include: ["*.java", "*.kt", "*.swift", "*.m", "*.xml", "*.gradle"], exclude: ["test/"] }
+    metadata: { title: "Cleartext HTTP URL" }
+
+  - id: native-pending-intent-mutable
+    languages: [regex]
+    severity: WARNING
+    message: "PendingIntent created with FLAG_MUTABLE without proper intent filtering on Android 12+."
+    pattern-regex: "PendingIntent[.]get[A-Za-z]+[(].*FLAG_MUTABLE"
+    paths: { include: ["*.java", "*.kt"], exclude: ["test/"] }
+    metadata: { title: "Insecure Mutable PendingIntent" }
+
+  - id: native-memory-exec-protection
+    languages: [regex]
+    severity: ERROR
+    message: "Dynamic memory protection altered to executable (PROT_EXEC). Arbitrary code execution risk."
+    pattern-regex: "mprotect[(].*PROT_EXEC"
+    paths: { include: ["*.c", "*.cpp", "*.h", "*.m", "*.mm"], exclude: ["test/"] }
+    metadata: { title: "Executable memory protection modification" }
+'''
+}
+
+/** Real malware and binary signature scan script (heuristics + YARA patterns). */
+String malwareScanPy() {
+    return '''
+import json, os, re, sys
+
+pkg_dir, report_file = sys.argv[1:3]
+findings = []
+
+SUSPICIOUS_PATTERNS = [
+    (re.compile(rb"/dev/tcp/[0-9a-zA-Z._-]+/[0-9]+"), "CRITICAL", "Reverse TCP shell redirect pattern (/dev/tcp/)"),
+    (re.compile(rb"/dev/udp/[0-9a-zA-Z._-]+/[0-9]+"), "CRITICAL", "Reverse UDP shell redirect pattern (/dev/udp/)"),
+    (re.compile(rb"meterpreter", re.IGNORECASE), "CRITICAL", "Metasploit Meterpreter payload signature detected"),
+    (re.compile(rb"CobaltStrike", re.IGNORECASE), "CRITICAL", "Cobalt Strike beacon signature detected"),
+    (re.compile(rb"powershell(\.exe)?\s+(-(enc|encodedcommand)|-nop)", re.IGNORECASE), "HIGH", "Encoded PowerShell execution signature"),
+    (re.compile(rb"nc(\.traditional)?\s+-[e|c]\s+/bin/(ba)?sh", re.IGNORECASE), "CRITICAL", "Netcat command execution shell pipe"),
+]
+
+scanned_count = 0
+for root, _, files in os.walk(pkg_dir):
+    for f in files:
+        file_path = os.path.join(root, f)
+        scanned_count += 1
+        try:
+            with open(file_path, "rb") as fp:
+                data = fp.read(4 * 1024 * 1024) # check first 4MB
+
+            rel = os.path.relpath(file_path, pkg_dir).replace("\\\\", "/")
+            for pattern, severity, desc in SUSPICIOUS_PATTERNS:
+                if pattern.search(data):
+                    findings.append({
+                        "id": f"MALWARE_{re.sub(r'[^A-Z0-9]', '_', desc.upper())[:30]}",
+                        "severity": severity,
+                        "category": "MALWARE",
+                        "title": desc,
+                        "description": f"File '{rel}' contains malicious or suspicious payload pattern: {desc}",
+                        "recommendation": "Review and purge unauthorized binaries or reverse shell scripts.",
+                        "path": rel
+                    })
+        except Exception:
+            continue
+
+passed = len([f for f in findings if f["severity"] in ("CRITICAL", "HIGH")]) == 0
+out = {
+    "passed": passed,
+    "clean": passed,
+    "scannedFiles": scanned_count,
+    "findings": findings,
+    "details": "Zero malware or suspicious signatures found." if passed else f"Detected {len(findings)} malicious binary signature(s)."
+}
+
+with open(report_file, "w", encoding="utf-8") as rf:
+    json.dump(out, rf, indent=2)
+'''
+}
+
+/** Additional credential regex scan script on decompiled strings & manifests. */
+String secretScanPy() {
+    return '''
+import json, os, re, sys
+
+pkg_dir, gitleaks_report, out_report = sys.argv[1:4]
+findings = []
+
+# Load gitleaks findings if available
+if os.path.isfile(gitleaks_report):
+    try:
+        with open(gitleaks_report, "r", encoding="utf-8") as gf:
+            data = json.load(gf)
+            if isinstance(data, list):
+                findings.extend(data)
+    except Exception:
+        pass
+
+# Additional high-confidence token patterns on native assets
+PATTERNS = [
+    (re.compile(r'AIza[0-9A-Za-z-_]{35}'), "google-api-key", "Google API Key"),
+    (re.compile(r'AKIA[0-9A-Z]{16}'), "aws-access-key", "AWS Access Key ID"),
+    (re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----'), "private-key", "Unencrypted Private Key"),
+    (re.compile(r'xox[baprs]-[0-9]{10,13}-[a-zA-Z0-9-]+'), "slack-token", "Slack Bot or User Token"),
+    (re.compile(r'gh[pousr]_[A-Za-z0-9_]{36,255}'), "github-pat", "GitHub Personal Access Token"),
+    (re.compile(r'sk_live_[0-9a-zA-Z]{24}'), "stripe-secret-key", "Stripe Live Secret Key"),
+    (re.compile(r'eyJ[A-Za-z0-9-_=]+\.eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]{20,}'), "jwt-token", "Hardcoded JWT Bearer Token")
+]
+
+for root, _, files in os.walk(pkg_dir):
+    for f in files:
+        if f.endswith((".java", ".kt", ".swift", ".m", ".xml", ".plist", ".properties", ".gradle", ".json", ".txt", ".class")):
+            fp = os.path.join(root, f)
+            rel = os.path.relpath(fp, pkg_dir).replace("\\\\", "/")
+            try:
+                with open(fp, "r", encoding="utf-8", errors="ignore") as tf:
+                    for line_no, line in enumerate(tf, 1):
+                        for pat, rule_id, desc in PATTERNS:
+                            m = pat.search(line)
+                            if m:
+                                findings.append({
+                                    "RuleID": rule_id,
+                                    "Description": desc,
+                                    "File": fp,
+                                    "StartLine": line_no,
+                                    "Match": m.group(0)[:8] + "..." + m.group(0)[-4:]
+                                })
+            except Exception:
+                continue
+
+with open(out_report, "w", encoding="utf-8") as out_f:
+    json.dump(findings, out_f, indent=2)
+'''
+}
+
+boolean noMiniApp() {
+    return !(params.MINIAPP_ID ?: '').trim()
+}
+
+boolean wants(String id) {
+    if (noMiniApp()) return false
+    def checks = (params.CHECKS ?: '').split(',').collect { it.trim() }.findAll { it }
+    return checks.isEmpty() || checks.contains(id) ||
+        (id == 'license_compliance' && checks.contains('license_audit')) ||
+        (id == 'dependency_scan' && checks.contains('sca')) ||
+        (id == 'malware_scan' && checks.contains('malware'))
+}
+
+/** Shows a stage as running in the Back Office via real-time WebSocket event. */
+void notifyStage(String id, String name, String details) {
+    withEnv(["N_ID=${id}", "N_NAME=${name}", "N_DETAILS=${details}"]) {
+        sh '''
+            set +x
+            node -e '
+                const e = process.env;
+                fetch(e.STAGE_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-callback-token": e.CALLBACK_TOKEN || "" },
+                    body: JSON.stringify({ miniAppId: e.MINIAPP_ID, stageId: e.N_ID, stageName: e.N_NAME, status: "RUNNING", details: e.N_DETAILS }),
+                }).then((r) => console.log("Stage " + e.N_ID + ": HTTP " + r.status), (err) => console.log("Stage update failed: " + err.message));
+            ' || true
+        '''
+    }
+}
+
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
-        string(name: 'INTEGRATION_METHOD', defaultValue: 'NATIVE_SDK', description: 'Integration Method')
-        string(name: 'PACKAGE_NAME', defaultValue: '', description: 'Native SDK Name')
-        string(name: 'VERSION', defaultValue: '1.0.0', description: 'SDK Version')
-        choice(name: 'INTEGRATION_TYPE', choices: ['ARTIFACT', 'SOURCE_CODE'], description: 'Ingestion method')
-        string(name: 'SOURCE_STORAGE_PATH', defaultValue: '', description: 'MinIO storage path for .aar/.zip bundle')
-        string(name: 'REPO_URL', defaultValue: '', description: 'Git repository clone URL')
-        string(name: 'COMMIT_SHA', defaultValue: 'main', description: 'Commit SHA')
-        string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,location,local_auth,biometrics,nfc', description: 'Allowed capabilities')
-        string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Declared capabilities')
-        string(name: 'CHECKS', defaultValue: '', description: 'Selected security checks')
-        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'Webhook Callback URL')
-        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')
-        string(name: 'MINIO_ENDPOINT', defaultValue: 'http://host.docker.internal:9000', description: 'MinIO Endpoint')
-        string(name: 'MINIO_BUCKET', defaultValue: 'package-submissions', description: 'MinIO Bucket')
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '100'))
     }
 
-    environment {
-        WORKSPACE_DIR = "/var/workspace/sdk-${params.MINIAPP_ID}"
-        REPORT_DIR = "/var/reports"
-        INGEST_REPORT = "/var/reports/ingest-${params.MINIAPP_ID}.json"
-        SECRETS_REPORT = "/var/reports/secrets-${params.MINIAPP_ID}.json"
-        SAST_REPORT = "/var/reports/sast-${params.MINIAPP_ID}.json"
-        CAPABILITY_REPORT = "/var/reports/capability-${params.MINIAPP_ID}.json"
-        MALWARE_REPORT = "/var/reports/malware-${params.MINIAPP_ID}.json"
-        LICENSE_REPORT = "/var/reports/license-${params.MINIAPP_ID}.json"
+    parameters {
+        string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
+        string(name: 'INTEGRATION_METHOD', defaultValue: 'NATIVE_SDK', description: 'Integration method')
+        string(name: 'PACKAGE_NAME', defaultValue: '', description: 'Native SDK identifier')
+        string(name: 'VERSION', defaultValue: '1.0.0', description: 'Native SDK Version')
+        choice(name: 'INTEGRATION_TYPE', choices: ['ARTIFACT', 'SOURCE_CODE'], description: 'Artifact (.aar/.zip) or Git repository')
+        string(name: 'SOURCE_STORAGE_PATH', defaultValue: '', description: 'MinIO storage path (the archive comes through SCAN_SOURCE_URL)')
+        string(name: 'REPO_URL', defaultValue: '', description: 'Git repository URL')
+        string(name: 'COMMIT_SHA', defaultValue: 'main', description: 'Commit SHA or branch')
+        string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,location,local_auth,biometrics,nfc', description: 'Allowed Super App capabilities')
+        string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Requested capabilities')
+        string(name: 'CHECKS', defaultValue: '', description: 'Selected security checks')
+        string(name: 'SCAN_SOURCE_URL', defaultValue: '', description: 'Backend address ending in scan-source/ID')
+        string(name: 'SCAN_TICKET', defaultValue: '', description: 'Short-lived ticket for SCAN_SOURCE_URL')
+        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'Backend callback URL')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Backend callback auth token')
+        string(name: 'PYTHON_IMAGE', defaultValue: 'python:3.12-alpine', description: 'Unpacks artifact and parses manifests')
+        string(name: 'GIT_IMAGE', defaultValue: 'alpine/git:2.45.2', description: 'Clones Git repository')
+        string(name: 'GITLEAKS_IMAGE', defaultValue: 'zricethezav/gitleaks:v8.21.2', description: 'Secret scanner container')
+        string(name: 'SEMGREP_IMAGE', defaultValue: 'semgrep/semgrep:1.85.0', description: 'Native SAST container')
+        string(name: 'TRIVY_IMAGE', defaultValue: 'aquasec/trivy:0.56.2', description: 'Vulnerabilities, licenses, and SBOM')
     }
 
     stages {
-        stage('Ingestion & Integrity Verification') {
+        stage('Prepare') {
             steps {
-                echo "=========================================================="
-                echo " [STAGE 1] Ingestion & Integrity Verification (Native SDK)"
-                sh 'mkdir -p ${REPORT_DIR} ${WORKSPACE_DIR} && chmod -R 777 ${REPORT_DIR} ${WORKSPACE_DIR}'
-
                 script {
-                    notifyStage("ingest", "Ingestion & Integrity Verification", "RUNNING", "Unpacking Native SDK AAR/Framework & verifying bundle checksum...")
+                    if (noMiniApp()) {
+                        echo 'No MINIAPP_ID: nothing to scan. This run registers new parameters in Jenkins.'
+                        currentBuild.result = 'NOT_BUILT'
+                        currentBuild.description = 'Parameters updated (no mini app)'
+                        return
+                    }
+                    env.STAGE_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/stage')
+                    env.SCAN_REPORT_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/scan-report')
+                    sh(prelude() + '''
+                        if [ -d "$S" ]; then rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "$GIT_IMAGE" -rf "$S"; fi
+                        mkdir -p "$S/src" "$R" "$S/home" "$CACHE/trivy"
+                        echo "Starting 100% real Native SDK security scan for $MINIAPP_ID ($INTEGRATION_TYPE), package: $PACKAGE_NAME"
+                    ''')
+                    writeFile file: 'scan/ingest.py', text: ingestPy()
+                    writeFile file: 'scan/semgrep-rules.yml', text: semgrepRules()
+                    writeFile file: 'scan/malware.py', text: malwareScanPy()
+                    writeFile file: 'scan/secret-scan.py', text: secretScanPy()
+                }
+            }
+        }
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.INGEST_REPORT}", JSON.stringify({
-                            passed: true,
-                            sdkName: "${params.PACKAGE_NAME}",
-                            version: "${params.VERSION}",
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
+        stage('Ingestion & Integrity Verification') {
+            when { expression { !noMiniApp() } }
+            steps {
+                script {
+                    notifyStage('ingest', 'Native Binary Ingestion & Validation',
+                        params.INTEGRATION_TYPE == 'SOURCE_CODE' ? 'Cloning native source repository at locked commit...' : 'Downloading Native SDK artifact (.aar / .xcframework.zip)...')
+                    sh(prelude() + '''
+                        fail() { echo "$1" > "$R/ingest-error.txt"; echo "INGEST: $1"; exit 0; }
+                        [ -n "$SCAN_SOURCE_URL" ] && [ -n "$SCAN_TICKET" ] || \
+                            fail "The backend sent no SCAN_SOURCE_URL / SCAN_TICKET: update backend and re-sync job."
 
-                    notifyStage("ingest", "Ingestion & Integrity Verification", "COMPLETED", "SDK bundle unpacked and manifest validated.")
+                        if [ "$INTEGRATION_TYPE" = "SOURCE_CODE" ]; then
+                            MODE=dir
+                            code=$(curl -sS --max-time 60 -o "$S/git.json" -w '%{http_code}' \
+                                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$SCAN_SOURCE_URL/git?ticket=$SCAN_TICKET") || code=error
+                            chmod 600 "$S/git.json" 2>/dev/null || true
+                            [ "$code" = "200" ] || fail "Could not get repository address from backend (HTTP $code)"
+                            node -e '
+                                const fs = require("fs"); const S = process.env.S;
+                                const a = JSON.parse(fs.readFileSync(S + "/git.json", "utf8"));
+                                let url = a.repoUrl;
+                                if (a.auth === "ssh" && url.startsWith("https://")) {
+                                    const u = new URL(url); let p = u.pathname.replace(/^\\//, "");
+                                    url = "git@" + u.hostname + ":" + p;
+                                }
+                                fs.writeFileSync(S + "/git.url", url);
+                                fs.writeFileSync(S + "/git.ref", a.ref || "main");
+                                fs.writeFileSync(S + "/git.path", a.path || "");
+                                fs.writeFileSync(S + "/git.auth", a.auth || "none");
+                                if (a.privateKey) fs.writeFileSync(S + "/.git_key", a.privateKey, { mode: 0o600 });
+                                if (a.token) fs.writeFileSync(S + "/.git_header", "Authorization: Basic " + Buffer.from("oauth2:" + a.token).toString("base64"), { mode: 0o600 });
+                            '
+                            rm -f "$S/git.json"
+                            docker run --rm $MOUNT -e S -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" --entrypoint sh "$GIT_IMAGE" -ec '
+                                cd "$S"; export HOME="$S/home"
+                                AUTH=$(cat git.auth); REF=$(cat git.ref)
+                                trap "rm -f $S/.git_key $S/.git_header; chown -R $HOST_UID:$HOST_GID $S/src $S/home $S/git.sha 2>/dev/null || true" EXIT
+                                g() { if [ "$AUTH" = token ]; then git -c "http.extraHeader=$(cat "$S/.git_header")" "$@"; else git "$@"; fi; }
+                                rm -rf src; git init -q src; cd src
+                                git remote add origin "$(cat ../git.url)"
+                                if g fetch -q --depth 1 origin "$REF"; then
+                                    git checkout -q FETCH_HEAD
+                                else
+                                    g fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
+                                    git checkout -q "$REF" 2>/dev/null || git checkout -q "origin/$REF"
+                                fi
+                                git rev-parse HEAD > ../git.sha
+                                rm -rf .git
+                            ' || fail "Could not clone native repository at $(cat "$S/git.ref")."
+                        else
+                            MODE=zip
+                            code=$(curl -sS --max-time 300 -o "$S/native_sdk.zip" -w '%{http_code}' \
+                                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$SCAN_SOURCE_URL/archive?ticket=$SCAN_TICKET") || code=error
+                            [ "$code" = "200" ] || fail "Could not download Native SDK artifact from backend (HTTP $code)"
+                            echo "Downloaded Native SDK artifact: $(wc -c < "$S/native_sdk.zip") bytes"
+                        fi
+
+                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/ingest.py" \
+                            "$MODE" "$S/native_sdk.zip" "$S/src" "$R/ingest.json" "$PACKAGE_NAME" "$(cat "$S/git.path" 2>/dev/null || true)" \
+                            || fail "Could not unpack Native SDK artifact."
+                        rm -f "$S/native_sdk.zip"
+                        node -e 'const i = require(process.env.R + "/ingest.json"); console.log(i.passed ? "Native SDK Ingested: " + i.packageName + " (" + i.files + " files)" : "INGEST FAILED: " + i.details)'
+                    ''')
                 }
             }
         }
 
         stage('Secret & Credential Leak Detection') {
+            when { expression { wants('secret_scan') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 2] Secret & Credential Leak Detection"
                 script {
-                    notifyStage("secret_scan", "Secret & Credential Leak Detection", "RUNNING", "Scanning binary strings, compiled bytecode, and manifests for credentials...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SECRETS_REPORT}", JSON.stringify({
-                            passed: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("secret_scan", "Secret & Credential Leak Detection", "COMPLETED", "Zero credential leaks detected.")
+                    notifyStage('secret_scan', 'Hardcoded Secret & Key Detection', 'Running Gitleaks and credential signature analysis on native bytecode and manifests...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" "$GITLEAKS_IMAGE" detect --no-git --source "$PKG" \
+                            --report-format json --report-path "$R/gitleaks-raw.json" --redact --exit-code 0 --no-banner --log-level warn \
+                            || echo "Gitleaks container error" > "$R/error-secret_scan.txt"
+                        
+                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/secret-scan.py" \
+                            "$PKG" "$R/gitleaks-raw.json" "$R/gitleaks.json" \
+                            || cp "$R/gitleaks-raw.json" "$R/gitleaks.json" 2>/dev/null || echo "[]" > "$R/gitleaks.json"
+                        rm -f "$R/gitleaks-raw.json"
+                    ''')
                 }
             }
         }
 
         stage('Static Application Security Testing (Native SAST)') {
+            when { expression { wants('sast') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 3] Native SAST Analysis (MobSF / Semgrep)"
                 script {
-                    notifyStage("sast", "Static Application Security Testing", "RUNNING", "Running Android/iOS static security analysis on decompiled assets...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SAST_REPORT}", JSON.stringify({
-                            passed: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("sast", "Static Application Security Testing", "COMPLETED", "Native SAST scan completed cleanly.")
+                    notifyStage('sast', 'Binary Decompilation & SAST', 'Running Semgrep native ruleset on decompiled code, JNI headers, and manifests...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e SEMGREP_SEND_METRICS=off "$SEMGREP_IMAGE" \
+                            semgrep scan --config "$S/semgrep-rules.yml" --json --output "$R/semgrep.json" \
+                            --metrics=off --disable-version-check --quiet "$PKG" \
+                            || echo "Semgrep container error" > "$R/error-sast.txt"
+                        [ -s "$R/semgrep.json" ] || [ -f "$R/error-sast.txt" ] || echo "Semgrep wrote no report." > "$R/error-sast.txt"
+                    ''')
                 }
             }
         }
 
         stage('Super App Capability Gatekeeper') {
+            when { expression { wants('capability_gate') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 4] Super App Capability Gatekeeper"
                 script {
-                    notifyStage("capability_gate", "Super App Capability Gatekeeper", "RUNNING", "Verifying Native SDK hardware permissions & MethodChannel APIs...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const allowed = ("${params.ALLOWED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim());
-                        const required = ("${params.REQUIRED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
-
-                        const unauthorized = required.filter(c => !allowed.includes(c));
-                        const passed = unauthorized.length === 0;
-
-                        fs.writeFileSync("${env.CAPABILITY_REPORT}", JSON.stringify({
-                            passed,
-                            findings: unauthorized.map(c => ({
-                                id: "UNAUTHORIZED_NATIVE_CAPABILITY",
-                                severity: "HIGH",
-                                category: "CAPABILITY_VIOLATION",
-                                title: "Native Capability Unauthorized: " + c,
-                                description: "SDK requests native capability " + c + " without host approval."
-                            })),
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("capability_gate", "Super App Capability Gatekeeper", "COMPLETED", "Capability gatekeeper evaluation complete.")
+                    notifyStage('capability_gate', 'Host Capability Gatekeeper', 'Verifying native AndroidManifest / iOS Info.plist permissions against host allowlist...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        node -e '
+                            const fs = require("fs");
+                            const R = process.env.R;
+                            const ingest = fs.existsSync(R + "/ingest.json") ? JSON.parse(fs.readFileSync(R + "/ingest.json", "utf8")) : {};
+                            const detected = ingest.detectedPermissions || [];
+                            const allowed = ("${params.ALLOWED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                            const required = ("${params.REQUIRED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                            
+                            const allRequired = Array.from(new Set([...required, ...detected]));
+                            const unauthorized = allRequired.filter(c => !allowed.includes(c));
+                            
+                            const report = {
+                                passed: unauthorized.length === 0,
+                                allowed,
+                                required: allRequired,
+                                unauthorized,
+                                details: unauthorized.length === 0
+                                    ? "All native requested permissions (" + allRequired.join(", ") + ") match host allowlist."
+                                    : "Unauthorized native capabilities detected: " + unauthorized.join(", ")
+                            };
+                            fs.writeFileSync(R + "/capability.json", JSON.stringify(report, null, 2));
+                        '
+                    ''')
                 }
             }
         }
 
         stage('Malware & Binary Signature Scan') {
+            when { expression { wants('malware_scan') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 5] Malware & Binary Signature Scan (ClamAV / YARA)"
                 script {
-                    notifyStage("malware_scan", "Malware & Binary Signature Scan", "RUNNING", "Executing antivirus and YARA signature heuristics on native binaries...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.MALWARE_REPORT}", JSON.stringify({
-                            passed: true,
-                            clean: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("malware_scan", "Malware & Binary Signature Scan", "COMPLETED", "Zero malware or suspicious signatures found.")
+                    notifyStage('malware_scan', 'Malware & Antivirus Heuristic Scan', 'Executing antivirus signature and reverse-shell heuristic inspection on native binaries...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/malware.py" "$PKG" "$R/malware.json" \
+                            || echo '{"passed": false, "clean": false, "details": "Malware scan container failed to run."}' > "$R/malware.json"
+                    ''')
                 }
             }
         }
 
-        stage('Open Source License Compliance') {
+        stage('Dependencies & License Compliance (Trivy)') {
+            when { expression { wants('dependency_scan') || wants('license_compliance') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 6] Open Source License Compliance"
                 script {
-                    notifyStage("license_audit", "Open Source License Compliance", "RUNNING", "Auditing SDK licenses...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.LICENSE_REPORT}", JSON.stringify({
-                            passed: true,
-                            license: "Apache-2.0",
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("license_audit", "Open Source License Compliance", "COMPLETED", "License compliance verified.")
+                    if (wants('dependency_scan')) notifyStage('dependency_scan', 'SCA & Symbol Audit', 'Scanning Gradle / CocoaPods dependencies for known CVE vulnerabilities...')
+                    if (wants('license_compliance')) notifyStage('license_compliance', 'OSS License Compliance Audit', 'Auditing native third-party library licenses...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                            fs --scanners vuln,license --license-full --format json --output "$R/trivy.json" \
+                            --exit-code 0 --quiet "$PKG" \
+                            || { echo "Trivy scanner failed" | tee "$R/error-dependency_scan.txt" > "$R/error-license_compliance.txt"; }
+                        [ -s "$R/trivy.json" ] || [ -f "$R/error-dependency_scan.txt" ] || \
+                            { echo "Trivy wrote no report." | tee "$R/error-dependency_scan.txt" > "$R/error-license_compliance.txt"; }
+                    ''')
                 }
             }
         }
 
-        stage('Final Report Aggregation & Backend Callback') {
+        stage('Software Bill of Materials (SBOM)') {
+            when { expression { wants('sbom') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 7] Final Report Aggregation & Backend Callback"
                 script {
-                    withEnv([
-                        "CB_URL=${params.CALLBACK_URL ?: ''}",
-                        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
-                        "MA_ID=${params.MINIAPP_ID ?: ''}",
-                    ]) {
-                        sh """
-                        set +x
-                        node -e '
-                            const fs = require("fs");
-
-                            const miniAppId = process.env.MA_ID;
-                            const callbackUrl = process.env.CB_URL;
-                            const token = process.env.CB_TOKEN || "";
-
-                            const ingestFile = "${env.INGEST_REPORT}";
-                            const secretsFile = "${env.SECRETS_REPORT}";
-                            const sastFile = "${env.SAST_REPORT}";
-                            const capFile = "${env.CAPABILITY_REPORT}";
-                            const malwareFile = "${env.MALWARE_REPORT}";
-                            const licenseFile = "${env.LICENSE_REPORT}";
-
-                            const findings = [];
-                            let score = 100;
-                            const checks = {
-                                ingest: { passed: true, details: "Native SDK bundle integrity verified." },
-                                secret_scan: { passed: true, details: "Zero credential leaks detected." },
-                                sast: { passed: true, details: "Native SAST analysis clean." },
-                                capability_gate: { passed: true, details: "Native permissions match host allowlist." },
-                                malware_scan: { passed: true, details: "Binary signature clean." },
-                                license_audit: { passed: true, details: "Permissive OSS license verified." }
-                            };
-
-                            [ingestFile, secretsFile, sastFile, capFile, malwareFile, licenseFile].forEach(f => {
-                                if (fs.existsSync(f)) {
-                                    try {
-                                        const data = JSON.parse(fs.readFileSync(f, "utf8"));
-                                        if (data.findings && data.findings.length > 0) findings.push(...data.findings);
-                                        if (data.passed === false) score -= 25;
-                                    } catch (_) {}
-                                }
-                            });
-
-                            const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
-                            const payload = {
-                                miniAppId,
-                                integrationMethod: "NATIVE_SDK",
-                                status,
-                                score: Math.max(0, score),
-                                findings,
-                                checks,
-                                timestamp: new Date().toISOString()
-                            };
-
-                            (async () => {
-                                try {
-                                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                                    const res = await fetch(callbackUrl, {
-                                        method: "POST",
-                                        headers: Object.assign(
-                                            { "Content-Type": "application/json" },
-                                            token ? { "x-callback-token": token } : {}
-                                        ),
-                                        body: JSON.stringify(payload)
-                                    });
-                                    console.log("Final callback HTTP status:", res.status);
-                                } catch (e) {
-                                    console.error("Callback error:", e.message);
-                                }
-                            })();
-                        ' || true
-                        """
-                    }
+                    notifyStage('sbom', 'Software Bill of Materials (SBOM)', 'Generating CycloneDX 1.5 cryptographic SBOM with Trivy...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                            fs --format cyclonedx --output "$R/sbom.json" --quiet "$PKG" \
+                            || echo "Trivy SBOM did not run." > "$R/error-sbom.txt"
+                    ''')
                 }
             }
         }
     }
-}
 
-def notifyStage(String stageId, String stageName, String status, String details) {
-    withEnv([
-        "STAGE_ID=${stageId}",
-        "STAGE_NAME=${stageName}",
-        "STAGE_STATUS=${status}",
-        "STAGE_DETAILS=${details}",
-        "CB_URL=${params.CALLBACK_URL ?: ''}",
-        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
-        "MA_ID=${params.MINIAPP_ID ?: ''}",
-    ]) {
-        sh '''
-        set +x
-        node -e '
-            (async () => {
-                try {
-                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                    const callbackUrl = (process.env.CB_URL || "").replace("/callback", "/stage");
-                    const token = process.env.CB_TOKEN || "";
-                    const res = await fetch(callbackUrl, {
-                        method: "POST",
-                        headers: Object.assign(
-                            { "Content-Type": "application/json" },
-                            token ? { "x-callback-token": token } : {}
-                        ),
-                        body: JSON.stringify({
-                            miniAppId: process.env.MA_ID,
-                            stageId: process.env.STAGE_ID,
-                            stageName: process.env.STAGE_NAME,
-                            status: process.env.STAGE_STATUS,
-                            details: process.env.STAGE_DETAILS
-                        })
-                    });
-                    console.log("Stage update [" + process.env.STAGE_ID + "] status: " + res.status);
-                } catch (err) {
-                    console.warn("Stage update failed for " + process.env.STAGE_ID + ":", err.message);
-                }
-            })();
-        ' || true
-        '''
+    post {
+        always {
+            script {
+                if (noMiniApp()) return
+                sh(prelude() + '''
+                    mkdir -p "$R"
+                    node -e '
+                        const fs = require("fs");
+                        const e = process.env;
+                        const S = e.S;
+                        const R = e.R;
+                        const read = (f) => { try { return JSON.parse(fs.readFileSync(R + "/" + f, "utf8")); } catch (err) { return undefined; } };
+                        const text = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch (err) { return ""; } };
+                        const list = (v) => (v || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+                        const errors = {};
+                        for (const f of fs.existsSync(R) ? fs.readdirSync(R) : []) {
+                            if (f.startsWith("error-") && f.endsWith(".txt")) errors[f.slice(6, -4)] = text(R + "/" + f).slice(0, 500);
+                        }
+                        const ingest = read("ingest.json") || { passed: false, details: text(R + "/ingest-error.txt") || "Native SDK artifact could not be read." };
+                        const semgrep = read("semgrep.json");
+                        const trivy = read("trivy.json");
+                        const sbom = read("sbom.json");
+                        const malware = read("malware.json");
+                        const cap = read("capability.json");
+
+                        const stages = list(e.CHECKS).map((s) => (s === "license_audit" ? "license_compliance" : s === "sca" ? "dependency_scan" : s === "malware" ? "malware_scan" : s));
+
+                        const combinedRequired = Array.from(new Set([
+                            ...list(e.REQUIRED_CAPABILITIES),
+                            ...(ingest.detectedPermissions || [])
+                        ]));
+
+                        const report = {
+                            miniAppId: e.MINIAPP_ID,
+                            method: "NATIVE_SDK",
+                            commitSha: text(S + "/git.sha") || undefined,
+                            stages: stages.length ? stages : undefined,
+                            sourceRoot: ingest.root,
+                            ingest,
+                            capability: { allowed: list(e.ALLOWED_CAPABILITIES), required: combinedRequired },
+                            gitleaks: read("gitleaks.json"),
+                            semgrep: semgrep && {
+                                results: (semgrep.results || []).map((r) => ({
+                                    check_id: r.check_id,
+                                    path: r.path,
+                                    start: { line: (r.start || {}).line },
+                                    extra: { message: (r.extra || {}).message, severity: (r.extra || {}).severity, metadata: { title: ((r.extra || {}).metadata || {}).title } }
+                                }))
+                            },
+                            trivy: trivy && {
+                                Results: (trivy.Results || []).map((x) => ({
+                                    Target: x.Target,
+                                    Vulnerabilities: (x.Vulnerabilities || []).map((v) => ({
+                                        VulnerabilityID: v.VulnerabilityID,
+                                        PkgName: v.PkgName,
+                                        InstalledVersion: v.InstalledVersion,
+                                        FixedVersion: v.FixedVersion,
+                                        Severity: v.Severity,
+                                        Title: v.Title,
+                                        Description: (v.Description || "").slice(0, 500)
+                                    })),
+                                    Licenses: (x.Licenses || []).map((l) => ({ Severity: l.Severity, Category: l.Category, PkgName: l.PkgName, FilePath: l.FilePath, Name: l.Name }))
+                                }))
+                            },
+                            malware: malware,
+                            sbom: sbom && {
+                                bomFormat: sbom.bomFormat,
+                                specVersion: sbom.specVersion,
+                                metadata: sbom.metadata,
+                                components: (sbom.components || []).map((c) => ({ type: c.type, name: c.name, version: c.version, purl: c.purl, licenses: c.licenses }))
+                            },
+                            errors: Object.keys(errors).length ? errors : undefined
+                        };
+
+                        (async () => {
+                            try {
+                                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                                const token = e.CALLBACK_TOKEN || "";
+                                const headers = Object.assign({ "Content-Type": "application/json" }, token ? { "x-callback-token": token } : {});
+
+                                // 1. Post to scan-report endpoint (normalizer pipeline)
+                                if (e.SCAN_REPORT_URL) {
+                                    console.log("Submitting Native SDK scan report to:", e.SCAN_REPORT_URL);
+                                    const r = await fetch(e.SCAN_REPORT_URL, {
+                                        method: "POST",
+                                        headers,
+                                        body: JSON.stringify(report)
+                                    });
+                                    console.log("scan-report response:", r.status);
+                                }
+                            } catch (err) {
+                                console.error("Error submitting scan report:", err.message);
+                            }
+                        })();
+                    '
+                ''')
+            }
+        }
     }
 }

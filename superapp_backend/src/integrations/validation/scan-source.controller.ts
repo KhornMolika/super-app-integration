@@ -66,26 +66,38 @@ export class ScanSourceController {
     return { app, cfg, source: scanSourceOf(cfg) };
   }
 
-  /** The uploaded package archive (.zip), streamed from MinIO quarantine. */
+  /** The uploaded package archive (.zip / .aar), streamed from MinIO quarantine. */
   @Get(':miniAppId/archive')
   @BypassTransform()
   @Header('Cache-Control', 'no-store')
-  async archive(@Param('miniAppId') miniAppId: string, @Query('ticket') ticket: string, @Res() res: Response) {
-    const { source } = await this.load(miniAppId, ticket);
-    if (source.integrationType !== 'ARTIFACT' || !source.sourceStoragePath) {
+  async archive(
+    @Param('miniAppId') miniAppId: string,
+    @Query('ticket') ticket: string,
+    @Res() res: Response,
+    @Query('platform') platform?: string,
+  ) {
+    const { source, cfg } = await this.load(miniAppId, ticket);
+    let storagePath = source.sourceStoragePath;
+    if (platform === 'ios' && (cfg.iosMinioKey || cfg.iosStoragePath)) {
+      storagePath = cfg.iosMinioKey || cfg.iosStoragePath;
+    } else if (platform === 'android' && (cfg.androidMinioKey || cfg.androidStoragePath)) {
+      storagePath = cfg.androidMinioKey || cfg.androidStoragePath;
+    }
+
+    if (source.integrationType !== 'ARTIFACT' || !storagePath) {
       throw new NotFoundException('This mini app has no uploaded package archive');
     }
     if (!this.storageService) throw new NotFoundException('MinIO storage is not configured');
     let archive: Buffer | null = null;
     try {
-      archive = await this.storageService.getObjectBuffer(this.storageService.packageSubmissionsBucket, source.sourceStoragePath);
+      archive = await this.storageService.getObjectBuffer(this.storageService.packageSubmissionsBucket, storagePath);
     } catch (err: any) {
-      this.logger.warn(`Scan source ${miniAppId}: cannot read ${source.sourceStoragePath}: ${err?.message || err}`);
+      this.logger.warn(`Scan source ${miniAppId}: cannot read ${storagePath}: ${err?.message || err}`);
     }
-    if (!archive || archive.length === 0) throw new NotFoundException(`Package archive not found in MinIO (${source.sourceStoragePath})`);
-    res.setHeader('Content-Type', 'application/zip');
+    if (!archive || archive.length === 0) throw new NotFoundException(`Package archive not found in MinIO (${storagePath})`);
+    res.setHeader('Content-Type', storagePath.endsWith('.aar') ? 'application/octet-stream' : 'application/zip');
     res.setHeader('Content-Length', String(archive.length));
-    res.setHeader('X-Source-Path', source.sourceStoragePath);
+    res.setHeader('X-Source-Path', storagePath);
     res.end(archive);
   }
 

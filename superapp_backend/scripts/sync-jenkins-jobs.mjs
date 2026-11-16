@@ -232,6 +232,26 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <name>COMMIT_SHA</name>
           <defaultValue>main</defaultValue>
           <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>INTEGRATION_TYPE</name>
+          <defaultValue>ARTIFACT</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>SOURCE_STORAGE_PATH</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>SCAN_SOURCE_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>SCAN_TICKET</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
         </hudson.model.StringParameterDefinition>`;
   }
 
