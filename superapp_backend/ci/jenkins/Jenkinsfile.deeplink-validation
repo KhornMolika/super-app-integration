@@ -38,93 +38,98 @@ pipeline {
                 script {
                     notifyStage("scheme_audit", "Scheme Syntax & Security Audit", "RUNNING", "Validating RFC 3986 URI format, reserved protocol collisions, and injection vectors...")
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const scheme = "${params.URL_SCHEME}".trim();
-                        const findings = [];
-                        let passed = true;
+                    withEnv([
+                        "URL_SCHEME_VAL=${params.URL_SCHEME ?: ''}",
+                        "SCHEME_REPORT_VAL=${env.SCHEME_REPORT ?: ''}",
+                    ]) {
+                        sh '''
+                        node -e '
+                            const fs = require("fs");
+                            const scheme = (process.env.URL_SCHEME_VAL || "").trim();
+                            const findings = [];
+                            let passed = true;
 
-                        const reserved = ["http", "https", "file", "javascript", "data", "about", "vbscript", "intent", "content", "chrome", "market", "package", "blob"];
-                        const cleanProtocol = scheme.split(":")[0].toLowerCase();
+                            const reserved = ["http", "https", "file", "javascript", "data", "about", "vbscript", "intent", "content", "chrome", "market", "package", "blob"];
+                            const cleanProtocol = scheme.split(":")[0].toLowerCase();
 
-                        if (!cleanProtocol) {
-                            passed = false;
-                            findings.push({
-                                id: "EMPTY_URL_SCHEME",
-                                severity: "CRITICAL",
-                                category: "SECURITY_VIOLATION",
-                                title: "Empty or Unspecified URL Scheme",
-                                description: "The deep link URI scheme cannot be empty.",
-                                recommendation: "Specify a valid custom URI scheme conforming to RFC 3986 (e.g. myapp://open)."
-                            });
-                        } else if (reserved.includes(cleanProtocol)) {
-                            passed = false;
-                            findings.push({
-                                id: "RESERVED_PROTOCOL_COLLISION",
-                                severity: "CRITICAL",
-                                category: "SECURITY_VIOLATION",
-                                title: "Reserved Protocol Collision: " + cleanProtocol,
-                                description: "Scheme \\"" + cleanProtocol + "\\" collides with a reserved system protocol. Custom schemes must use a private protocol.",
-                                recommendation: "Use a private reverse-domain or unique brand URI scheme (e.g. cambodia-tax:// or myapp://)."
-                            });
-                        } else if (!/^[a-z][a-z0-9+.-]*\$/i.test(cleanProtocol)) {
-                            passed = false;
-                            findings.push({
-                                id: "RFC3986_SYNTAX_VIOLATION",
-                                severity: "HIGH",
-                                category: "SECURITY_VIOLATION",
-                                title: "RFC 3986 Scheme Syntax Violation",
-                                description: "Protocol \\"" + cleanProtocol + "\\" violates RFC 3986 (must start with letter and only contain letters, numbers, +, -, .).",
-                                recommendation: "Format scheme strictly according to RFC 3986 specifications."
-                            });
-                        }
+                            if (!cleanProtocol) {
+                                passed = false;
+                                findings.push({
+                                    id: "EMPTY_URL_SCHEME",
+                                    severity: "CRITICAL",
+                                    category: "SECURITY_VIOLATION",
+                                    title: "Empty or Unspecified URL Scheme",
+                                    description: "The deep link URI scheme cannot be empty.",
+                                    recommendation: "Specify a valid custom URI scheme conforming to RFC 3986 (e.g. myapp://open)."
+                                });
+                            } else if (reserved.includes(cleanProtocol)) {
+                                passed = false;
+                                findings.push({
+                                    id: "RESERVED_PROTOCOL_COLLISION",
+                                    severity: "CRITICAL",
+                                    category: "SECURITY_VIOLATION",
+                                    title: "Reserved Protocol Collision: " + cleanProtocol,
+                                    description: "Scheme \\"" + cleanProtocol + "\\" collides with a reserved system protocol. Custom schemes must use a private protocol.",
+                                    recommendation: "Use a private reverse-domain or unique brand URI scheme (e.g. cambodia-tax:// or myapp://)."
+                                });
+                            } else if (!/^[a-z][a-z0-9+.-]*$/i.test(cleanProtocol)) {
+                                passed = false;
+                                findings.push({
+                                    id: "RFC3986_SYNTAX_VIOLATION",
+                                    severity: "HIGH",
+                                    category: "SECURITY_VIOLATION",
+                                    title: "RFC 3986 Scheme Syntax Violation",
+                                    description: "Protocol \\"" + cleanProtocol + "\\" violates RFC 3986 (must start with letter and only contain letters, numbers, +, -, .).",
+                                    recommendation: "Format scheme strictly according to RFC 3986 specifications."
+                                });
+                            }
 
-                        // Path traversal and command injection checks
-                        if (scheme.includes("../") || scheme.includes("..%2f") || scheme.includes("%2e%2e") || scheme.includes("%00")) {
-                            passed = false;
-                            findings.push({
-                                id: "URI_PATH_TRAVERSAL_INJECTION",
-                                severity: "CRITICAL",
-                                category: "INJECTION_ATTACK",
-                                title: "Path Traversal or Null-Byte Detected in Scheme",
-                                description: "Scheme contains dangerous path traversal sequences (../ or %00) that can exploit Android intent receivers.",
-                                recommendation: "Sanitize custom URI scheme and avoid relative path traversal sequences."
-                            });
-                        }
+                            // Path traversal and command injection checks
+                            if (scheme.includes("../") || scheme.includes("..%2f") || scheme.includes("%2e%2e") || scheme.includes("%00")) {
+                                passed = false;
+                                findings.push({
+                                    id: "URI_PATH_TRAVERSAL_INJECTION",
+                                    severity: "CRITICAL",
+                                    category: "INJECTION_ATTACK",
+                                    title: "Path Traversal or Null-Byte Detected in Scheme",
+                                    description: "Scheme contains dangerous path traversal sequences (../ or %00) that can exploit Android intent receivers.",
+                                    recommendation: "Sanitize custom URI scheme and avoid relative path traversal sequences."
+                                });
+                            }
 
-                        if (/[;|`&\$]/.test(scheme)) {
-                            passed = false;
-                            findings.push({
-                                id: "SHELL_COMMAND_INJECTION_CHARS",
-                                severity: "CRITICAL",
-                                category: "INJECTION_ATTACK",
-                                title: "Command Injection Characters in URI Scheme",
-                                description: "Scheme contains shell metacharacters (; | ` & $) that pose command injection hazards.",
-                                recommendation: "Remove shell metacharacters from custom URI schemes."
-                            });
-                        }
+                            if (/[;|`&$]/.test(scheme)) {
+                                passed = false;
+                                findings.push({
+                                    id: "SHELL_COMMAND_INJECTION_CHARS",
+                                    severity: "CRITICAL",
+                                    category: "INJECTION_ATTACK",
+                                    title: "Command Injection Characters in URI Scheme",
+                                    description: "Scheme contains shell metacharacters (; | ` & $) that pose command injection hazards.",
+                                    recommendation: "Remove shell metacharacters from custom URI schemes."
+                                });
+                            }
 
-                        // Namespace collision check on Android
-                        if (cleanProtocol && cleanProtocol.length < 3) {
-                            findings.push({
-                                id: "SHORT_SCHEME_NAMESPACE_COLLISION",
-                                severity: "MEDIUM",
-                                category: "SECURITY_WARNING",
-                                title: "Short URI Scheme Namespace Collision Risk",
-                                description: "Scheme \\"" + cleanProtocol + "\\" is very short (< 3 chars), making OS intent collision with other apps likely.",
-                                recommendation: "Use a longer, unique scheme prefix (e.g. kh-tax:// instead of t://)."
-                            });
-                        }
+                            // Namespace collision check on Android
+                            if (cleanProtocol && cleanProtocol.length < 3) {
+                                findings.push({
+                                    id: "SHORT_SCHEME_NAMESPACE_COLLISION",
+                                    severity: "MEDIUM",
+                                    category: "SECURITY_WARNING",
+                                    title: "Short URI Scheme Namespace Collision Risk",
+                                    description: "Scheme \\"" + cleanProtocol + "\\" is very short (< 3 chars), making OS intent collision with other apps likely.",
+                                    recommendation: "Use a longer, unique scheme prefix (e.g. kh-tax:// instead of t://)."
+                                });
+                            }
 
-                        fs.writeFileSync("${env.SCHEME_REPORT}", JSON.stringify({
-                            passed,
-                            cleanProtocol,
-                            findings,
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
+                            fs.writeFileSync(process.env.SCHEME_REPORT_VAL, JSON.stringify({
+                                passed,
+                                cleanProtocol,
+                                findings,
+                                timestamp: new Date().toISOString()
+                            }));
+                        ' || true
+                        '''
+                    }
 
                     notifyStage("scheme_audit", "Scheme Syntax & Security Audit", "COMPLETED", "Custom URL scheme syntax and injection audit completed.")
                 }
@@ -138,147 +143,162 @@ pipeline {
                 script {
                     notifyStage("secret_scan", "Secret & API Key Leak Detection", "RUNNING", "Scanning URI scheme and parameters for leaked API keys, tokens, and credentials...")
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const scheme = "${params.URL_SCHEME}".trim();
-                        const storeUrl = "${params.APP_STORE_URL}".trim();
-                        const playUrl = "${params.PLAY_STORE_URL}".trim();
-                        const targetUrl = "${params.TARGET_URL}".trim();
-
-                        const combinedText = [scheme, storeUrl, playUrl, targetUrl].filter(Boolean).join("\\n");
-                        const findings = [];
-
-                        // 1. Google Cloud / Firebase API Key
-                        const googleApiKeyRegex = /AIza[0-9A-Za-z-_]{35}/g;
-                        let match;
-                        while ((match = googleApiKeyRegex.exec(combinedText)) !== null) {
-                            findings.push({
-                                id: "GITLEAKS_GOOGLE_API_KEY",
-                                severity: "CRITICAL",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Hardcoded Google API Key in Deep Link",
-                                description: "Found Google Cloud / Firebase API key (" + match[0].substring(0, 8) + "...) in deep link configuration.",
-                                recommendation: "Never transmit API keys in custom URI schemes. Custom schemes are broadcast across the device OS and logged unencrypted."
-                            });
-                        }
-
-                        // 2. JWT Tokens
-                        const jwtRegex = /eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]+/g;
-                        while ((match = jwtRegex.exec(combinedText)) !== null) {
-                            findings.push({
-                                id: "GITLEAKS_JWT_BEARER_TOKEN",
-                                severity: "CRITICAL",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Cleartext JWT Bearer Token in Deep Link Scheme",
-                                description: "Found hardcoded JWT authorization token in URI scheme or URL query string.",
-                                recommendation: "Use PKCE OAuth 2.0 authorization code flow instead of embedding bearer tokens in custom URI schemes."
-                            });
-                        }
-
-                        // 3. AWS Access Keys
-                        const awsKeyRegex = /AKIA[0-9A-Z]{16}/g;
-                        while ((match = awsKeyRegex.exec(combinedText)) !== null) {
-                            findings.push({
-                                id: "GITLEAKS_AWS_ACCESS_KEY",
-                                severity: "CRITICAL",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Exposed AWS Access Key in Deep Link",
-                                description: "Found AWS access key identifier in deep link parameters.",
-                                recommendation: "Revoke the exposed AWS credential immediately and remove it from mobile client configuration."
-                            });
-                        }
-
-                        // 4. Private Key Headers
-                        if (/-----BEGIN [A-Z ]+ PRIVATE KEY-----/.test(combinedText)) {
-                            findings.push({
-                                id: "GITLEAKS_PRIVATE_KEY",
-                                severity: "CRITICAL",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Private Key Embedded in Deep Link Payload",
-                                description: "Detected cryptographic private key header inside deep link configuration.",
-                                recommendation: "Private keys must never be distributed to client configurations."
-                            });
-                        }
-
-                        // 5. GitHub / Slack / Generic Tokens
-                        const patRegex = /(gh[pousr]_[A-Za-z0-9_]{36,}|xox[baprs]-[0-9a-zA-Z]{10,48})/g;
-                        while ((match = patRegex.exec(combinedText)) !== null) {
-                            findings.push({
-                                id: "GITLEAKS_DEV_TOKEN",
-                                severity: "CRITICAL",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Exposed Developer Access Token",
-                                description: "Found exposed GitHub or Slack access token in deep link parameters.",
-                                recommendation: "Revoke the token and remove it from deep link parameters."
-                            });
-                        }
-
-                        // 6. Dangerous Query Parameters (apiKey=, secret=, client_secret=, password=, access_token=)
-                        const sensitiveParamRegex = /[?&](api_?key|client_secret|secret|access_token|auth_token|bearer|password)=([^&\\s]{6,})/gi;
-                        while ((match = sensitiveParamRegex.exec(scheme)) !== null) {
-                            findings.push({
-                                id: "SENSITIVE_QUERY_PARAM_IN_SCHEME",
-                                severity: "HIGH",
-                                category: "CREDENTIAL_LEAK",
-                                title: "Sensitive Credential Parameter: " + match[1],
-                                description: "Custom URI scheme exposes \\"" + match[1] + "\\" in query string. Schemes can be sniffed by any app registered for the same intent.",
-                                recommendation: "Perform authentication via secure browser custom tabs (OAuth PKCE) or host SuperApp SSO bridge."
-                            });
-                        }
-
-                        // Dump manifest for Gitleaks container inspection
-                        fs.writeFileSync("${env.WORKSPACE_DIR}/manifest.json", JSON.stringify({
-                            urlScheme: scheme,
-                            appStoreUrl: storeUrl,
-                            playStoreUrl: playUrl,
-                            targetUrl: targetUrl
-                        }, null, 2));
-
-                        const passed = findings.length === 0;
-                        fs.writeFileSync("${env.SECRETS_REPORT}", JSON.stringify({
-                            passed,
-                            findings,
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    // Attempt Docker-based Gitleaks if Docker engine is available on agent
-                    sh """
-                    if which docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-                        echo "Running Gitleaks Docker container (${env.GITLEAKS_IMAGE})..."
-                        docker run --rm -v "${env.WORKSPACE_DIR}:/scan" "${env.GITLEAKS_IMAGE}" detect --no-git --source /scan \
-                            --report-format json --report-path /scan/gitleaks-raw.json --exit-code 0 --no-banner --log-level warn || true
+                    withEnv([
+                        "URL_SCHEME_VAL=${params.URL_SCHEME ?: ''}",
+                        "APP_STORE_URL_VAL=${params.APP_STORE_URL ?: ''}",
+                        "PLAY_STORE_URL_VAL=${params.PLAY_STORE_URL ?: ''}",
+                        "TARGET_URL_VAL=${params.TARGET_URL ?: ''}",
+                        "WORKSPACE_DIR_VAL=${env.WORKSPACE_DIR ?: ''}",
+                        "SECRETS_REPORT_VAL=${env.SECRETS_REPORT ?: ''}",
+                    ]) {
+                        sh '''
                         node -e '
                             const fs = require("fs");
-                            const rawPath = "${env.WORKSPACE_DIR}/gitleaks-raw.json";
-                            const repPath = "${env.SECRETS_REPORT}";
-                            if (fs.existsSync(rawPath) && fs.existsSync(repPath)) {
-                                try {
-                                    const raw = JSON.parse(fs.readFileSync(rawPath, "utf8"));
-                                    const rep = JSON.parse(fs.readFileSync(repPath, "utf8"));
-                                    if (Array.isArray(raw) && raw.length > 0) {
-                                        raw.forEach((r, idx) => {
-                                            rep.findings.push({
-                                                id: "GITLEAKS_ENGINE_" + (r.RuleID || idx),
-                                                severity: "CRITICAL",
-                                                category: "CREDENTIAL_LEAK",
-                                                title: "Gitleaks Detection: " + (r.Description || r.RuleID || "Secret Leak"),
-                                                description: "Gitleaks matched rule \\"" + (r.RuleID || "secret") + "\\" in deep link manifest.",
-                                                recommendation: "Remove leaked secret immediately."
-                                            });
-                                        });
-                                        rep.passed = false;
-                                        fs.writeFileSync(repPath, JSON.stringify(rep));
-                                    }
-                                } catch (_) {}
+                            const scheme = (process.env.URL_SCHEME_VAL || "").trim();
+                            const storeUrl = (process.env.APP_STORE_URL_VAL || "").trim();
+                            const playUrl = (process.env.PLAY_STORE_URL_VAL || "").trim();
+                            const targetUrl = (process.env.TARGET_URL_VAL || "").trim();
+
+                            const combinedText = [scheme, storeUrl, playUrl, targetUrl].filter(Boolean).join("\\n");
+                            const findings = [];
+
+                            // 1. Google Cloud / Firebase API Key
+                            const googleApiKeyRegex = /AIza[0-9A-Za-z-_]{35}/g;
+                            let match;
+                            while ((match = googleApiKeyRegex.exec(combinedText)) !== null) {
+                                findings.push({
+                                    id: "GITLEAKS_GOOGLE_API_KEY",
+                                    severity: "CRITICAL",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Hardcoded Google API Key in Deep Link",
+                                    description: "Found Google Cloud / Firebase API key (" + match[0].substring(0, 8) + "...) in deep link configuration.",
+                                    recommendation: "Never transmit API keys in custom URI schemes. Custom schemes are broadcast across the device OS and logged unencrypted."
+                                });
                             }
+
+                            // 2. JWT Tokens
+                            const jwtRegex = /eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]+/g;
+                            while ((match = jwtRegex.exec(combinedText)) !== null) {
+                                findings.push({
+                                    id: "GITLEAKS_JWT_BEARER_TOKEN",
+                                    severity: "CRITICAL",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Cleartext JWT Bearer Token in Deep Link Scheme",
+                                    description: "Found hardcoded JWT authorization token in URI scheme or URL query string.",
+                                    recommendation: "Use PKCE OAuth 2.0 authorization code flow instead of embedding bearer tokens in custom URI schemes."
+                                });
+                            }
+
+                            // 3. AWS Access Keys
+                            const awsKeyRegex = /AKIA[0-9A-Z]{16}/g;
+                            while ((match = awsKeyRegex.exec(combinedText)) !== null) {
+                                findings.push({
+                                    id: "GITLEAKS_AWS_ACCESS_KEY",
+                                    severity: "CRITICAL",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Exposed AWS Access Key in Deep Link",
+                                    description: "Found AWS access key identifier in deep link parameters.",
+                                    recommendation: "Revoke the exposed AWS credential immediately and remove it from mobile client configuration."
+                                });
+                            }
+
+                            // 4. Private Key Headers
+                            if (/-----BEGIN [A-Z ]+ PRIVATE KEY-----/.test(combinedText)) {
+                                findings.push({
+                                    id: "GITLEAKS_PRIVATE_KEY",
+                                    severity: "CRITICAL",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Private Key Embedded in Deep Link Payload",
+                                    description: "Detected cryptographic private key header inside deep link configuration.",
+                                    recommendation: "Private keys must never be distributed to client configurations."
+                                });
+                            }
+
+                            // 5. GitHub / Slack / Generic Tokens
+                            const patRegex = /(gh[pousr]_[A-Za-z0-9_]{36,}|xox[baprs]-[0-9a-zA-Z]{10,48})/g;
+                            while ((match = patRegex.exec(combinedText)) !== null) {
+                                findings.push({
+                                    id: "GITLEAKS_DEV_TOKEN",
+                                    severity: "CRITICAL",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Exposed Developer Access Token",
+                                    description: "Found exposed GitHub or Slack access token in deep link parameters.",
+                                    recommendation: "Revoke the token and remove it from deep link parameters."
+                                });
+                            }
+
+                            // 6. Dangerous Query Parameters (apiKey=, secret=, client_secret=, password=, access_token=)
+                            const sensitiveParamRegex = /[?&](api_?key|client_secret|secret|access_token|auth_token|bearer|password)=([^&\\s]{6,})/gi;
+                            while ((match = sensitiveParamRegex.exec(scheme)) !== null) {
+                                findings.push({
+                                    id: "SENSITIVE_QUERY_PARAM_IN_SCHEME",
+                                    severity: "HIGH",
+                                    category: "CREDENTIAL_LEAK",
+                                    title: "Sensitive Credential Parameter: " + match[1],
+                                    description: "Custom URI scheme exposes \\"" + match[1] + "\\" in query string. Schemes can be sniffed by any app registered for the same intent.",
+                                    recommendation: "Perform authentication via secure browser custom tabs (OAuth PKCE) or host SuperApp SSO bridge."
+                                });
+                            }
+
+                            // Dump manifest for Gitleaks container inspection
+                            fs.writeFileSync(process.env.WORKSPACE_DIR_VAL + "/manifest.json", JSON.stringify({
+                                urlScheme: scheme,
+                                appStoreUrl: storeUrl,
+                                playStoreUrl: playUrl,
+                                targetUrl: targetUrl
+                            }, null, 2));
+
+                            const passed = findings.length === 0;
+                            fs.writeFileSync(process.env.SECRETS_REPORT_VAL, JSON.stringify({
+                                passed,
+                                findings,
+                                timestamp: new Date().toISOString()
+                            }));
                         ' || true
-                    else
-                        echo "Docker not available; native pattern guard completed."
-                    fi
-                    """
+                        '''
+                    }
+
+                    // Attempt Docker-based Gitleaks if Docker engine is available on agent
+                    withEnv([
+                        "WORKSPACE_DIR_VAL=${env.WORKSPACE_DIR ?: ''}",
+                        "SECRETS_REPORT_VAL=${env.SECRETS_REPORT ?: ''}",
+                        "GITLEAKS_IMG_VAL=${env.GITLEAKS_IMAGE ?: 'zricethezav/gitleaks:latest'}",
+                    ]) {
+                        sh '''
+                        if which docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+                            echo "Running Gitleaks Docker container (${GITLEAKS_IMG_VAL})..."
+                            docker run --rm -v "${WORKSPACE_DIR_VAL}:/scan" "${GITLEAKS_IMG_VAL}" detect --no-git --source /scan \
+                                --report-format json --report-path /scan/gitleaks-raw.json --exit-code 0 --no-banner --log-level warn || true
+                            node -e '
+                                const fs = require("fs");
+                                const rawPath = process.env.WORKSPACE_DIR_VAL + "/gitleaks-raw.json";
+                                const repPath = process.env.SECRETS_REPORT_VAL;
+                                if (fs.existsSync(rawPath) && fs.existsSync(repPath)) {
+                                    try {
+                                        const raw = JSON.parse(fs.readFileSync(rawPath, "utf8"));
+                                        const rep = JSON.parse(fs.readFileSync(repPath, "utf8"));
+                                        if (Array.isArray(raw) && raw.length > 0) {
+                                            raw.forEach((r, idx) => {
+                                                rep.findings.push({
+                                                    id: "GITLEAKS_ENGINE_" + (r.RuleID || idx),
+                                                    severity: "CRITICAL",
+                                                    category: "CREDENTIAL_LEAK",
+                                                    title: "Gitleaks Detection: " + (r.Description || r.RuleID || "Secret Leak"),
+                                                    description: "Gitleaks matched rule \\"" + (r.RuleID || "secret") + "\\" in deep link manifest.",
+                                                    recommendation: "Remove leaked secret immediately."
+                                                });
+                                            });
+                                            rep.passed = false;
+                                            fs.writeFileSync(repPath, JSON.stringify(rep));
+                                        }
+                                    } catch (_) {}
+                                }
+                            ' || true
+                        else
+                            echo "Docker not available; native pattern guard completed."
+                        fi
+                        '''
+                    }
 
                     notifyStage("secret_scan", "Secret & API Key Leak Detection", "COMPLETED", "Secret & credential leak detection completed.")
                 }
@@ -292,77 +312,83 @@ pipeline {
                 script {
                     notifyStage("store_url_audit", "App Store & Play Store URL Audit", "RUNNING", "Validating official store fallback domains and HTTPS transport security...")
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const appStoreUrl = "${params.APP_STORE_URL}".trim();
-                        const playStoreUrl = "${params.PLAY_STORE_URL}".trim();
-                        const findings = [];
-                        let passed = true;
+                    withEnv([
+                        "APP_STORE_URL_VAL=${params.APP_STORE_URL ?: ''}",
+                        "PLAY_STORE_URL_VAL=${params.PLAY_STORE_URL ?: ''}",
+                        "STORE_REPORT_VAL=${env.STORE_REPORT ?: ''}",
+                    ]) {
+                        sh '''
+                        node -e '
+                            const fs = require("fs");
+                            const appStoreUrl = (process.env.APP_STORE_URL_VAL || "").trim();
+                            const playStoreUrl = (process.env.PLAY_STORE_URL_VAL || "").trim();
+                            const findings = [];
+                            let passed = true;
 
-                        const checkUrl = (url, platform) => {
-                            if (!url) return;
-                            if (!url.startsWith("https://")) {
-                                passed = false;
-                                findings.push({
-                                    id: "INSECURE_STORE_URL_" + platform,
-                                    severity: "HIGH",
-                                    category: "TRANSPORT_SECURITY",
-                                    title: "Insecure " + platform + " Store URL",
-                                    description: platform + " store fallback URL must enforce secure HTTPS transport.",
-                                    recommendation: "Update the fallback URL to use https://."
-                                });
-                            }
-
-                            try {
-                                const parsed = new URL(url);
-                                const host = parsed.hostname.toLowerCase();
-                                const suspiciousRedirectors = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "buff.ly", "ow.ly"];
-                                if (suspiciousRedirectors.includes(host)) {
-                                    findings.push({
-                                        id: "URL_SHORTENER_DETECTED_" + platform,
-                                        severity: "MEDIUM",
-                                        category: "PHISHING_RISK",
-                                        title: "URL Shortener Used for Store Link",
-                                        description: "Store fallback URL uses shortener \\"" + host + "\\" which conceals final destination.",
-                                        recommendation: "Provide direct official store links (play.google.com or apps.apple.com)."
-                                    });
-                                }
-
-                                if (/^(127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.|localhost)/.test(host)) {
+                            const checkUrl = (url, platform) => {
+                                if (!url) return;
+                                if (!url.startsWith("https://")) {
                                     passed = false;
                                     findings.push({
-                                        id: "PRIVATE_IP_STORE_URL_" + platform,
-                                        severity: "CRITICAL",
-                                        category: "SSRF_VIOLATION",
-                                        title: "Private or Localhost Store URL",
-                                        description: "Store fallback points to internal RFC 1918 address: " + host,
-                                        recommendation: "Provide a public internet-reachable app store URL."
+                                        id: "INSECURE_STORE_URL_" + platform,
+                                        severity: "HIGH",
+                                        category: "TRANSPORT_SECURITY",
+                                        title: "Insecure " + platform + " Store URL",
+                                        description: platform + " store fallback URL must enforce secure HTTPS transport.",
+                                        recommendation: "Update the fallback URL to use https://."
                                     });
                                 }
-                            } catch (_) {
-                                passed = false;
-                                findings.push({
-                                    id: "MALFORMED_STORE_URL_" + platform,
-                                    severity: "HIGH",
-                                    category: "INVALID_URL",
-                                    title: "Malformed " + platform + " Store URL",
-                                    description: "Unable to parse store URL syntax: " + url,
-                                    recommendation: "Provide a valid RFC 3986 URL."
-                                });
-                            }
-                        };
 
-                        checkUrl(appStoreUrl, "IOS");
-                        checkUrl(playStoreUrl, "ANDROID");
+                                try {
+                                    const parsed = new URL(url);
+                                    const host = parsed.hostname.toLowerCase();
+                                    const suspiciousRedirectors = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "buff.ly", "ow.ly"];
+                                    if (suspiciousRedirectors.includes(host)) {
+                                        findings.push({
+                                            id: "URL_SHORTENER_DETECTED_" + platform,
+                                            severity: "MEDIUM",
+                                            category: "PHISHING_RISK",
+                                            title: "URL Shortener Used for Store Link",
+                                            description: "Store fallback URL uses shortener \\"" + host + "\\" which conceals final destination.",
+                                            recommendation: "Provide direct official store links (play.google.com or apps.apple.com)."
+                                        });
+                                    }
 
-                        fs.writeFileSync("${env.STORE_REPORT}", JSON.stringify({
-                            passed,
-                            findings,
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
+                                    if (/^(127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.|localhost)/.test(host)) {
+                                        passed = false;
+                                        findings.push({
+                                            id: "PRIVATE_IP_STORE_URL_" + platform,
+                                            severity: "CRITICAL",
+                                            category: "SSRF_VIOLATION",
+                                            title: "Private or Localhost Store URL",
+                                            description: "Store fallback points to internal RFC 1918 address: " + host,
+                                            recommendation: "Provide a public internet-reachable app store URL."
+                                        });
+                                    }
+                                } catch (_) {
+                                    passed = false;
+                                    findings.push({
+                                        id: "MALFORMED_STORE_URL_" + platform,
+                                        severity: "HIGH",
+                                        category: "INVALID_URL",
+                                        title: "Malformed " + platform + " Store URL",
+                                        description: "Unable to parse store URL syntax: " + url,
+                                        recommendation: "Provide a valid RFC 3986 URL."
+                                    });
+                                }
+                            };
+
+                            checkUrl(appStoreUrl, "IOS");
+                            checkUrl(playStoreUrl, "ANDROID");
+
+                            fs.writeFileSync(process.env.STORE_REPORT_VAL, JSON.stringify({
+                                passed,
+                                findings,
+                                timestamp: new Date().toISOString()
+                            }));
+                        ' || true
+                        '''
+                    }
 
                     notifyStage("store_url_audit", "App Store & Play Store URL Audit", "COMPLETED", "Store fallback URLs verified.")
                 }
@@ -376,31 +402,37 @@ pipeline {
                 script {
                     notifyStage("capability_gate", "Super App Capability Gatekeeper", "RUNNING", "Verifying declared capabilities against host SuperApp policy...")
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const allowed = ("${params.ALLOWED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
-                        const required = ("${params.REQUIRED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                    withEnv([
+                        "ALLOWED_CAPS_VAL=${params.ALLOWED_CAPABILITIES ?: ''}",
+                        "REQUIRED_CAPS_VAL=${params.REQUIRED_CAPABILITIES ?: ''}",
+                        "CAPABILITY_REPORT_VAL=${env.CAPABILITY_REPORT ?: ''}",
+                    ]) {
+                        sh '''
+                        node -e '
+                            const fs = require("fs");
+                            const allowed = (process.env.ALLOWED_CAPS_VAL || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                            const required = (process.env.REQUIRED_CAPS_VAL || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
 
-                        const unauthorized = required.filter(c => !allowed.includes(c));
-                        const passed = unauthorized.length === 0;
+                            const unauthorized = required.filter(c => !allowed.includes(c));
+                            const passed = unauthorized.length === 0;
 
-                        const findings = unauthorized.map(c => ({
-                            id: "UNAUTHORIZED_CAPABILITY_" + c.toUpperCase(),
-                            severity: "HIGH",
-                            category: "CAPABILITY_VIOLATION",
-                            title: "Unauthorized Host Capability: " + c,
-                            description: "Deep link mini app declared capability \\"" + c + "\\" which is not in the host SuperApp policy allowlist.",
-                            recommendation: "Request capability authorization or remove the capability from mini app configuration."
-                        }));
+                            const findings = unauthorized.map(c => ({
+                                id: "UNAUTHORIZED_CAPABILITY_" + c.toUpperCase(),
+                                severity: "HIGH",
+                                category: "CAPABILITY_VIOLATION",
+                                title: "Unauthorized Host Capability: " + c,
+                                description: "Deep link mini app declared capability \\"" + c + "\\" which is not in the host SuperApp policy allowlist.",
+                                recommendation: "Request capability authorization or remove the capability from mini app configuration."
+                            }));
 
-                        fs.writeFileSync("${env.CAPABILITY_REPORT}", JSON.stringify({
-                            passed,
-                            findings,
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
+                            fs.writeFileSync(process.env.CAPABILITY_REPORT_VAL, JSON.stringify({
+                                passed,
+                                findings,
+                                timestamp: new Date().toISOString()
+                            }));
+                        ' || true
+                        '''
+                    }
 
                     notifyStage("capability_gate", "Super App Capability Gatekeeper", "COMPLETED", "Capability authorization verified.")
                 }
