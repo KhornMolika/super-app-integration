@@ -685,6 +685,20 @@ export class MiniappsService implements OnApplicationBootstrap {
     return app;
   }
 
+  async findByAppId(appId: string) {
+    const app = await this.miniappRepository.findOne({
+      where: { appId },
+      relations: {
+        issues: true,
+        collaborators: true,
+        versions: true,
+        legal: true,
+      },
+    });
+    if (app) await this.runs?.attach(app);
+    return app;
+  }
+
   async findAll(
     queryOrOwnerId?:
       QueryMiniAppsDto | { status?: string; mine?: boolean | string } | string,

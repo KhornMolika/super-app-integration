@@ -764,10 +764,18 @@ export function useMiniAppRegister() {
 
     try {
       const draft = await miniappsApi.createDraft(payload);
-      if (draft?.id) await sendSdkFiles(draft.id, payload);
-      router.push('/miniapps');
-    } catch (_) {
+      if (draft?.id) {
+        await sendSdkFiles(draft.id, payload);
+        toast.success('Draft saved successfully.');
+        router.push(`/miniapps/${draft.id}`);
+      } else {
+        toast.success('Draft saved successfully.');
+        router.push('/miniapps');
+      }
+    } catch (err: any) {
       setIsSubmitting(false);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save draft.';
+      toast.error(msg, 'Save Draft Failed');
     }
   };
 

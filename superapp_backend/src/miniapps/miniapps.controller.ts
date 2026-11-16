@@ -216,6 +216,25 @@ export class MiniappsController {
         dataToSave.organizationCode = req.user.organizationCode;
     }
 
+    const existing = await this.miniappService.findByAppId(dataToSave.appId);
+    if (existing) {
+      const allowedUpdateStatuses = [
+        'DRAFT',
+        'REJECTED',
+        'CHANGES_REQUESTED',
+        'SUBMITTED',
+      ];
+      if (allowedUpdateStatuses.includes(existing.lifecycleStatus)) {
+        const updated = await this.miniappService.update(
+          existing.id,
+          dataToSave,
+          req.user.sub,
+        );
+        return maskMiniAppCredentials(updated);
+      }
+      throw new BadRequestException('An app with this App ID already exists.');
+    }
+
     const created = await this.miniappService.create(dataToSave, req.user.sub);
     return maskMiniAppCredentials(created);
   }
@@ -251,6 +270,25 @@ export class MiniappsController {
         dataToSave.organization = req.user.organization;
       if (req.user?.organizationCode)
         dataToSave.organizationCode = req.user.organizationCode;
+    }
+
+    const existing = await this.miniappService.findByAppId(dataToSave.appId);
+    if (existing) {
+      const allowedUpdateStatuses = [
+        'DRAFT',
+        'REJECTED',
+        'CHANGES_REQUESTED',
+        'SUBMITTED',
+      ];
+      if (allowedUpdateStatuses.includes(existing.lifecycleStatus)) {
+        const updated = await this.miniappService.update(
+          existing.id,
+          dataToSave,
+          req.user.sub,
+        );
+        return maskMiniAppCredentials(updated);
+      }
+      throw new BadRequestException('An app with this App ID already exists.');
     }
 
     const created = await this.miniappService.create(dataToSave, req.user.sub);
