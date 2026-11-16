@@ -204,6 +204,16 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
+          <name>APP_STORE_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PLAY_STORE_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
           <name>ALLOWED_CAPABILITIES</name>
           <defaultValue>camera,geolocator,location,local_auth,biometrics</defaultValue>
           <trim>true</trim>

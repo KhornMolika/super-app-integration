@@ -1,4 +1,4 @@
-﻿export interface SecurityCheckMetadata {
+export interface SecurityCheckMetadata {
   id: string;
   name: string;
   tool: string;
@@ -304,7 +304,7 @@ export function getDefaultChecksForMethod(method: string): string[] {
     ];
   }
   if (norm === 'DEEP_LINK') {
-    return ['scheme_audit', 'store_url_audit', 'capability_gate'];
+    return ['scheme_audit', 'secret_scan', 'store_url_audit', 'capability_gate'];
   }
   return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'capability_gate'];
 }
@@ -340,7 +340,7 @@ export function buildDynamicValidationStages(
       'malware_scan',
       'license_compliance',
     ],
-    DEEP_LINK: ['scheme_audit', 'store_url_audit', 'capability_gate'],
+    DEEP_LINK: ['scheme_audit', 'secret_scan', 'store_url_audit', 'capability_gate'],
   };
 
   const pipelineSequence =

@@ -649,6 +649,7 @@ export class MiniappValidationHelper {
           targetUrl: cfg.productionUrl || cfg.url,
           urlScheme: cfg.urlScheme,
           appStoreUrl: cfg.appStoreUrl,
+          playStoreUrl: cfg.playStoreUrl,
           allowedDomains,
           allowLocal,
           packageName,

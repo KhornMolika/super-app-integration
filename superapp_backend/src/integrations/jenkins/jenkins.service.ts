@@ -149,6 +149,7 @@ export class JenkinsService {
     targetUrl?: string;
     urlScheme?: string;
     appStoreUrl?: string;
+    playStoreUrl?: string;
     allowedDomains?: string[];
     packageName?: string;
     version?: string;
@@ -184,6 +185,7 @@ export class JenkinsService {
       TARGET_URL: options.targetUrl || '',
       URL_SCHEME: options.urlScheme || '',
       APP_STORE_URL: options.appStoreUrl || '',
+      PLAY_STORE_URL: options.playStoreUrl || '',
       ALLOWED_DOMAINS: allowedDomainsStr,
       PACKAGE_NAME: options.packageName || '',
       VERSION: options.version || '1.0.0',
@@ -407,6 +409,7 @@ export class JenkinsService {
     miniAppId: string;
     urlScheme: string;
     appStoreUrl?: string;
+    playStoreUrl?: string;
     targetUrl?: string;
     allowedDomains?: string[];
     allowedCapabilities?: string[];
@@ -423,6 +426,7 @@ export class JenkinsService {
       allowedCapabilities: options.allowedCapabilities,
       requiredCapabilities: options.requiredCapabilities,
       checks: options.checks,
+      ...({ playStoreUrl: options.playStoreUrl } as any),
     });
   }
 
