@@ -122,83 +122,94 @@ pipeline {
                 echo "=========================================================="
                 echo " [STAGE 4] Final Report Aggregation & Backend Callback"
                 script {
-                    sh """
-                    node -e '
-                        const fs = require("fs");
+                    withEnv([
+                        "CB_URL=${params.CALLBACK_URL ?: ''}",
+                        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
+                        "MA_ID=${params.MINIAPP_ID ?: ''}",
+                    ]) {
+                        sh '''
+                        set +x
+                        node -e '
+                            const fs = require("fs");
 
-                        const miniAppId = "${params.MINIAPP_ID}";
-                        const callbackUrl = "${params.CALLBACK_URL}";
-                        const schemeFile = "${env.SCHEME_REPORT}";
-                        const storeFile = "${env.STORE_REPORT}";
+                            const miniAppId = process.env.MA_ID;
+                            const callbackUrl = process.env.CB_URL;
+                            const token = process.env.CB_TOKEN || "";
+                            const schemeFile = process.env.SCHEME_REPORT;
+                            const storeFile = process.env.STORE_REPORT;
 
-                        const findings = [];
-                        let score = 100;
-                        const checks = {
-                            scheme_audit: { passed: true, details: "Custom URL scheme syntax verified." },
-                            store_url_audit: { passed: true, details: "Store fallback URLs verified." },
-                            capability_gate: { passed: true, details: "Deep link parameter access authorized." }
-                        };
+                            const findings = [];
+                            let score = 100;
+                            const checks = {
+                                scheme_audit: { passed: true, details: "Custom URL scheme syntax verified." },
+                                store_url_audit: { passed: true, details: "Store fallback URLs verified." },
+                                capability_gate: { passed: true, details: "Deep link parameter access authorized." }
+                            };
 
-                        if (fs.existsSync(schemeFile)) {
-                            const data = JSON.parse(fs.readFileSync(schemeFile, "utf8"));
-                            if (data.passed === false) {
-                                checks.scheme_audit.passed = false;
-                                checks.scheme_audit.details = data.error || "Invalid scheme.";
-                                score -= 50;
-                                findings.push({
-                                    id: "INVALID_URL_SCHEME",
-                                    severity: "CRITICAL",
-                                    category: "SECURITY_VIOLATION",
-                                    title: "Invalid or Reserved Custom Scheme",
-                                    description: data.error,
-                                    recommendation: "Use a valid private URI scheme format (e.g. app-name://)."
-                                });
+                            if (fs.existsSync(schemeFile)) {
+                                const data = JSON.parse(fs.readFileSync(schemeFile, "utf8"));
+                                if (data.passed === false) {
+                                    checks.scheme_audit.passed = false;
+                                    checks.scheme_audit.details = data.error || "Invalid scheme.";
+                                    score -= 50;
+                                    findings.push({
+                                        id: "INVALID_URL_SCHEME",
+                                        severity: "CRITICAL",
+                                        category: "SECURITY_VIOLATION",
+                                        title: "Invalid or Reserved Custom Scheme",
+                                        description: data.error,
+                                        recommendation: "Use a valid private URI scheme format (e.g. app-name://)."
+                                    });
+                                }
                             }
-                        }
 
-                        if (fs.existsSync(storeFile)) {
-                            const data = JSON.parse(fs.readFileSync(storeFile, "utf8"));
-                            if (data.passed === false) {
-                                checks.store_url_audit.passed = false;
-                                checks.store_url_audit.details = data.error || "Insecure store URL.";
-                                score -= 25;
-                                findings.push({
-                                    id: "INSECURE_STORE_URL",
-                                    severity: "HIGH",
-                                    category: "TRANSPORT_SECURITY",
-                                    title: "Insecure Store Fallback URL",
-                                    description: data.error,
-                                    recommendation: "Ensure App Store and Play Store URLs use HTTPS."
-                                });
+                            if (fs.existsSync(storeFile)) {
+                                const data = JSON.parse(fs.readFileSync(storeFile, "utf8"));
+                                if (data.passed === false) {
+                                    checks.store_url_audit.passed = false;
+                                    checks.store_url_audit.details = data.error || "Insecure store URL.";
+                                    score -= 25;
+                                    findings.push({
+                                        id: "INSECURE_STORE_URL",
+                                        severity: "HIGH",
+                                        category: "TRANSPORT_SECURITY",
+                                        title: "Insecure Store Fallback URL",
+                                        description: data.error,
+                                        recommendation: "Ensure App Store and Play Store URLs use HTTPS."
+                                    });
+                                }
                             }
-                        }
 
-                        const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
-                        const payload = {
-                            miniAppId,
-                            integrationMethod: "DEEP_LINK",
-                            status,
-                            score: Math.max(0, score),
-                            findings,
-                            checks,
-                            timestamp: new Date().toISOString()
-                        };
+                            const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
+                            const payload = {
+                                miniAppId,
+                                integrationMethod: "DEEP_LINK",
+                                status,
+                                score: Math.max(0, score),
+                                findings,
+                                checks,
+                                timestamp: new Date().toISOString()
+                            };
 
-                        (async () => {
-                            try {
-                                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                                const res = await fetch(callbackUrl, {
-                                    method: "POST",
-                                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                                    body: JSON.stringify(payload)
-                                });
-                                console.log("Final callback HTTP status:", res.status);
-                            } catch (e) {
-                                console.error("Callback error:", e.message);
-                            }
-                        })();
-                    ' || true
-                    """
+                            (async () => {
+                                try {
+                                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                                    const res = await fetch(callbackUrl, {
+                                        method: "POST",
+                                        headers: Object.assign(
+                                            { "Content-Type": "application/json" },
+                                            token ? { "x-callback-token": token } : {}
+                                        ),
+                                        body: JSON.stringify(payload)
+                                    });
+                                    console.log("Final callback HTTP status:", res.status);
+                                } catch (e) {
+                                    console.error("Callback error:", e.message);
+                                }
+                            })();
+                        ' || true
+                        '''
+                    }
                 }
             }
         }
@@ -206,28 +217,43 @@ pipeline {
 }
 
 def notifyStage(String stageId, String stageName, String status, String details) {
-    sh """
-    node -e '
-        (async () => {
-            try {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
-                const res = await fetch(callbackUrl, {
-                    method: "POST",
-                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                    body: JSON.stringify({
-                        miniAppId: "${params.MINIAPP_ID}",
-                        stageId: "${stageId}",
-                        stageName: "${stageName}",
-                        status: "${status}",
-                        details: "${details}"
-                    })
-                });
-                console.log("Stage update [" + "${stageId}" + "] status: " + res.status);
-            } catch (err) {
-                console.warn("Stage update failed for " + "${stageId}" + ":", err.message);
-            }
-        })();
-    ' || true
-    """
+    withEnv([
+        "STAGE_ID=${stageId}",
+        "STAGE_NAME=${stageName}",
+        "STAGE_STATUS=${status}",
+        "STAGE_DETAILS=${details}",
+        "CB_URL=${params.CALLBACK_URL ?: ''}",
+        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
+        "MA_ID=${params.MINIAPP_ID ?: ''}",
+    ]) {
+        sh '''
+        set +x
+        node -e '
+            (async () => {
+                try {
+                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                    const callbackUrl = (process.env.CB_URL || "").replace("/callback", "/stage");
+                    const token = process.env.CB_TOKEN || "";
+                    const res = await fetch(callbackUrl, {
+                        method: "POST",
+                        headers: Object.assign(
+                            { "Content-Type": "application/json" },
+                            token ? { "x-callback-token": token } : {}
+                        ),
+                        body: JSON.stringify({
+                            miniAppId: process.env.MA_ID,
+                            stageId: process.env.STAGE_ID,
+                            stageName: process.env.STAGE_NAME,
+                            status: process.env.STAGE_STATUS,
+                            details: process.env.STAGE_DETAILS
+                        })
+                    });
+                    console.log("Stage update [" + process.env.STAGE_ID + "] status: " + res.status);
+                } catch (err) {
+                    console.warn("Stage update failed for " + process.env.STAGE_ID + ":", err.message);
+                }
+            })();
+        ' || true
+        '''
+    }
 }
