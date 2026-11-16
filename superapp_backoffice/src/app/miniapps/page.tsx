@@ -333,7 +333,7 @@ function MiniAppsContent() {
       },
       {
         key: 'lifecycle',
-        header: 'Version',
+        header: 'Stage',
         width: 'w-[14%]',
         sortable: false,
         cell: (app) => (
