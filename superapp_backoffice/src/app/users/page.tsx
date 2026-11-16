@@ -29,6 +29,7 @@ import {
   getRoleTheme,
   getUserRoles,
   getUserEffectiveStatus,
+  UserAvatar,
 } from '@/components/users';
 import { OrganizationAvatar } from '@/components/organizations';
 function UsersContent() {
@@ -394,30 +395,14 @@ function UsersContent() {
       defaultSort: true,
       sortValue: (user) => user.name || user.email || '',
       cell: (user) => {
-        const initials = (user.name || 'U')
-          .split(' ')
-          .map((n) => n[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase();
         return (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-900">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold flex items-center justify-center text-sm">
-                  {initials}
-                </div>
-              )}
-            </div>
+            <UserAvatar
+              name={user.name}
+              email={user.email}
+              avatarUrl={user.avatarUrl}
+              size="md"
+            />
             <div className="min-w-0">
               <div className="font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
                 <Link

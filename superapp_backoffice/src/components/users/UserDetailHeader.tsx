@@ -12,6 +12,7 @@ import ActionMenu from '@/components/ui/ActionMenu';
 import { ShieldCheckIcon, CheckIcon, XIcon, BuildingIcon, LockIcon } from '@/components/ui/Icons';
 import { useAuth } from '@/lib/auth';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles } from './types';
+import { UserAvatar } from './UserAvatar';
 
 
 export interface UserDetailHeaderProps {
@@ -85,15 +86,6 @@ export function UserDetailHeader({
   const canEditTarget = canManage && (!isTargetSuperAdmin || isSelf);
 
 
-  const initials = (user.name || 'U')
-    .split(' ')
-    .filter(Boolean)
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
-
   const formattedCreated = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString(undefined, {
         month: 'short',
@@ -141,22 +133,12 @@ export function UserDetailHeader({
             {/* Avatar & Name Group */}
             <div className="flex flex-col items-center space-y-3.5 w-full">
               {/* Avatar */}
-              <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 shadow-md ring-4 ring-slate-100 dark:ring-slate-800 select-none">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold text-3xl flex items-center justify-center">
-                    {initials}
-                  </div>
-                )}
-              </div>
+              <UserAvatar
+                name={user.name}
+                email={user.email}
+                avatarUrl={user.avatarUrl}
+                size="2xl"
+              />
 
               {/* Name & Email */}
               <div className="space-y-1 min-w-0 w-full px-1">
