@@ -35,7 +35,7 @@ pkg_root() { node -e 'try { const i = require(process.env.R + "/ingest.json"); i
 /** Unpacks the archive (or takes the clone), inspects manifests and bytecode. */
 String ingestPy() {
     return '''
-import hashlib, json, os, re, sys, zipfile
+import hashlib, json, os, plistlib, re, sys, zipfile
 
 mode, archive, dest, report, expected, sub = sys.argv[1:7]
 out = {"passed": False, "detectedPermissions": [], "manifestPermissions": [], "platforms": []}
@@ -129,16 +129,32 @@ try:
     for pl in plists:
         out["platforms"].append("ios")
         try:
-            with open(pl, "r", encoding="utf-8", errors="ignore") as f:
-                pcontent = f.read()
-            id_m = re.search(r'<key>CFBundleIdentifier</key>[ \t\r\n]*<string>([^<]+)</string>', pcontent)
-            if id_m and not pkg_name:
-                pkg_name = id_m.group(1)
-            ver_m = re.search(r'<key>CFBundleShortVersionString</key>[ \t\r\n]*<string>([^<]+)</string>', pcontent)
-            if ver_m and not version:
-                version = ver_m.group(1)
+            with open(pl, "rb") as f:
+                pdata = plistlib.load(f)
+            bid = pdata.get("CFBundleIdentifier")
+            if bid and not pkg_name:
+                pkg_name = str(bid)
+            bver = pdata.get("CFBundleShortVersionString") or pdata.get("CFBundleVersion")
+            if bver and not version:
+                version = str(bver)
         except Exception:
-            pass
+            try:
+                with open(pl, "r", encoding="utf-8", errors="ignore") as f:
+                    pcontent = f.read()
+                if "<key>CFBundleIdentifier</key>" in pcontent:
+                    parts = pcontent.split("<key>CFBundleIdentifier</key>", 1)[1]
+                    if "<string>" in parts and "</string>" in parts:
+                        s = parts.split("<string>", 1)[1].split("</string>", 1)[0].strip()
+                        if s and not pkg_name:
+                            pkg_name = s
+                if "<key>CFBundleShortVersionString</key>" in pcontent:
+                    parts = pcontent.split("<key>CFBundleShortVersionString</key>", 1)[1]
+                    if "<string>" in parts and "</string>" in parts:
+                        s = parts.split("<string>", 1)[1].split("</string>", 1)[0].strip()
+                        if s and not version:
+                            version = s
+            except Exception:
+                pass
 
     # Map manifest permissions to SuperApp capability names
     cap_map = {
