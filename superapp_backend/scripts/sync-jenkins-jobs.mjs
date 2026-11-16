@@ -8,18 +8,23 @@ const __dirname = path.dirname(__filename);
 const isProdFlag = process.argv.includes('--prod') || process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 
 function loadEnv() {
+  const backendRoot = path.resolve(__dirname, '..');
   const envPaths = isProdFlag
     ? [
         path.join(process.cwd(), '.env.production'),
         path.join(process.cwd(), 'superapp_backend', '.env.production'),
+        path.join(backendRoot, '.env.production'),
         path.join(process.cwd(), '.env'),
         path.join(process.cwd(), 'superapp_backend', '.env'),
+        path.join(backendRoot, '.env'),
       ]
     : [
         path.join(process.cwd(), '.env'),
         path.join(process.cwd(), '.env.development'),
         path.join(process.cwd(), 'superapp_backend', '.env'),
         path.join(process.cwd(), 'superapp_backend', '.env.development'),
+        path.join(backendRoot, '.env'),
+        path.join(backendRoot, '.env.development'),
       ];
 
   for (const envPath of envPaths) {
@@ -270,6 +275,229 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <defaultValue></defaultValue>
           <description>Harbor Robot Account Token / Secret</description>
         </hudson.model.PasswordParameterDefinition>`;
+  }
+
+  if (jobName === 'superapp-test-build') {
+    return `${scmTokenParam}
+        <hudson.model.StringParameterDefinition>
+          <name>APP_NAME</name>
+          <defaultValue>superapp</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>RELEASE_VERSION</name>
+          <defaultValue>v0.0.1</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>BUILD_TYPE</name>
+          <description>Flutter build mode</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>release</string>
+              <string>debug</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>MINIAPP_SET</name>
+          <description>Mini apps to bundle</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>test</string>
+              <string>release</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/api/release-assembly/build-callback</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_TOKEN</name>
+          <defaultValue>${escapeXmlScript(releaseCallbackToken)}</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXUS_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/nexus</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXUS_USER</name>
+          <defaultValue>admin</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.PasswordParameterDefinition>
+          <name>NEXUS_PASSWORD</name>
+          <defaultValue></defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>API_BASE_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/api</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MOBILE_REPO_URL</name>
+          <defaultValue>https://git.fintechcenterfsa.com/frontend/super-app.git</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MOBILE_BRANCH</name>
+          <defaultValue>development</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>GIT_CREDENTIALS_ID</name>
+          <defaultValue>git-action</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NATIVE_SDK_MANIFEST_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>FLUTTER_IMAGE</name>
+          <defaultValue>ghcr.io/cirruslabs/flutter:3.44.0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PUB_GATEWAY_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/pub</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PRIVATE_GIT_DEPS</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_CREDENTIALS_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MINIAPPS_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>TOOLCHAIN_CHECK_ONLY</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>BUILD_WEB</name>
+          <defaultValue>true</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CODEGEN_MR_IID</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_MODE</name>
+          <defaultValue>release</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
+  }
+
+  if (jobName === 'superapp-sandbox-build') {
+    return `${scmTokenParam}
+        <hudson.model.StringParameterDefinition>
+          <name>REPO_URL</name>
+          <defaultValue>https://git.fintechcenterfsa.com/frontend/super-app.git</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BRANCH</name>
+          <defaultValue>development</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>GIT_CREDENTIALS_ID</name>
+          <defaultValue>git-action</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BASE_HREF</name>
+          <defaultValue>/superapp-sandbox/</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>BUILD_MODE</name>
+          <description>Flutter Web build mode</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>release</string>
+              <string>debug</string>
+              <string>profile</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>DEPLOY_SANDBOX</name>
+          <defaultValue>true</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>PUBLISH_TO_NEXUS</name>
+          <defaultValue>true</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>API_BASE_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/api</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXUS_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/nexus</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXUS_USER</name>
+          <defaultValue>admin</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.PasswordParameterDefinition>
+          <name>NEXUS_PASSWORD</name>
+          <defaultValue></defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>FLUTTER_IMAGE</name>
+          <defaultValue>ghcr.io/cirruslabs/flutter:3.44.0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PUB_GATEWAY_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/pub</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PRIVATE_GIT_DEPS</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_CREDENTIALS_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MINIAPPS_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_TOKEN</name>
+          <defaultValue>${escapeXmlScript(releaseCallbackToken)}</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
   }
 
   return `${scmTokenParam}
