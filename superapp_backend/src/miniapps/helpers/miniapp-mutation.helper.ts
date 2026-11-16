@@ -222,7 +222,7 @@ export class MiniappMutationHelper {
     const clean = input?.trim();
     if (clean && this.organizationRepository?.findOne) {
       const org = await this.organizationRepository.findOne({
-        where: [{ name: clean }, { code: clean }],
+        where: [{ name: clean }, { code: clean }, { id: clean }],
       });
       if (org?.code) return { name: org.name, code: org.code, id: org.id };
     }
@@ -318,10 +318,18 @@ export class MiniappMutationHelper {
     }
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = await this.resolveOrganization(data.organization);
-    data.organization = orgInfo.name;
-    data.organizationCode = orgInfo.code;
-    if (orgInfo.id && !data.organizationId) {
+    let orgInfo = await this.resolveOrganization(data.organization);
+    if ((!orgInfo.id || !orgInfo.name) && data.organizationId && this.organizationRepository?.findOne) {
+      const orgById = await this.organizationRepository.findOne({
+        where: [{ id: data.organizationId }, { code: data.organizationId }, { name: data.organizationId }],
+      });
+      if (orgById) {
+        orgInfo = { name: orgById.name, code: orgById.code, id: orgById.id };
+      }
+    }
+    if (orgInfo.name) data.organization = orgInfo.name;
+    if (orgInfo.code) data.organizationCode = orgInfo.code;
+    if (orgInfo.id) {
       data.organizationId = orgInfo.id;
     }
     // mini_apps.organizationId is NOT NULL: fall back to the creator's agency
@@ -589,7 +597,7 @@ export class MiniappMutationHelper {
     delete data.status;
     const orgInput = options.lockOwnership
       ? undefined
-      : data.organization || undefined;
+      : data.organization || data.organizationId || undefined;
     delete data.category;
 
     if (data.shortDescription !== undefined) {
@@ -986,10 +994,18 @@ export class MiniappMutationHelper {
         data.alertTelegramChatId || data.teamTelegramChatId;
     }
     if (orgInput) {
-      const orgInfo = await this.resolveOrganization(orgInput);
-      (merged as any).organization = orgInfo.name;
-      (merged as any).organizationCode = orgInfo.code;
-      if (orgInfo?.id) merged.organizationId = orgInfo.id;
+      let orgInfo = await this.resolveOrganization(orgInput);
+      if ((!orgInfo.id || !orgInfo.name) && data.organizationId && this.organizationRepository?.findOne) {
+        const orgById = await this.organizationRepository.findOne({
+          where: [{ id: data.organizationId }, { code: data.organizationId }, { name: data.organizationId }],
+        });
+        if (orgById) {
+          orgInfo = { name: orgById.name, code: orgById.code, id: orgById.id };
+        }
+      }
+      if (orgInfo.name) (merged as any).organization = orgInfo.name;
+      if (orgInfo.code) (merged as any).organizationCode = orgInfo.code;
+      if (orgInfo.id) merged.organizationId = orgInfo.id;
     }
 
     // Reset domain verification status if productionUrl changes

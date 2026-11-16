@@ -199,7 +199,19 @@ export class MiniappsController {
     // Automatic Agency Inheritance
     const userOrgId = req.user?.organizationId;
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
-    if (userOrgId) {
+    const userIsSuper = isSuperAdmin(req.user);
+
+    if (userIsSuper) {
+      // Super admins can register for any organization.
+      // If organizationId or organization name is not provided, fall back to user's org.
+      if (!dataToSave.organizationId && !dataToSave.organization && userOrgId) {
+        dataToSave.organizationId = userOrgId;
+        if (req.user?.organization)
+          dataToSave.organization = req.user.organization;
+        if (req.user?.organizationCode)
+          dataToSave.organizationCode = req.user.organizationCode;
+      }
+    } else if (userOrgId) {
       if (
         isDeveloper &&
         dataToSave.organizationId &&
@@ -255,7 +267,19 @@ export class MiniappsController {
     // Automatic Agency Inheritance
     const userOrgId = req.user?.organizationId;
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
-    if (userOrgId) {
+    const userIsSuper = isSuperAdmin(req.user);
+
+    if (userIsSuper) {
+      // Super admins can register for any organization.
+      // If organizationId or organization name is not provided, fall back to user's org.
+      if (!dataToSave.organizationId && !dataToSave.organization && userOrgId) {
+        dataToSave.organizationId = userOrgId;
+        if (req.user?.organization)
+          dataToSave.organization = req.user.organization;
+        if (req.user?.organizationCode)
+          dataToSave.organizationCode = req.user.organizationCode;
+      }
+    } else if (userOrgId) {
       if (
         isDeveloper &&
         dataToSave.organizationId &&

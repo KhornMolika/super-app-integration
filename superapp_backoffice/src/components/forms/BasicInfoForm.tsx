@@ -7,7 +7,12 @@ import { unwrapData } from '@/api';
 import { useAuth } from '@/lib/auth';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isSuperAdmin =
+    role === 'SUPER_ADMIN' ||
+    user?.roles?.some(
+      (r: any) => (typeof r === 'string' ? r : r?.name)?.toUpperCase() === 'SUPER_ADMIN',
+    );
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
@@ -42,16 +47,21 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
             return false;
           });
 
-          // If user belongs to an organization, always bind to their organization
-          const targetOrg = matchedUserOrg || (userOrgName ? { name: userOrgName, code: userOrgCode || '' } : (!formData.organization ? data[0] : null));
+          // If user belongs to an organization, bind default organization (super admins can freely re-select)
+          const targetOrg = matchedUserOrg || (userOrgName ? { name: userOrgName, code: userOrgCode || '', id: userOrgId || '' } : (!formData.organization ? data[0] : null));
 
-          if (targetOrg && handleChange && (!formData.organization || (!formData.id && (matchedUserOrg || userOrgName)))) {
+          if (targetOrg && handleChange && (!formData.organization || (!isSuperAdmin && !formData.id && (matchedUserOrg || userOrgName)))) {
             handleChange({
               target: { name: 'organization', value: targetOrg.name },
             } as any);
             if (targetOrg.code) {
               handleChange({
                 target: { name: 'organizationCode', value: targetOrg.code },
+              } as any);
+            }
+            if (targetOrg.id) {
+              handleChange({
+                target: { name: 'organizationId', value: targetOrg.id },
               } as any);
             }
           }
@@ -113,6 +123,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
 
   // Sync user organization when user or organizations finish loading
   useEffect(() => {
+    if (isSuperAdmin) return; // Super admins can pick any organization; don't force-overwrite
     if (!userAffiliatedOrg || !handleChange) return;
     if (formData.id) return; // Do not overwrite existing miniapp organization
 
@@ -129,7 +140,12 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         target: { name: 'organizationCode', value: targetCode },
       } as any);
     }
-  }, [userAffiliatedOrg, formData.id, formData.organization, formData.organizationCode, handleChange]);
+    if (userAffiliatedOrg.id && formData.organizationId !== userAffiliatedOrg.id) {
+      handleChange({
+        target: { name: 'organizationId', value: userAffiliatedOrg.id },
+      } as any);
+    }
+  }, [userAffiliatedOrg, formData.id, formData.organization, formData.organizationCode, formData.organizationId, handleChange, isSuperAdmin]);
 
   // Filter out any INACTIVE organizations and sort in Ascending (ASC) order from A to Z
   const activeDbOrgs = useMemo(
@@ -156,7 +172,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
   }, [activeDbOrgs]);
 
   const handleOrgSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (userAffiliatedOrg) return; // Disallow changing organization when bound to user's org
+    if (!isSuperAdmin && userAffiliatedOrg) return; // Disallow changing organization when bound to user's org
     const chosenName = e.target.value;
     const selectedOrg = dbOrganizations.find((o) => o.name === chosenName);
 
@@ -168,6 +184,12 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
       handleChange({
         target: { name: 'organizationCode', value: selectedOrg?.code || '' },
       } as any);
+
+      if (selectedOrg?.id) {
+        handleChange({
+          target: { name: 'organizationId', value: selectedOrg.id },
+        } as any);
+      }
     }
   };
 
@@ -207,12 +229,12 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{allErrors.slug}</p>}
       </div>
 
-      {/* Organization: plain text when it is fixed to the user's own */}
+      {/* Organization: plain text when it is fixed to the user's own (Super admins can select any org) */}
       <div>
         <Label htmlFor="miniapp-org">
           Organization <span className="text-rose-500">*</span>
         </Label>
-        {userAffiliatedOrg ? (
+        {!isSuperAdmin && userAffiliatedOrg ? (
           <div
             id="miniapp-org"
             className="flex items-center gap-2 min-h-[42px] px-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-200"

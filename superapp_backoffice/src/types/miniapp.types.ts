@@ -136,6 +136,7 @@ export interface CreateMiniAppDto {
   description?: string;
   organization?: string;
   organizationCode?: string;
+  organizationId?: string;
   shortDescription?: string;
   fullDescription?: string;
   logo?: string;

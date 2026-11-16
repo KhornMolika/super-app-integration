@@ -363,3 +363,39 @@ describe('package archive upload', () => {
     ).toBe(404);
   });
 });
+
+describe('register and create organization scoping', () => {
+  it('allows a SUPER_ADMIN to register an app under any organization', async () => {
+    const { controller, service } = build();
+    service.findByAppId.mockResolvedValue(null);
+    service.create.mockImplementation(async (data: any) => data);
+
+    const saReq = { user: USERS.superAdmin }; // superAdmin has organizationId: ORG_B
+    const dto: any = {
+      appId: 'com.test.otherorg',
+      name: 'Other Org App',
+      organizationId: ORG_A,
+      organization: 'Org A',
+    };
+
+    await controller.create(dto, saReq);
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: ORG_A, organization: 'Org A' }),
+      USERS.superAdmin.sub,
+    );
+  });
+
+  it('restricts a MA_DEVELOPER from registering an app under another organization', async () => {
+    const { controller, service } = build();
+    service.findByAppId.mockResolvedValue(null);
+
+    const devReq = { user: USERS.devA }; // devA has organizationId: ORG_A
+    const dto: any = {
+      appId: 'com.test.crossorg',
+      name: 'Cross Org App',
+      organizationId: ORG_B,
+    };
+
+    await expect(controller.create(dto, devReq)).rejects.toThrow(ForbiddenException);
+  });
+});

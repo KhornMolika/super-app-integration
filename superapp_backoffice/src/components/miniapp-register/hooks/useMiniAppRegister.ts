@@ -204,6 +204,11 @@ export function useMiniAppRegister() {
 
   useEffect(() => {
     if (user) {
+      const isSuperAdmin =
+        user.role === 'SUPER_ADMIN' ||
+        user.roles?.some(
+          (r: any) => (typeof r === 'string' ? r : r?.name)?.toUpperCase() === 'SUPER_ADMIN',
+        );
       const userOrg = user.organization;
       const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name || '';
       const userOrgCode = typeof userOrg === 'object' ? userOrg?.code || '' : '';
@@ -215,10 +220,10 @@ export function useMiniAppRegister() {
         ownerEmail: prev.ownerEmail || user.email || '',
         supportEmail: prev.supportEmail || user.email || '',
         teamName: prev.teamName || (userOrgName ? `${userOrgName} Team` : 'MiniApp Development Team'),
-        ...(userOrgName ? {
-          organization: userOrgName,
-          organizationCode: userOrgCode,
-          organizationId: userOrgId,
+        ...(userOrgName && (!isSuperAdmin || !prev.organization) ? {
+          organization: prev.organization || userOrgName,
+          organizationCode: prev.organizationCode || userOrgCode,
+          organizationId: prev.organizationId || userOrgId,
         } : {}),
       }));
     }
@@ -419,10 +424,15 @@ export function useMiniAppRegister() {
   ) => {
     const { name, value } = e.target;
     if (name === 'organization') {
+      const isSuperAdmin =
+        user?.role === 'SUPER_ADMIN' ||
+        user?.roles?.some(
+          (r: any) => (typeof r === 'string' ? r : r?.name)?.toUpperCase() === 'SUPER_ADMIN',
+        );
       const userOrg = user?.organization;
       const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
-      if (userOrgName) {
-        return; // Disallow changing organization when bound to user's organization
+      if (!isSuperAdmin && userOrgName) {
+        return; // Disallow changing organization when bound to user's organization (non-super-admins)
       }
       setFormData((prev) => ({
         ...prev,
@@ -431,14 +441,26 @@ export function useMiniAppRegister() {
       return;
     }
     if (name === 'organizationCode') {
+      const isSuperAdmin =
+        user?.role === 'SUPER_ADMIN' ||
+        user?.roles?.some(
+          (r: any) => (typeof r === 'string' ? r : r?.name)?.toUpperCase() === 'SUPER_ADMIN',
+        );
       const userOrg = user?.organization;
       const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
-      if (userOrgCode) {
-        return; // Disallow changing organization code
+      if (!isSuperAdmin && userOrgCode) {
+        return; // Disallow changing organization code (non-super-admins)
       }
       setFormData((prev) => ({
         ...prev,
         organizationCode: value,
+      }));
+      return;
+    }
+    if (name === 'organizationId') {
+      setFormData((prev) => ({
+        ...prev,
+        organizationId: value,
       }));
       return;
     }
