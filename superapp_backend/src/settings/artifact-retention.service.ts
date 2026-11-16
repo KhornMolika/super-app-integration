@@ -265,6 +265,114 @@ export class ArtifactRetentionService implements OnModuleInit {
     return fallback;
   }
 
+  /**
+   * Fetches all assets for a given repository from Nexus, following continuation tokens.
+   */
+  async fetchAllRepositoryAssets(
+    baseUrl: string,
+    repository: string,
+    authHeaders: Record<string, string>,
+  ): Promise<any[]> {
+    const allItems: any[] = [];
+    let continuationToken: string | null = null;
+    let pageCount = 0;
+    const maxPages = 50;
+
+    do {
+      pageCount++;
+      const url = new URL(`${baseUrl}/service/rest/v1/assets`);
+      url.searchParams.set('repository', repository);
+      if (continuationToken) {
+        url.searchParams.set('continuationToken', continuationToken);
+      }
+
+      const res = await fetch(url.toString(), { headers: authHeaders });
+      if (!res.ok) {
+        if (pageCount === 1) {
+          throw new Error(
+            `HTTP ${res.status} (${res.statusText}) querying repository ${repository}`,
+          );
+        }
+        this.logger.warn(
+          `Failed to fetch continuation page ${pageCount} for repository ${repository}: HTTP ${res.status}`,
+        );
+        break;
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data.items)) {
+        allItems.push(...data.items);
+      }
+      continuationToken = data.continuationToken || null;
+    } while (continuationToken && pageCount < maxPages);
+
+    return allItems;
+  }
+
+  /**
+   * Correctly groups assets by application and version directory.
+   * Handles Nexus paths with or without leading slashes (e.g. "/superapp/v1.1.9/superapp-test-v1.1.9.apk").
+   */
+  groupAssetsByAppAndVersion(
+    items: any[],
+  ): Record<string, Record<string, any[]>> {
+    const appGroups: Record<string, Record<string, any[]>> = {};
+
+    for (const item of items) {
+      const cleanParts = (item.path || '').split('/').filter(Boolean);
+      let appName = 'superapp';
+      let version = 'default';
+
+      if (cleanParts.length >= 3) {
+        // e.g. ["superapp", "v1.1.9", "superapp-test-v1.1.9.apk"]
+        appName = cleanParts[0];
+        version = cleanParts[1];
+      } else if (cleanParts.length === 2) {
+        // e.g. ["superapp", "superapp-test.apk"]
+        appName = cleanParts[0];
+        version = 'default';
+      } else if (cleanParts.length === 1) {
+        // e.g. ["superapp-test.apk"]
+        appName = 'superapp';
+        version = 'default';
+      }
+
+      if (!appGroups[appName]) appGroups[appName] = {};
+      if (!appGroups[appName][version]) appGroups[appName][version] = [];
+      appGroups[appName][version].push(item);
+    }
+
+    return appGroups;
+  }
+
+  /**
+   * Sorts versions: 'latest' always protected first, then newest to oldest by creation/modification timestamp,
+   * with natural/semantic version comparison as a tie-breaker.
+   */
+  sortVersions(
+    versionMap: Record<string, any[]>,
+  ): Array<{ version: string; items: any[]; time: number }> {
+    const versions = Object.keys(versionMap).map((ver) => {
+      const verItems = versionMap[ver];
+      const maxTime = Math.max(
+        ...verItems.map((it) => {
+          const t = new Date(it.lastModified || it.blobCreated || 0).getTime();
+          return isNaN(t) ? 0 : t;
+        }),
+      );
+      return { version: ver, items: verItems, time: maxTime };
+    });
+
+    versions.sort((a, b) => {
+      if (a.version === 'latest') return -1;
+      if (b.version === 'latest') return 1;
+      if (b.time !== a.time) return b.time - a.time;
+      return b.version.localeCompare(a.version, undefined, { numeric: true });
+    });
+
+    return versions;
+  }
+
   async getStorageStats(): Promise<StorageOverviewStats> {
     const policy = await this.getPolicy();
     const baseUrl = await this.getNexusBaseUrl();
@@ -278,59 +386,47 @@ export class ArtifactRetentionService implements OnModuleInit {
     let prunableSizeMb = 0;
 
     try {
-      // Fetch assets from apk-test-builds
-      const testRes = await fetch(
-        `${baseUrl}/service/rest/v1/assets?repository=apk-test-builds`,
-        { headers: authHeaders },
+      // Fetch assets from apk-test-builds with pagination
+      const items = await this.fetchAllRepositoryAssets(
+        baseUrl,
+        'apk-test-builds',
+        authHeaders,
       );
-      if (testRes.ok) {
-        const data = await testRes.json();
-        const items = data.items || [];
-        testCount = items.length;
-        // Group by path or prefix
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - policy.retentionDays);
+      testCount = items.length;
 
-        const appGroups: Record<string, Record<string, any[]>> = {};
-        for (const item of items) {
-          const size = (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
-          testSizeMb += size;
-          const parts = (item.path || '').split('/');
-          const appName = parts[0] || 'superapp';
-          const version = parts[1] || 'default';
+      const appGroups = this.groupAssetsByAppAndVersion(items);
+      const maxKeep = Math.max(1, policy.maxTestBuildsPerApp || 3);
 
-          if (!appGroups[appName]) appGroups[appName] = {};
-          if (!appGroups[appName][version]) appGroups[appName][version] = [];
-          appGroups[appName][version].push(item);
-        }
+      for (const appName of Object.keys(appGroups)) {
+        const versions = this.sortVersions(appGroups[appName]);
 
-        // Apply Dual-rule estimation: keep last N build versions per app
-        for (const appName of Object.keys(appGroups)) {
-          const versionMap = appGroups[appName];
-          const versions = Object.keys(versionMap).map((ver) => {
-            const verItems = versionMap[ver];
-            const maxTime = Math.max(
-              ...verItems.map((it) =>
-                new Date(it.lastModified || it.blobCreated || 0).getTime(),
-              ),
-            );
-            return { version: ver, items: verItems, time: maxTime };
-          });
+        // Keep top N versions per app
+        const canPruneApp =
+          (appName === 'superapp' && policy.pruneSuperAppTestBuilds) ||
+          (appName !== 'superapp' && policy.pruneMiniAppArtifacts);
 
-          // Sort versions: 'latest' first, then newer to older
-          versions.sort((a, b) => {
-            if (a.version === 'latest') return -1;
-            if (b.version === 'latest') return 1;
-            return b.time - a.time;
-          });
-
-          const candidates = versions.slice(policy.maxTestBuildsPerApp);
+        if (canPruneApp) {
+          const candidates = versions.slice(maxKeep);
           for (const verObj of candidates) {
             for (const item of verObj.items) {
               prunableCount++;
-              prunableSizeMb +=
-                (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
+              const size =
+                typeof item.fileSize === 'number'
+                  ? item.fileSize
+                  : 50 * 1024 * 1024;
+              prunableSizeMb += size / (1024 * 1024);
             }
+          }
+        }
+
+        // Sum total test size
+        for (const verObj of versions) {
+          for (const item of verObj.items) {
+            const size =
+              typeof item.fileSize === 'number'
+                ? item.fileSize
+                : 50 * 1024 * 1024;
+            testSizeMb += size / (1024 * 1024);
           }
         }
       }
@@ -338,29 +434,27 @@ export class ArtifactRetentionService implements OnModuleInit {
       this.logger.warn(
         `Could not query Nexus apk-test-builds assets: ${err.message}`,
       );
-      testCount = 6;
-      testSizeMb = 288;
-      prunableCount = 3;
-      prunableSizeMb = 144;
     }
 
     try {
       // Fetch official releases (PERMANENTLY PROTECTED)
-      const relRes = await fetch(
-        `${baseUrl}/service/rest/v1/assets?repository=apk-releases`,
-        { headers: authHeaders },
+      const relItems = await this.fetchAllRepositoryAssets(
+        baseUrl,
+        'apk-releases',
+        authHeaders,
       );
-      if (relRes.ok) {
-        const data = await relRes.json();
-        const items = data.items || [];
-        releaseCount = items.length;
-        for (const item of items) {
-          releaseSizeMb += (item.fileSize || 55 * 1024 * 1024) / (1024 * 1024);
-        }
+      releaseCount = relItems.length;
+      for (const item of relItems) {
+        const size =
+          typeof item.fileSize === 'number'
+            ? item.fileSize
+            : 55 * 1024 * 1024;
+        releaseSizeMb += size / (1024 * 1024);
       }
     } catch (err: any) {
-      releaseCount = 2;
-      releaseSizeMb = 110;
+      this.logger.warn(
+        `Could not query Nexus apk-releases assets: ${err.message}`,
+      );
     }
 
     // Calculate next run date/time display
@@ -372,7 +466,9 @@ export class ArtifactRetentionService implements OnModuleInit {
       ) {
         nextScheduledRun = policy.specificRunDateTime;
       } else {
-        const [hh, mm] = policy.scheduleTime.split(':').map(Number);
+        const [hh, mm] = (policy.scheduleTime || '02:00')
+          .split(':')
+          .map(Number);
         const next = new Date();
         next.setHours(hh, mm, 0, 0);
         if (next.getTime() <= Date.now()) {
@@ -415,8 +511,11 @@ export class ArtifactRetentionService implements OnModuleInit {
     const baseUrl = await this.getNexusBaseUrl();
     const authHeaders = this.getNexusAuthHeader();
 
+    const maxKeep = Math.max(1, policy.maxTestBuildsPerApp || 3);
+    const retentionDays = Math.max(1, policy.retentionDays || 14);
+
     this.logger.log(
-      `Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${policy.maxTestBuildsPerApp} build versions, ageThreshold=${policy.retentionDays}d`,
+      `Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${maxKeep} build versions, ageThreshold=${retentionDays}d`,
     );
 
     let prunedCount = 0;
@@ -424,105 +523,100 @@ export class ArtifactRetentionService implements OnModuleInit {
     const details: Array<{ path: string; size: string; status: string }> = [];
 
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - policy.retentionDays);
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     try {
-      if (policy.pruneSuperAppTestBuilds) {
-        const res = await fetch(
-          `${baseUrl}/service/rest/v1/assets?repository=apk-test-builds`,
-          { headers: authHeaders },
+      if (policy.pruneSuperAppTestBuilds || policy.pruneMiniAppArtifacts) {
+        const items = await this.fetchAllRepositoryAssets(
+          baseUrl,
+          'apk-test-builds',
+          authHeaders,
         );
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
 
-          // Group assets by application and version directory
-          const appGroups: Record<string, Record<string, any[]>> = {};
-          for (const item of items) {
-            const parts = (item.path || '').split('/');
-            const appName = parts[0] || 'superapp';
-            const version = parts[1] || 'default';
+        // Group assets by application and version directory
+        const appGroups = this.groupAssetsByAppAndVersion(items);
 
-            if (!appGroups[appName]) appGroups[appName] = {};
-            if (!appGroups[appName][version]) appGroups[appName][version] = [];
-            appGroups[appName][version].push(item);
+        // Enforce dual-rule: protect last N build versions per app, delete older versions
+        for (const appName of Object.keys(appGroups)) {
+          if (appName === 'superapp' && !policy.pruneSuperAppTestBuilds) {
+            continue;
+          }
+          if (appName !== 'superapp' && !policy.pruneMiniAppArtifacts) {
+            continue;
           }
 
-          // Enforce dual-rule: protect last N build versions per app, delete older versions
-          for (const appName of Object.keys(appGroups)) {
-            const versionMap = appGroups[appName];
-            const versions = Object.keys(versionMap).map((ver) => {
-              const verItems = versionMap[ver];
-              const maxTime = Math.max(
-                ...verItems.map((it) =>
-                  new Date(it.lastModified || it.blobCreated || 0).getTime(),
-                ),
-              );
-              return { version: ver, items: verItems, time: maxTime };
-            });
+          const versions = this.sortVersions(appGroups[appName]);
 
-            // Sort versions: 'latest' always protected first, followed by newest to oldest
-            versions.sort((a, b) => {
-              if (a.version === 'latest') return -1;
-              if (b.version === 'latest') return 1;
-              return b.time - a.time;
-            });
-
-            // Retain top N build versions unconditionally
-            const protectedVersions = versions.slice(
-              0,
-              policy.maxTestBuildsPerApp,
-            );
-            for (const verObj of protectedVersions) {
-              for (const item of verObj.items) {
-                details.push({
-                  path: item.path || 'apk-test-builds/' + item.id,
-                  size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
-                  status: 'RETAINED_RECENT_BUILD',
-                });
-              }
+          // Retain top N build versions unconditionally
+          const protectedVersions = versions.slice(0, maxKeep);
+          for (const verObj of protectedVersions) {
+            for (const item of verObj.items) {
+              const size =
+                typeof item.fileSize === 'number'
+                  ? item.fileSize
+                  : 50 * 1024 * 1024;
+              details.push({
+                path: item.path || 'apk-test-builds/' + item.id,
+                size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                status: 'RETAINED_RECENT_BUILD',
+              });
             }
+          }
 
-            // Inspect remainder versions for age cutoff or manual pruning
-            const remainderVersions = versions.slice(
-              policy.maxTestBuildsPerApp,
-            );
-            for (const verObj of remainderVersions) {
-              const isOlder = verObj.time < cutoffDate.getTime();
-              const shouldPrune =
-                triggerSource === 'MANUAL' ||
-                triggerSource === 'SCHEDULED_SPECIFIC_DATETIME' ||
-                isOlder;
+          // Inspect remainder versions for age cutoff or manual pruning
+          const remainderVersions = versions.slice(maxKeep);
+          for (const verObj of remainderVersions) {
+            const isOlder = verObj.time < cutoffDate.getTime();
+            const shouldPrune =
+              triggerSource === 'MANUAL' ||
+              triggerSource === 'SCHEDULED_SPECIFIC_DATETIME' ||
+              isOlder;
 
-              for (const item of verObj.items) {
-                if (shouldPrune) {
-                  try {
-                    const delRes = await fetch(
-                      `${baseUrl}/service/rest/v1/assets/${encodeURIComponent(item.id)}`,
-                      { method: 'DELETE', headers: authHeaders },
-                    );
-                    if (delRes.ok || delRes.status === 204) {
-                      prunedCount++;
-                      const size = item.fileSize || 50 * 1024 * 1024;
-                      freedBytes += size;
-                      details.push({
-                        path: item.path || item.id,
-                        size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
-                        status: 'PRUNED_SUCCESS',
-                      });
-                    }
-                  } catch (delErr: any) {
+            for (const item of verObj.items) {
+              const size =
+                typeof item.fileSize === 'number'
+                  ? item.fileSize
+                  : 50 * 1024 * 1024;
+              if (shouldPrune) {
+                try {
+                  const delRes = await fetch(
+                    `${baseUrl}/service/rest/v1/assets/${encodeURIComponent(item.id)}`,
+                    { method: 'DELETE', headers: authHeaders },
+                  );
+                  if (delRes.ok || delRes.status === 204) {
+                    prunedCount++;
+                    freedBytes += size;
+                    details.push({
+                      path: item.path || item.id,
+                      size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                      status: 'PRUNED_SUCCESS',
+                    });
+                  } else {
                     this.logger.warn(
-                      `Failed to delete asset ${item.id}: ${delErr.message}`,
+                      `Failed to delete asset ${item.id} (${item.path}): HTTP ${delRes.status} ${delRes.statusText}`,
                     );
+                    details.push({
+                      path: item.path || item.id,
+                      size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                      status: `FAILED_HTTP_${delRes.status}`,
+                    });
                   }
-                } else {
+                } catch (delErr: any) {
+                  this.logger.warn(
+                    `Failed to delete asset ${item.id}: ${delErr.message}`,
+                  );
                   details.push({
                     path: item.path || item.id,
-                    size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
-                    status: 'RETAINED_WITHIN_AGE_LIMIT',
+                    size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                    status: 'DELETE_ERROR',
                   });
                 }
+              } else {
+                details.push({
+                  path: item.path || item.id,
+                  size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                  status: 'RETAINED_WITHIN_AGE_LIMIT',
+                });
               }
             }
           }
@@ -549,9 +643,9 @@ export class ArtifactRetentionService implements OnModuleInit {
 
     const latestStats = await this.getStorageStats().catch(() => null);
     const protectedCount =
-      latestStats?.protectedReleaseCount ||
-      latestStats?.nexusReleasesCount ||
-      14;
+      latestStats?.protectedReleaseCount ??
+      latestStats?.nexusReleasesCount ??
+      0;
 
     return {
       success: true,
