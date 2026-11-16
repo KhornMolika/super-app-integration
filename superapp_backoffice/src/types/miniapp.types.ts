@@ -96,6 +96,7 @@ export interface DeepLinkConfigDto {
   urlScheme: string;
   packageName?: string;
   appStoreUrl?: string;
+  playStoreUrl?: string;
 }
 
 export interface NativeSdkConfigDto {

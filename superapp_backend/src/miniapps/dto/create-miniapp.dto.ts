@@ -58,6 +58,10 @@ export class DeepLinkConfigDto {
   @IsString()
   @IsOptional()
   appStoreUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  playStoreUrl?: string;
 }
 
 export class WebViewConfigDto {

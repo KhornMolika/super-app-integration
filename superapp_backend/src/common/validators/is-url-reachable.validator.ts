@@ -31,6 +31,16 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
       return true;
     }
 
+    // Official App Store / Google Play URLs frequently reject headless bot HEAD requests or return 404 for unreleased/internal partner apps.
+    // Accept them if they enforce secure HTTPS transport.
+    if (
+      url.includes('play.google.com') ||
+      url.includes('apps.apple.com') ||
+      url.includes('itunes.apple.com')
+    ) {
+      return url.startsWith('https://');
+    }
+
     // In local development / testing, allow localhost and test URLs
     const envVal = (
       process.env.ENVIRONMENT ||

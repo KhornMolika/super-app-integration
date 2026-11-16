@@ -367,9 +367,20 @@ export class MiniappValidationHelper {
         }
       }
     } else if (app.integrationMethod === 'DEEP_LINK') {
-      if (!app.integrationConfig?.urlScheme) {
+      const scheme = app.integrationConfig?.urlScheme?.trim();
+      if (!scheme) {
         errors['integrationConfigDeepLink.urlScheme'] =
           'URL scheme is required for Deep Link integration.';
+      } else {
+        const cleanScheme = scheme.split(':')[0].toLowerCase();
+        const reserved = ['http', 'https', 'file', 'javascript', 'data', 'about', 'vbscript', 'intent'];
+        if (reserved.includes(cleanScheme)) {
+          errors['integrationConfigDeepLink.urlScheme'] =
+            `Scheme "${cleanScheme}" collides with a reserved system protocol.`;
+        } else if (!/^[a-z][a-z0-9+.-]*$/.test(cleanScheme)) {
+          errors['integrationConfigDeepLink.urlScheme'] =
+            `Scheme "${cleanScheme}" violates RFC 3986 syntax requirements.`;
+        }
       }
       if (
         app.integrationConfig?.appStoreUrl &&
@@ -381,7 +392,21 @@ export class MiniappValidationHelper {
             .then((isValid) => {
               if (!isValid)
                 errors['integrationConfigDeepLink.appStoreUrl'] =
-                  'App Store fallback URL must be a valid, reachable URL.';
+                  'App Store fallback URL must be a valid, reachable HTTPS URL.';
+            }),
+        );
+      }
+      if (
+        app.integrationConfig?.playStoreUrl &&
+        app.integrationConfig.playStoreUrl.trim() !== ''
+      ) {
+        checks.push(
+          urlValidator
+            .validate(app.integrationConfig.playStoreUrl, null as any)
+            .then((isValid) => {
+              if (!isValid)
+                errors['integrationConfigDeepLink.playStoreUrl'] =
+                  'Google Play Store fallback URL must be a valid, reachable HTTPS URL.';
             }),
         );
       }

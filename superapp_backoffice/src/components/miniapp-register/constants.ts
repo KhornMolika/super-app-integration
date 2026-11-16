@@ -77,6 +77,7 @@ export function getInitialRegisterFormData(): Partial<CreateMiniAppDto> {
       urlScheme: '',
       packageName: '',
       appStoreUrl: '',
+      playStoreUrl: '',
     },
     homeWidget: null,
     permissions: [],

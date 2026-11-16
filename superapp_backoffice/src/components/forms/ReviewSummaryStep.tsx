@@ -671,10 +671,25 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </code>
                   </div>
                 </div>
+                {formData.integrationConfigDeepLink?.playStoreUrl && (
+                  <div>
+                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                      Google Play Store Fallback (Android)
+                    </span>
+                    <a
+                      href={formData.integrationConfigDeepLink.playStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-brand-600 hover:underline break-all block truncate"
+                    >
+                      {formData.integrationConfigDeepLink.playStoreUrl}
+                    </a>
+                  </div>
+                )}
                 {formData.integrationConfigDeepLink?.appStoreUrl && (
                   <div>
                     <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                      Store Fallback
+                      Apple App Store Fallback (iOS)
                     </span>
                     <a
                       href={formData.integrationConfigDeepLink.appStoreUrl}
