@@ -21,6 +21,9 @@ export interface MiniApp {
   /** The caller's access on this app (GET /mini-apps/:id only): VIEW | EDIT | MAINTAIN | OWN | ADMIN. */
   myAccess?: string;
   ownerId?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  owner?: { id?: string; name?: string; email?: string; avatarUrl?: string };
   version?: string;
   currentReleaseVersion?: string;
   activeTestVersion?: string;

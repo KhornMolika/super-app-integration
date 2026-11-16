@@ -86,5 +86,19 @@ export function formatMiniAppResponse<T = any>(app: T): T {
     teamTelegramChatId: a.alertTelegramChatId ?? a.teamTelegramChatId,
     ownerEmail,
     ownerName,
+    owner: a.owner
+      ? {
+          id: a.owner.id,
+          name: a.owner.name,
+          email: a.owner.email,
+          avatarUrl: a.owner.avatarUrl,
+        }
+      : a.ownerName || a.ownerEmail
+        ? {
+            id: a.ownerId,
+            name: a.ownerName,
+            email: a.ownerEmail,
+          }
+        : null,
   } as T;
 }

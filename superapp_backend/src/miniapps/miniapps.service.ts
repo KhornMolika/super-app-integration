@@ -773,11 +773,11 @@ export class MiniappsService implements OnApplicationBootstrap {
       );
     }
 
-    // Search: name, App ID, tagline, description, organization code or name
+    // Search: name, App ID, tagline, description, organization code or name, app owner
     if (search?.trim()) {
       const sanitized = escapeLikeString(search.trim());
       qb.andWhere(
-        '(app.name ILIKE :search OR app.appId ILIKE :search OR app.tagline ILIKE :search OR app.description ILIKE :search OR org.code ILIKE :search OR org.name ILIKE :search)',
+        '(app.name ILIKE :search OR app.appId ILIKE :search OR app.tagline ILIKE :search OR app.description ILIKE :search OR org.code ILIKE :search OR org.name ILIKE :search OR app.ownerName ILIKE :search OR owner.name ILIKE :search OR owner.email ILIKE :search)',
         { search: `%${sanitized}%` },
       );
     }
@@ -841,6 +841,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       availability: 'app.appStatus',
       organization: 'org.code',
       integrationMethod: 'app.integrationMethod',
+      owner: 'COALESCE(owner.name, app.ownerName, app.ownerEmail)',
     };
     const orderColumn = sortColumns[sortBy] || 'app.createdAt';
     const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';

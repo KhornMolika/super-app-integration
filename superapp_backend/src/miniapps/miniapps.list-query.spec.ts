@@ -108,6 +108,7 @@ describe('MiniappsService.findAll list query', () => {
     ['lifecycle', 'app.appStatus'],
     ['availability', 'app.appStatus'],
     ['organization', 'org.code'],
+    ['owner', 'COALESCE(owner.name, app.ownerName, app.ownerEmail)'],
     ['updatedAt', 'app.updatedAt'],
     ['name', 'app.name'],
     ['anything-else', 'app.createdAt'],
@@ -116,11 +117,12 @@ describe('MiniappsService.findAll list query', () => {
     expect(order()).toEqual([column, 'ASC']);
   });
 
-  it('search covers name, App ID and the organization', async () => {
+  it('search covers name, App ID, organization and owner', async () => {
     const { wheres } = await run({ search: 'irc' });
     const clause = wheres.find((w) => w.params?.search)!;
     expect(clause.sql).toContain('app.appId ILIKE');
     expect(clause.sql).toContain('org.code ILIKE');
+    expect(clause.sql).toContain('app.ownerName ILIKE');
     expect(clause.params.search).toBe('%irc%');
   });
 });

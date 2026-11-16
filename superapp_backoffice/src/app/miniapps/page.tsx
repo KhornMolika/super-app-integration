@@ -24,6 +24,7 @@ import { toast } from '@/components/ui/Toast';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn, SortDirection } from '@/components/ui/DataTable';
+import { getAvatarColor } from '@/components/forms/team/team.utils';
 
 /**
  * MiniApp catalog. Search, filters, sorting and paging all run on the API and
@@ -290,16 +291,16 @@ function MiniAppsContent() {
       {
         key: 'name',
         header: 'App',
-        width: 'w-[26%]',
+        width: 'w-[22%]',
         sortable: true,
         cell: (app) => (
           <div className="flex items-center gap-3 min-w-0">
             <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
             <div className="min-w-0">
-              <span className="block font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[240px]">
+              <span className="block font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[220px]">
                 {app.name || '-'}
               </span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400 truncate max-w-[240px]">
+              <span className="block text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">
                 <span className="font-mono">{app.appId}</span>
                 <span aria-hidden="true"> · </span>
                 {METHOD_LABEL[app.integrationMethod || ''] || app.integrationMethod}
@@ -311,7 +312,7 @@ function MiniAppsContent() {
       {
         key: 'organization',
         header: 'Org',
-        width: 'w-[8%]',
+        width: 'w-[7%]',
         headerClassName: 'hidden md:table-cell',
         className: 'hidden md:table-cell',
         sortable: true,
@@ -325,16 +326,62 @@ function MiniAppsContent() {
         ),
       },
       {
+        key: 'owner',
+        header: 'App Owner',
+        width: 'w-[13%]',
+        headerClassName: 'hidden sm:table-cell',
+        className: 'hidden sm:table-cell',
+        sortable: true,
+        cell: (app) => {
+          const ownerObj = app.owner;
+          const name = ownerObj?.name || app.ownerName || ownerObj?.email || app.ownerEmail || '';
+          const email = ownerObj?.email || app.ownerEmail || '';
+          if (!name && !email) {
+            return (
+              <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
+            );
+          }
+          const initials = (name || email || 'U')
+            .split(' ')
+            .map((n: string) => n[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+          return (
+            <div className="flex items-center gap-2 min-w-0" title={email ? `${name} (${email})` : name}>
+              <div
+                aria-hidden="true"
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${getAvatarColor(
+                  name || email,
+                )}`}
+              >
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <span className="block text-xs font-medium text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
+                  {name || email}
+                </span>
+                {email && name && email !== name && (
+                  <span className="block text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[130px]">
+                    {email}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
         key: 'availability',
         header: 'Status',
-        width: 'w-[12%]',
+        width: 'w-[11%]',
         sortable: true,
         cell: (app) => <AppStatusBadge app={app} />,
       },
       {
         key: 'lifecycle',
         header: 'Stage',
-        width: 'w-[14%]',
+        width: 'w-[13%]',
         sortable: false,
         cell: (app) => (
           <VersionStageBadge
@@ -351,7 +398,7 @@ function MiniAppsContent() {
       {
         key: 'checks',
         header: 'Checks',
-        width: 'w-[12%]',
+        width: 'w-[11%]',
         headerClassName: 'hidden lg:table-cell',
         className: 'hidden lg:table-cell',
         sortable: false,
@@ -365,7 +412,7 @@ function MiniAppsContent() {
       {
         key: 'issues',
         header: 'Issues',
-        width: 'w-[8%]',
+        width: 'w-[7%]',
         headerClassName: 'hidden lg:table-cell',
         className: 'hidden lg:table-cell',
         sortable: false,
@@ -387,7 +434,7 @@ function MiniAppsContent() {
       {
         key: 'version',
         header: 'Version',
-        width: 'w-[10%]',
+        width: 'w-[8%]',
         headerClassName: 'hidden xl:table-cell',
         className: 'hidden xl:table-cell',
         sortable: false,
@@ -410,7 +457,7 @@ function MiniAppsContent() {
       {
         key: 'updatedAt',
         header: 'Updated',
-        width: 'w-[8%]',
+        width: 'w-[6%]',
         headerClassName: 'hidden md:table-cell',
         className: 'hidden md:table-cell',
         sortable: true,
@@ -581,7 +628,7 @@ function MiniAppsContent() {
           loadingMessage="Loading..."
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Search name, App ID or organization"
+          searchPlaceholder="Search name, App ID, organization or owner"
           filters={filters}
           isFiltered={isFiltered}
           onResetFilters={() => {
