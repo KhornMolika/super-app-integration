@@ -586,26 +586,30 @@ export default function WebViewIntegrationForm({
           {/* Trigger Verification Action */}
           <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Button
+              <button
                 type="button"
                 onClick={handleVerifyDomain}
                 disabled={isVerifyingDomain || !isEditable || !prodUrlInput}
-                className="h-9 px-4 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 disabled:opacity-50 shadow-2xs"
+                className={`h-9 px-4 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+                  isVerifyingDomain || !isEditable || !prodUrlInput
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
+                    : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm shadow-emerald-600/25 cursor-pointer'
+                }`}
               >
                 {isVerifyingDomain ? (
                   <>
-                    <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Verifying domain...
+                    <span>Verifying domain...</span>
                   </>
                 ) : isVerified ? (
                   'Re-verify domain'
                 ) : (
                   'Verify domain now'
                 )}
-              </Button>
+              </button>
               {isVerified && (
                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <CheckIcon className="w-3.5 h-3.5" />

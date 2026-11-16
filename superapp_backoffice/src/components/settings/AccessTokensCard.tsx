@@ -19,6 +19,7 @@ export function AccessTokensCard() {
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedNpmrc, setCopiedNpmrc] = useState(false);
   const [copiedDartPub, setCopiedDartPub] = useState(false);
+  const [showSnippets, setShowSnippets] = useState(false);
 
   // Form states
   const [tokenName, setTokenName] = useState('');
@@ -137,60 +138,71 @@ export function AccessTokensCard() {
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
                   Developer Access Tokens (PAT)
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-brand-100 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300">
-                  SDK &amp; Private Registry Auth
+                <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  SDK &amp; Registry Auth
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                Your <strong>Developer Token (PAT)</strong> (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_pat_...</code>) authenticates you with private package registries to download official scoped SDKs (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">@fsasuperapp/*</code> and <code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_superapp_flutter_sdk</code>). You only need <strong>one token</strong> for all your local development projects.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
+                Generate scoped tokens (<code className="text-slate-800 dark:text-slate-200 font-mono text-2xs font-bold">fsa_pat_...</code>) for private registries (<code className="text-slate-700 dark:text-slate-300 font-mono text-2xs">@fsasuperapp/*</code>, <code className="text-slate-700 dark:text-slate-300 font-mono text-2xs">fsa_superapp_flutter_sdk</code>) and local CLI workflows.
               </p>
             </div>
           </div>
 
-          <Button
+          <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs py-2 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white font-semibold text-xs py-2 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
             <span>Generate New Token</span>
-          </Button>
+          </button>
         </div>
 
-        {/* Quick Reference Code Snippets */}
-        <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+        {/* Collapsible Quick Reference Configuration */}
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <button
+              type="button"
+              onClick={() => setShowSnippets(!showSnippets)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-transform ${showSnippets ? 'rotate-90 text-slate-900 dark:text-white' : 'text-slate-400'}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
-              How to Use Your Token in Local Development
-            </span>
+              <span>Local Registry Configuration Snippets (.npmrc &amp; Dart Pub)</span>
+            </button>
             <a
               href="/guidelines#section-04-pillar-0"
               className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
             >
-              View Full Setup Guide &rarr;
+              SDK Documentation &rarr;
             </a>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
-              <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Web MiniApps (.npmrc):</div>
-              <div className="text-emerald-400 overflow-x-auto whitespace-nowrap">
-                //app.fintechcenterfsa.com/api/sdk/:_authToken=&quot;&lt;YOUR_TOKEN&gt;&quot;
+          {showSnippets && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-xs font-mono animate-in fade-in duration-200">
+              <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
+                <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Web MiniApps (.npmrc):</div>
+                <div className="text-emerald-400 overflow-x-auto whitespace-nowrap">
+                  //app.fintechcenterfsa.com/api/sdk/:_authToken=&quot;&lt;YOUR_TOKEN&gt;&quot;
+                </div>
               </div>
-            </div>
 
-            <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
-              <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Flutter MiniApps (Dart CLI):</div>
-              <div className="text-sky-400 overflow-x-auto whitespace-nowrap">
-                dart pub token add https://app.fintechcenterfsa.com/pub
+              <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
+                <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Flutter MiniApps (Dart CLI):</div>
+                <div className="text-sky-400 overflow-x-auto whitespace-nowrap">
+                  dart pub token add https://app.fintechcenterfsa.com/pub
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Token List */}

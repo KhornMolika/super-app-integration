@@ -149,22 +149,21 @@ export function DomainTokenGeneratorCard() {
             <span>Developer Pre-Flight Tools</span>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Pre-Verification Domain Challenge Generator
+            Domain Pre-Verification Tool
           </h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm max-w-2xl leading-relaxed">
-            Generate and configure your domain verification challenge tokens during local development <strong>before deploying</strong>. Embed the token into your project or DNS once, and avoid the redeployment loop during registration.
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm max-w-2xl leading-relaxed">
+            Generate and configure domain ownership tokens during local development <strong>before deploying</strong> your WebView MiniApp.
           </p>
         </div>
 
         <div className="shrink-0">
-          <Button
+          <button
             type="button"
             onClick={handleGenerateNewToken}
-            variant="outline"
-            className="h-9 px-3.5 rounded-xl text-xs font-semibold"
+            className="h-8 px-3 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-colors cursor-pointer"
           >
             Generate New Token
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -172,7 +171,7 @@ export function DomainTokenGeneratorCard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800/80">
         <div className="sm:col-span-2 space-y-1.5">
           <Label htmlFor="pre-domain" className="text-xs font-semibold">
-            Target Domain / Homepage URL <span className="text-rose-500">*</span>
+            Target Domain / Production URL <span className="text-rose-500">*</span>
           </Label>
           <Input
             id="pre-domain"
@@ -203,50 +202,50 @@ export function DomainTokenGeneratorCard() {
         </div>
       </div>
 
-      {/* Prominent Challenge Token Banner */}
-      <div className="p-4 bg-brand-50/60 dark:bg-brand-950/30 rounded-2xl border border-brand-200/70 dark:border-brand-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Challenge Token Banner */}
+      <div className="p-4 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 block mb-0.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
             Active Challenge Token
           </span>
           <code className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-slate-100 break-all select-all">
             {token}
           </code>
         </div>
-        <Button
+        <button
           type="button"
           onClick={() => copy(token, setCopiedToken)}
-          className="h-9 px-4 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shrink-0 shadow-2xs"
+          className="h-8 px-3.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shrink-0 shadow-xs transition-colors cursor-pointer"
         >
           {copiedToken ? 'Copied Token!' : 'Copy Token'}
-        </Button>
+        </button>
       </div>
 
       {/* Method Tabs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            Choose Implementation Method:
+            Verification Method:
           </span>
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('dns')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                 activeTab === 'dns'
-                  ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  ? 'bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Method A: DNS TXT (Zero Redeployment)
+              Method A: DNS TXT
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('meta')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                 activeTab === 'meta'
-                  ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  ? 'bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Method B: HTML &lt;meta&gt; Tag
@@ -254,13 +253,13 @@ export function DomainTokenGeneratorCard() {
             <button
               type="button"
               onClick={() => setActiveTab('json')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                 activeTab === 'json'
-                  ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  ? 'bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Method C: JSON Association File
+              Method C: Association JSON
             </button>
           </div>
         </div>
@@ -281,7 +280,7 @@ export function DomainTokenGeneratorCard() {
                   <button
                     type="button"
                     onClick={() => copy(`_superapp-challenge.${host}`, setCopiedDnsHost)}
-                    className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     {copiedDnsHost ? 'Copied' : 'Copy'}
                   </button>
@@ -291,13 +290,13 @@ export function DomainTokenGeneratorCard() {
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-slate-500">TXT Record Value</span>
                 <div className="flex items-center gap-1.5">
-                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-brand-300 font-mono text-[11px] truncate">
+                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-emerald-400 font-mono text-[11px] truncate">
                     {`superapp-site-verification=${token}`}
                   </code>
                   <button
                     type="button"
                     onClick={() => copy(`superapp-site-verification=${token}`, setCopiedDnsVal)}
-                    className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     {copiedDnsVal ? 'Copied' : 'Copy'}
                   </button>
@@ -311,16 +310,16 @@ export function DomainTokenGeneratorCard() {
         {activeTab === 'meta' && (
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-3">
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Place this tag inside the <code className="font-mono text-brand-600">&lt;head&gt;</code> of your app's root page (<code className="font-mono">index.html</code> or <code className="font-mono">app/layout.tsx</code>):
+              Place this tag inside the <code className="font-mono text-emerald-600 dark:text-emerald-400">&lt;head&gt;</code> of your app's root page (<code className="font-mono">index.html</code> or <code className="font-mono">app/layout.tsx</code>):
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 p-2.5 rounded-lg bg-slate-900 text-brand-300 font-mono text-xs overflow-x-auto">
+              <code className="flex-1 p-2.5 rounded-lg bg-slate-900 text-emerald-400 font-mono text-xs overflow-x-auto">
                 {`<meta name="superapp-site-verification" content="${token}" />`}
               </code>
               <button
                 type="button"
                 onClick={() => copy(`<meta name="superapp-site-verification" content="${token}" />`, setCopiedMeta)}
-                className="h-8 px-3 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+                className="h-8 px-3 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 cursor-pointer"
               >
                 {copiedMeta ? 'Copied!' : 'Copy Tag'}
               </button>
@@ -332,7 +331,7 @@ export function DomainTokenGeneratorCard() {
         {activeTab === 'json' && (
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-3">
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Place this file in <code className="font-mono text-brand-600">public/.well-known/superapp-miniapp-association.json</code> so it serves over HTTPS:
+              Place this file in <code className="font-mono text-emerald-600 dark:text-emerald-400">public/.well-known/superapp-miniapp-association.json</code> so it serves over HTTPS:
             </p>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <code className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate max-w-sm">
@@ -342,17 +341,17 @@ export function DomainTokenGeneratorCard() {
                 <button
                   type="button"
                   onClick={() => copy(manifest, setCopiedJson)}
-                  className="h-8 px-3 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="h-8 px-3 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   {copiedJson ? 'Copied JSON' : 'Copy JSON'}
                 </button>
-                <Button
+                <button
                   type="button"
                   onClick={handleDownloadJson}
-                  className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white"
+                  className="h-8 px-3 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-xs transition-colors cursor-pointer"
                 >
                   Download .json File
-                </Button>
+                </button>
               </div>
             </div>
             <pre className="max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-200">
@@ -362,25 +361,42 @@ export function DomainTokenGeneratorCard() {
         )}
       </div>
 
-      {/* Pre-flight Live Verification Test Button */}
+      {/* Pre-flight Live Verification Test */}
       <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-            Test Your Live Verification Setup:
+          <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
+            Test Live Verification
           </span>
-          <span className="text-xs text-slate-500">
-            Check if your DNS, Meta Tag, or JSON file is reachable and valid before opening the registration wizard.
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            Confirm your DNS TXT, Meta Tag, or JSON file is live and reachable before app registration.
           </span>
         </div>
 
-        <Button
+        <button
           type="button"
           onClick={handlePreflightCheck}
           disabled={isVerifying || !domainInput.trim()}
-          className="h-10 px-5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shrink-0 disabled:opacity-50"
+          className={`h-10 px-5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 ${
+            !domainInput.trim() || isVerifying
+              ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
+              : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm shadow-emerald-600/25 cursor-pointer'
+          }`}
         >
-          {isVerifying ? 'Checking Verification...' : 'Test Verification Now'}
-        </Button>
+          {isVerifying ? (
+            <>
+              <svg className="w-4 h-4 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <span>Checking Live Domain...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon className="w-4 h-4" />
+              <span>Test Verification Now</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Verification Feedback Banner */}

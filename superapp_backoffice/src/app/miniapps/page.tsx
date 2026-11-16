@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
@@ -173,6 +174,89 @@ function openIssues(app: MiniApp): { count: number; severe: boolean } {
   };
 }
 
+function AppOwnerCell({ name, email }: { name: string; email: string }) {
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  if (!name && !email) {
+    return <span className="text-xs text-slate-400 dark:text-slate-500">-</span>;
+  }
+
+  const displayName = name || email;
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const handleMouseEnter = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setTooltipPos({
+      x: rect.left,
+      y: rect.top,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipPos(null);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="inline-flex items-center gap-2 min-w-0 cursor-default py-0.5 group"
+    >
+      <div
+        aria-hidden="true"
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 shadow-2xs ${getAvatarColor(
+          displayName,
+        )}`}
+      >
+        {initials}
+      </div>
+      <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
+        {displayName}
+      </span>
+
+      {tooltipPos && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: `${tooltipPos.x}px`,
+            top: `${tooltipPos.y - 8}px`,
+            transform: 'translateY(-100%)',
+          }}
+          className="z-[9999] pointer-events-none px-3 py-2 rounded-xl bg-slate-900/95 dark:bg-slate-800/95 text-white shadow-xl backdrop-blur-md border border-slate-700/60 dark:border-slate-600/60 text-xs animate-in fade-in zoom-in-95 duration-150 min-w-[150px] max-w-[260px]"
+        >
+          <div className="flex items-center gap-2 mb-1 pb-1 border-b border-slate-700/60 dark:border-slate-700/80">
+            <div
+              className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${getAvatarColor(
+                displayName,
+              )}`}
+            >
+              {initials}
+            </div>
+            <span className="font-semibold text-white truncate text-xs">
+              {name || 'Owner'}
+            </span>
+          </div>
+          {email && (
+            <span className="block text-[11px] text-slate-300 dark:text-slate-300 font-mono truncate select-all">
+              {email}
+            </span>
+          )}
+          <div className="absolute top-full left-4 -mt-px w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900/95 dark:border-t-slate-800/95" />
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
 function StateLine({ dot, label }: { dot: Dot; label: string }) {
   return (
     <span className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -334,41 +418,9 @@ function MiniAppsContent() {
         sortable: true,
         cell: (app) => {
           const ownerObj = app.owner;
-          const name = ownerObj?.name || app.ownerName || ownerObj?.email || app.ownerEmail || '';
+          const name = ownerObj?.name || app.ownerName || '';
           const email = ownerObj?.email || app.ownerEmail || '';
-          if (!name && !email) {
-            return (
-              <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
-            );
-          }
-          const initials = (name || email || 'U')
-            .split(' ')
-            .map((n: string) => n[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase();
-          return (
-            <div className="flex items-center gap-2 min-w-0" title={email ? `${name} (${email})` : name}>
-              <div
-                aria-hidden="true"
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${getAvatarColor(
-                  name || email,
-                )}`}
-              >
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <span className="block text-xs font-medium text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
-                  {name || email}
-                </span>
-                {email && name && email !== name && (
-                  <span className="block text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[130px]">
-                    {email}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
+          return <AppOwnerCell name={name} email={email} />;
         },
       },
       {
