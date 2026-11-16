@@ -71,7 +71,9 @@ export function useDashboardData() {
           if (isBackendUnreachableError(err)) isDown = true;
           return null;
         }),
-        superAppApi.getStorageLicenseStatus().catch(() => null),
+        can('settings:manage')
+          ? superAppApi.getStorageLicenseStatus().catch(() => null)
+          : Promise.resolve(null),
         telegramApi.getStatus().catch(() => null),
       ];
 
