@@ -13,7 +13,17 @@ export function DomainTokenGeneratorCard() {
   const [domainInput, setDomainInput] = useState('');
   const [appIdInput, setAppIdInput] = useState('');
   const [environment, setEnvironment] = useState<'DEV' | 'PROD'>('PROD');
-  const [token, setToken] = useState<string>(() => generateClientVerificationToken());
+  const [token, setToken] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('superapp_preverification_token');
+      if (saved && saved.startsWith('tok_live_')) return saved;
+    }
+    const fresh = generateClientVerificationToken();
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('superapp_preverification_token', fresh); } catch (_) {}
+    }
+    return fresh;
+  });
   const [activeTab, setActiveTab] = useState<'dns' | 'meta' | 'json'>('dns');
 
   // Copy states
@@ -84,6 +94,9 @@ export function DomainTokenGeneratorCard() {
       // client fallback already generated
     }
     setToken(newToken);
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem('superapp_preverification_token', newToken); } catch (_) {}
+    }
     setVerifyResult(null);
     toast.success('Generated fresh domain challenge token.');
   };

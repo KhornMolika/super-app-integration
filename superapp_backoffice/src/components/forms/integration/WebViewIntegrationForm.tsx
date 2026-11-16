@@ -6,6 +6,7 @@ import { validateProductionUrlFormat, generateClientVerificationToken } from '@/
 import { miniappsApi } from '@/api';
 import { CheckIcon } from '@/components/ui/Icons';
 import { copyText } from '@/lib/clipboard';
+import { toast } from '@/components/ui/Toast';
 
 export interface WebViewIntegrationFormProps {
   formData: any;
@@ -38,6 +39,7 @@ export default function WebViewIntegrationForm({
   const [copiedDnsVal, setCopiedDnsVal] = useState(false);
   const [copiedMeta, setCopiedMeta] = useState(false);
   const [verificationTab, setVerificationTab] = useState<'dns' | 'meta' | 'json'>('dns');
+  const [isEditingCustomToken, setIsEditingCustomToken] = useState(false);
 
   // State for Domain Ownership Verification
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
@@ -425,33 +427,92 @@ export default function WebViewIntegrationForm({
         {/* Prominent Verification Token Card */}
         <div className="p-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/70 dark:border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
-                Verification Challenge Token
-              </span>
-              <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
-                {token}
-              </code>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isEditable && (
+            {isEditingCustomToken ? (
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                  Custom Challenge Token (from Settings or pre-deployed project)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={token}
+                    onChange={(e) => {
+                      if (handleWebViewChange) {
+                        handleWebViewChange({
+                          target: { name: 'verificationToken', value: e.target.value.trim() },
+                        } as any);
+                      }
+                    }}
+                    placeholder="e.g. tok_live_..."
+                    className="h-8 font-mono text-xs max-w-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingCustomToken(false)}
+                    className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shrink-0"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
+                  Verification Challenge Token
+                </span>
+                <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
+                  {token}
+                </code>
+              </div>
+            )}
+            {!isEditingCustomToken && (
+              <div className="flex items-center gap-2 shrink-0">
+                {isEditable && (
+                  <>
+                    {typeof window !== 'undefined' && localStorage.getItem('superapp_preverification_token') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const saved = localStorage.getItem('superapp_preverification_token');
+                          if (saved && handleWebViewChange) {
+                            handleWebViewChange({
+                              target: { name: 'verificationToken', value: saved },
+                            } as any);
+                            toast.success('Pasted verification token from Settings.');
+                          }
+                        }}
+                        className={smallBtn}
+                        title="Use token pre-generated in Settings"
+                      >
+                        Paste from Settings
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCustomToken(true)}
+                      className={smallBtn}
+                      title="Paste or enter a custom token"
+                    >
+                      Edit Token
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateToken}
+                      className={smallBtn}
+                      title="Generate a fresh token"
+                    >
+                      New token
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
-                  onClick={handleGenerateToken}
-                  className={smallBtn}
-                  title="Generate a fresh token"
+                  onClick={() => copy(token, setCopiedToken)}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 transition-colors shadow-2xs"
                 >
-                  New token
+                  {copiedToken ? 'Copied!' : 'Copy Token'}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => copy(token, setCopiedToken)}
-                className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 transition-colors shadow-2xs"
-              >
-                {copiedToken ? 'Copied!' : 'Copy Token'}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
