@@ -250,11 +250,16 @@ export function useMiniAppRegister() {
           formData.integrationConfigNativeSdk?.iosModuleName
         )?.trim() || '';
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
-      detectedId =
-        (
-          formData.integrationConfigDeepLink?.packageName ||
-          formData.integrationConfigDeepLink?.urlScheme
-        )?.trim() || '';
+      const pkg = formData.integrationConfigDeepLink?.packageName?.trim();
+      if (pkg) {
+        detectedId = pkg;
+      } else if (formData.slug) {
+        detectedId = `com.fsa.${formData.slug.replace(/-/g, '_')}`;
+      } else {
+        const rawScheme = formData.integrationConfigDeepLink?.urlScheme?.trim() || '';
+        const cleanScheme = rawScheme.replace(/:\/\/.*/, '').replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+        detectedId = cleanScheme ? `com.fsa.${cleanScheme}` : '';
+      }
     } else if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
       if (formData.slug) {
         detectedId = `com.fsa.${formData.slug.replace(/-/g, '_')}`;

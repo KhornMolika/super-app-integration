@@ -354,7 +354,8 @@ export class MiniappMutationHelper {
         (data.logo.length > 500 && !data.logo.startsWith('http')));
     if (isBase64Logo) {
       try {
-        const targetId = data.appId || `miniapp_${Date.now()}`;
+        const rawTargetId = String(data.appId || `miniapp_${Date.now()}`);
+        const targetId = rawTargetId.replace(/:\/\/.*/, '').replace(/[^a-zA-Z0-9_.-]/g, '_');
         data.logo = await this.storageService.uploadBase64(
           data.logo,
           `miniapps/${targetId}/logos/logo.png`,
@@ -669,7 +670,8 @@ export class MiniappMutationHelper {
         (data.logo.length > 500 && !data.logo.startsWith('http')));
     if (isBase64Logo) {
       try {
-        const targetId = data.appId || existing.appId || existing.id;
+        const rawTargetId = String(data.appId || existing.appId || existing.id);
+        const targetId = rawTargetId.replace(/:\/\/.*/, '').replace(/[^a-zA-Z0-9_.-]/g, '_');
         data.logo = await this.storageService.uploadBase64(
           data.logo,
           `miniapps/${targetId}/logos/logo.png`,

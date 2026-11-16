@@ -82,6 +82,8 @@ async function pipeAssetHelper(
   // Older records store "logos/<appId>/logo.png"; uploads now go to
   // "miniapps/<appId>/logos/logo.<ext>".
   const ownerDir = strippedKey.split('/')[0];
+  const safeOwnerDir = ownerDir.replace(/:\/\/.*/, '').replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const safeStrippedKey = strippedKey.replace(/:\/\/.*/, '').replace(/[^a-zA-Z0-9_.-]/g, '_');
 
   // Candidate object keys to check in MinIO
   const candidateKeys = [
@@ -90,10 +92,18 @@ async function pipeAssetHelper(
     `miniapps/${ownerDir}/logos/logo.jpg`,
     `miniapps/${ownerDir}/logos/logo.jpeg`,
     `miniapps/${ownerDir}/logos/logo.webp`,
+    `miniapps/${safeOwnerDir}/logos/logo.png`,
+    `miniapps/${safeOwnerDir}/logos/logo.jpg`,
+    `miniapps/${safeOwnerDir}/logos/logo.jpeg`,
+    `miniapps/${safeOwnerDir}/logos/logo.webp`,
     `miniapps/${strippedKey}/logos/logo.png`,
     `miniapps/${strippedKey}/logos/logo.jpg`,
     `miniapps/${strippedKey}/logos/logo.jpeg`,
     `miniapps/${strippedKey}/logos/logo.webp`,
+    `miniapps/${safeStrippedKey}/logos/logo.png`,
+    `miniapps/${safeStrippedKey}/logos/logo.jpg`,
+    `miniapps/${safeStrippedKey}/logos/logo.jpeg`,
+    `miniapps/${safeStrippedKey}/logos/logo.webp`,
     `miniapps/${cleanKey}`,
     `organizations/${strippedKey}/branding/logo.png`,
     `organizations/${strippedKey}/branding/logo.jpg`,
