@@ -67,6 +67,7 @@ describe('toCatalogItem', () => {
       permissions: [],
       termsAndConditions: null,
       privacyPolicy: null,
+      targetAudience: 'PUBLIC',
     });
   });
 
@@ -143,8 +144,10 @@ describe('MobileCatalogService.list', () => {
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);
     expect(page).toMatchObject({ total: 7, limit: 20, offset: 40 });
-    // No name search
-    expect(calls.and).toEqual([]);
+    // Target audience scoping defaults to PUBLIC for unauthenticated caller
+    expect(calls.and).toEqual([
+      ['(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience)', { publicAudience: 'PUBLIC' }],
+    ]);
   });
 
   it('item status: ACTIVE when live, else the stage of the served version', async () => {
@@ -198,7 +201,72 @@ describe('MobileCatalogService.list', () => {
   it('escapes LIKE wildcards in the name search', async () => {
     const { repo, calls } = qbFor([]);
     await new MobileCatalogService(repo).list('50%_off\\', 10, 0);
-    expect(calls.and[0][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
+    expect(calls.and[1][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
+  });
+
+  it('unauthenticated guest without token only sees PUBLIC mini apps', async () => {
+    const { repo, calls } = qbFor([]);
+    await new MobileCatalogService(repo).list();
+    expect(calls.and[0]).toEqual([
+      '(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience)',
+      { publicAudience: 'PUBLIC' },
+    ]);
+  });
+
+  it('consumer user without staff profile only sees PUBLIC mini apps', async () => {
+    const { repo, calls } = qbFor([]);
+    const staffProfilesRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+    } as any;
+    await new MobileCatalogService(repo, undefined, undefined, staffProfilesRepo).list({
+      endUser: { id: 'consumer-user-1' },
+    } as any);
+    expect(staffProfilesRepo.findOne).toHaveBeenCalledWith({
+      where: { identityId: 'consumer-user-1' },
+      relations: { role: true, organization: true },
+    });
+    expect(calls.and[0]).toEqual([
+      '(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience)',
+      { publicAudience: 'PUBLIC' },
+    ]);
+  });
+
+  it('FSA staff member sees PUBLIC, ALL_FSA_STAFF, and ORGANIZATION_ONLY for their organization', async () => {
+    const { repo, calls } = qbFor([]);
+    const staffProfilesRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        identityId: 'staff-user-1',
+        organizationId: 'org-fsa-1',
+        role: { name: 'OPERATOR' },
+      }),
+    } as any;
+    await new MobileCatalogService(repo, undefined, undefined, staffProfilesRepo).list({
+      endUser: { id: 'staff-user-1' },
+    } as any);
+    expect(calls.and[0]).toEqual([
+      '(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience OR UPPER(m.targetAudience) = :staffAudience OR (UPPER(m.targetAudience) = :orgAudience AND m.organizationId = :userOrgId))',
+      {
+        publicAudience: 'PUBLIC',
+        staffAudience: 'ALL_FSA_STAFF',
+        orgAudience: 'ORGANIZATION_ONLY',
+        userOrgId: 'org-fsa-1',
+      },
+    ]);
+  });
+
+  it('SUPER_ADMIN staff member sees all apps without audience restriction', async () => {
+    const { repo, calls } = qbFor([]);
+    const staffProfilesRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        identityId: 'admin-1',
+        organizationId: 'org-fsa-1',
+        role: { name: 'SUPER_ADMIN' },
+      }),
+    } as any;
+    await new MobileCatalogService(repo, undefined, undefined, staffProfilesRepo).list({
+      endUser: { id: 'admin-1' },
+    } as any);
+    expect(calls.and).toEqual([]);
   });
 
   it('takes the Home widget from the served version and returns it as widget', async () => {

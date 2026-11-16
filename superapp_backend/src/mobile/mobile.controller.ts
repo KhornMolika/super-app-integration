@@ -229,7 +229,8 @@ export class MobileController {
     const clientHost = String(rawHost).split(':')[0];
     // Test builds list apps in testing too; the official build live apps only
     const build = phoneBuildOf(req.headers['x-super-app-build']);
-    return this.catalog.list(Object.assign(query, { build }), clientHost);
+    const endUser = (req as any).endUser;
+    return this.catalog.list(Object.assign(query, { build, endUser }), clientHost, undefined, undefined, endUser);
   }
 
   @Get('auth/sso/providers')
