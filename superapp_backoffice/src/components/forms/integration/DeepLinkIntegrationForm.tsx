@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Input, Label } from '@/components/ui/inputs';
 import { AlertCircle, CheckCircle2, ExternalLink, Info, Smartphone } from 'lucide-react';
+import { AndroidIcon, AppleIcon } from '@/components/ui/Icons';
 
 export interface DeepLinkIntegrationFormProps {
   formData: any;
@@ -163,24 +164,26 @@ export default function DeepLinkIntegrationForm({
             <button
               type="button"
               onClick={() => setPlatformTab('android')}
-              className={`px-3 py-1 rounded-md transition-colors ${
+              className={`px-3 py-1 rounded-md transition-colors inline-flex items-center gap-1.5 ${
                 platformTab === 'android'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              Android Only
+              <AndroidIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Android Only</span>
             </button>
             <button
               type="button"
               onClick={() => setPlatformTab('ios')}
-              className={`px-3 py-1 rounded-md transition-colors ${
+              className={`px-3 py-1 rounded-md transition-colors inline-flex items-center gap-1.5 ${
                 platformTab === 'ios'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              iOS Only
+              <AppleIcon className="w-3.5 h-3.5" />
+              <span>iOS Only</span>
             </button>
           </div>
         </div>
@@ -191,7 +194,9 @@ export default function DeepLinkIntegrationForm({
           {(platformTab === 'both' || platformTab === 'android') && (
             <div className={`p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-4 ${platformTab === 'android' ? 'md:col-span-2' : ''}`}>
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <span className="text-base" role="img" aria-label="Android">🤖</span>
+                <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <AndroidIcon className="w-4 h-4" />
+                </div>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   Android Configuration
                 </span>
@@ -247,7 +252,9 @@ export default function DeepLinkIntegrationForm({
           {(platformTab === 'both' || platformTab === 'ios') && (
             <div className={`p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-4 ${platformTab === 'ios' ? 'md:col-span-2' : ''}`}>
               <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <span className="text-base" role="img" aria-label="Apple">🍎</span>
+                <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0">
+                  <AppleIcon className="w-4 h-4" />
+                </div>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   iOS Configuration
                 </span>

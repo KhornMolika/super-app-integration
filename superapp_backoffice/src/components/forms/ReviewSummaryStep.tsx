@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon, LockIcon, GlobeIcon, AndroidIcon, AppleIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { CreateMiniAppDto, HOME_WIDGET_FIELD, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
@@ -530,13 +530,15 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     <div className="flex items-center justify-between font-sans">
                       <span className="text-slate-400">Access Level:</span>
                       {formData.integrationConfigFlutter?.isPrivateRepo ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          <span>🔒 Private</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          <LockIcon className="w-3.5 h-3.5" />
+                          <span>Private</span>
                           <span>({formData.integrationConfigFlutter?.authMethod === 'token' ? 'Access Token' : 'SSH Deploy Key'})</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300">
-                          <span>🌍 Public (Zero Credentials)</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300">
+                          <GlobeIcon className="w-3.5 h-3.5" />
+                          <span>Public (Zero Credentials)</span>
                         </span>
                       )}
                     </div>
@@ -589,7 +591,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
                   <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
                     <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <DevicePhoneIcon className="w-3.5 h-3.5 text-slate-600" />
+                      <AppleIcon className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
                       <span>iOS Framework Target</span>
                     </span>
                     <span className="font-mono text-[11px] text-slate-500">
@@ -616,7 +618,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
                   <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
                     <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <PackageIcon className="w-3.5 h-3.5 text-brand-600" />
+                      <AndroidIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Android Maven Artifact Target</span>
                     </span>
                     <span className="font-mono text-[11px] text-slate-500">
@@ -673,8 +675,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 </div>
                 {formData.integrationConfigDeepLink?.playStoreUrl && (
                   <div>
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                      Google Play Store Fallback (Android)
+                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <AndroidIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Google Play Store Fallback (Android)</span>
                     </span>
                     <a
                       href={formData.integrationConfigDeepLink.playStoreUrl}
@@ -688,8 +691,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 )}
                 {formData.integrationConfigDeepLink?.appStoreUrl && (
                   <div>
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                      Apple App Store Fallback (iOS)
+                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <AppleIcon className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
+                      <span>Apple App Store Fallback (iOS)</span>
                     </span>
                     <a
                       href={formData.integrationConfigDeepLink.appStoreUrl}
