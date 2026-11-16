@@ -77,9 +77,6 @@ export interface PackagePublishPanelProps {
 /**
  * Where a Flutter package is on its way to the Super App build:
  *   archive in MinIO quarantine -> security scan -> published to Nexus pub-hosted.
- * Approval needs the archive in MinIO; the test build and the production release
- * need the package in Nexus and stop when it is not there, so this shows why,
- * and lets a reviewer publish (or retry) before starting a build.
  */
 export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh }: PackagePublishPanelProps) {
   const [busy, setBusy] = useState(false);
@@ -108,7 +105,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
           conf.archiveSize ? `${Math.round(Number(conf.archiveSize) / 1024)} KB` : '',
           conf.archiveChecksum ? `sha256 ${String(conf.archiveChecksum).slice(0, 12)}...` : '',
         ].filter(Boolean)
-      : ['No archive stored. The developer must attach the package archive and submit again.'],
+      : ['No archive stored. Developer must attach the package archive.'],
   };
 
   const scanState: StepState =
@@ -120,12 +117,12 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
     state: scanState,
     lines: [
       scanState === 'done'
-        ? 'Passed. The archive may leave quarantine.'
+        ? 'Passed security verification.'
         : scanState === 'failed'
-        ? 'Failed. The package stays in MinIO and is not published.'
+        ? 'Failed security scan. Package quarantined.'
         : scanState === 'running'
-        ? 'Scanning the archive from MinIO.'
-        : 'Starts when the mini app is submitted.',
+        ? 'Scanning archive from MinIO...'
+        : 'Pending mini app submission.',
     ],
   };
 
@@ -144,21 +141,24 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
     icon: <PackageIcon className="w-4 h-4" />,
     state: busy ? 'running' : nexusState,
     lines: busy
-      ? ['Publishing from MinIO and confirming that Nexus lists the version.']
+      ? ['Publishing to Nexus repository...']
       : published
       ? [
-          `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion} in pub-hosted`,
+          `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} in pub-hosted`,
           conf.nexusPublishedAt ? `Published ${formatWhen(conf.nexusPublishedAt)}` : '',
-          conf.nexusPublishCheckedAt ? `Last confirmed ${formatWhen(conf.nexusPublishCheckedAt)}` : '',
         ].filter(Boolean)
       : publishError
-      ? [publishError, conf.nexusPublishCheckedAt ? `Tried ${formatWhen(conf.nexusPublishCheckedAt)}` : ''].filter(Boolean)
+      ? [publishError]
       : scanState === 'done'
-      ? ['Not published yet. The test build publishes it first, or publish it now.']
-      : ['After the security scan passes.'],
+      ? ['Not published yet. Will publish during build.']
+      : ['Awaiting security scan approval.'],
   };
 
   const steps = [archiveStep, scanStep, nexusStep];
+  const hasError = Boolean(publishError || steps.some((s) => s.state === 'failed'));
+  const allDone = steps.every((s) => s.state === 'done');
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => hasError);
+
   const showButton = canPublish && scanState === 'done' && Boolean(storagePath || published);
   const buttonLabel = published ? 'Check Nexus again' : publishError ? 'Retry publish' : 'Publish to Nexus';
 
@@ -183,59 +183,163 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
   return (
     <section
       aria-label="Package publishing"
-      className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm"
+      className="mb-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-xs transition-all overflow-hidden"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Package publishing{inRevision ? ' (new version)' : ''}
-          </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            MinIO quarantine, then security scan, then Nexus pub-hosted. The Super App build reads the package from Nexus.
-          </p>
-        </div>
-        {showButton && (
-          <Button variant={publishError ? 'primary' : 'outline'} size="sm" onClick={publish} disabled={busy} className="shrink-0">
-            <span className="inline-flex items-center gap-1.5">
-              <RefreshIcon className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
-              {busy ? 'Publishing...' : buttonLabel}
-            </span>
-          </Button>
-        )}
-      </div>
-
-      <ol className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {steps.map((step, i) => {
-          const style = STATE_STYLES[step.state];
-          return (
-            <li
-              key={step.key}
-              className="relative flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 min-w-0"
+      {/* Compact Collapsed View */}
+      {!isExpanded ? (
+        <div className="p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
+                allDone
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800'
+                  : hasError
+                  ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800'
+                  : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
+              }`}
             >
-              <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${style.ring}`}>
-                <StateIcon state={step.state} />
+              {allDone ? (
+                <CheckCircleIcon className="w-4 h-4" />
+              ) : hasError ? (
+                <XCircleIcon className="w-4 h-4" />
+              ) : (
+                <PackageIcon className="w-4 h-4" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Package Publishing{inRevision ? ' (New Version)' : ''}
+                </span>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    allDone
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                      : hasError
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {allDone ? '3/3 Steps Complete' : hasError ? 'Issue Detected' : 'Pipeline Active'}
+                </span>
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">{i + 1}</span>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{step.title}</span>
-                  <span className={`text-[11px] font-medium ${style.text}`}>{style.label}</span>
-                </div>
-                {step.lines.map((line, j) => (
-                  <p
-                    key={j}
-                    className={`text-xs mt-1 break-words ${
-                      step.state === 'failed' && j === 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {allDone
+                  ? `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} hosted in Nexus pub-hosted`
+                  : hasError
+                  ? publishError || 'One or more package steps requires attention.'
+                  : 'MinIO quarantine → Security scan → Nexus pub-hosted.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {showButton && (
+              <Button
+                variant={publishError ? 'primary' : 'outline'}
+                size="sm"
+                onClick={publish}
+                disabled={busy}
+                className="h-8 text-xs shrink-0"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <RefreshIcon className={`w-3 h-3 ${busy ? 'animate-spin' : ''}`} />
+                  {busy ? 'Publishing...' : buttonLabel}
+                </span>
+              </Button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>View Details</span>
+              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Detailed Expanded View */
+        <div className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                Package Publishing Pipeline{inRevision ? ' (New Version)' : ''}
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                MinIO quarantine → Security scan → Nexus pub-hosted. Super App build reads the package from Nexus.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {showButton && (
+                <Button
+                  variant={publishError ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={publish}
+                  disabled={busy}
+                  className="h-8 text-xs shrink-0"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <RefreshIcon className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
+                    {busy ? 'Publishing...' : buttonLabel}
+                  </span>
+                </Button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsExpanded(false)}
+                className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>Hide</span>
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <ol className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {steps.map((step, i) => {
+              const style = STATE_STYLES[step.state];
+              return (
+                <li
+                  key={step.key}
+                  className="relative flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 min-w-0"
+                >
+                  <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${style.ring}`}>
+                    <StateIcon state={step.state} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {i + 1}. {step.title}
+                      </span>
+                      <span className={`text-[10px] font-semibold ${style.text}`}>{style.label}</span>
+                    </div>
+                    {step.lines.map((line, j) => (
+                      <p
+                        key={j}
+                        className={`text-[11px] mt-0.5 break-words ${
+                          step.state === 'failed' && j === 0
+                            ? 'text-rose-600 dark:text-rose-400 font-medium'
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
     </section>
   );
 }

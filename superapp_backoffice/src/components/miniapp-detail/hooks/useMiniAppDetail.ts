@@ -702,6 +702,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
       supportEmail: formData.supportEmail,
       teamTelegramChatId: formData.teamTelegramChatId,
       integrationMethod: formData.integrationMethod,
+      targetAudience: formData.targetAudience || 'PUBLIC',
       homeWidget: formData.homeWidget ?? null,
       permissions: cleanPermissions,
     };
