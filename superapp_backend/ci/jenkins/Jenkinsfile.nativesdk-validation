@@ -434,8 +434,13 @@ pipeline {
                     }
                     env.STAGE_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/stage')
                     env.SCAN_REPORT_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/scan-report')
+                    env.PYTHON_IMAGE = (params.PYTHON_IMAGE ?: 'python:3.12-alpine').trim()
+                    env.GIT_IMAGE = (params.GIT_IMAGE ?: 'alpine/git:2.45.2').trim()
+                    env.GITLEAKS_IMAGE = (params.GITLEAKS_IMAGE ?: 'zricethezav/gitleaks:v8.21.2').trim()
+                    env.SEMGREP_IMAGE = (params.SEMGREP_IMAGE ?: 'semgrep/semgrep:1.85.0').trim()
+                    env.TRIVY_IMAGE = (params.TRIVY_IMAGE ?: 'aquasec/trivy:0.56.2').trim()
                     sh(prelude() + '''
-                        if [ -d "$S" ]; then rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "$GIT_IMAGE" -rf "$S"; fi
+                        if [ -d "$S" ]; then rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "${GIT_IMAGE:-alpine/git:2.45.2}" -rf "$S"; fi
                         mkdir -p "$S/src" "$R" "$S/home" "$CACHE/trivy"
                         echo "Starting 100% real Native SDK security scan for $MINIAPP_ID ($INTEGRATION_TYPE), package: $PACKAGE_NAME"
                     ''')
@@ -480,7 +485,7 @@ pipeline {
                                 if (a.token) fs.writeFileSync(S + "/.git_header", "Authorization: Basic " + Buffer.from("oauth2:" + a.token).toString("base64"), { mode: 0o600 });
                             '
                             rm -f "$S/git.json"
-                            docker run --rm $MOUNT -e S -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" --entrypoint sh "$GIT_IMAGE" -ec '
+                            docker run --rm $MOUNT -e S -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" --entrypoint sh "${GIT_IMAGE:-alpine/git:2.45.2}" -ec '
                                 cd "$S"; export HOME="$S/home"
                                 AUTH=$(cat git.auth); REF=$(cat git.ref)
                                 trap "rm -f $S/.git_key $S/.git_header; chown -R $HOST_UID:$HOST_GID $S/src $S/home $S/git.sha 2>/dev/null || true" EXIT
@@ -504,7 +509,7 @@ pipeline {
                             echo "Downloaded Native SDK artifact: $(wc -c < "$S/native_sdk.zip") bytes"
                         fi
 
-                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/ingest.py" \
+                        docker run --rm $MOUNT --user "$ME" "${PYTHON_IMAGE:-python:3.12-alpine}" python3 "$S/ingest.py" \
                             "$MODE" "$S/native_sdk.zip" "$S/src" "$R/ingest.json" "$PACKAGE_NAME" "$(cat "$S/git.path" 2>/dev/null || true)" \
                             || fail "Could not unpack Native SDK artifact."
                         rm -f "$S/native_sdk.zip"
@@ -521,11 +526,11 @@ pipeline {
                     notifyStage('secret_scan', 'Hardcoded Secret & Key Detection', 'Running Gitleaks and credential signature analysis on native bytecode and manifests...')
                     sh(prelude() + '''
                         PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
-                        docker run --rm $MOUNT --user "$ME" "$GITLEAKS_IMAGE" detect --no-git --source "$PKG" \
+                        docker run --rm $MOUNT --user "$ME" "${GITLEAKS_IMAGE:-zricethezav/gitleaks:v8.21.2}" detect --no-git --source "$PKG" \
                             --report-format json --report-path "$R/gitleaks-raw.json" --redact --exit-code 0 --no-banner --log-level warn \
                             || echo "Gitleaks container error" > "$R/error-secret_scan.txt"
                         
-                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/secret-scan.py" \
+                        docker run --rm $MOUNT --user "$ME" "${PYTHON_IMAGE:-python:3.12-alpine}" python3 "$S/secret-scan.py" \
                             "$PKG" "$R/gitleaks-raw.json" "$R/gitleaks.json" \
                             || cp "$R/gitleaks-raw.json" "$R/gitleaks.json" 2>/dev/null || echo "[]" > "$R/gitleaks.json"
                         rm -f "$R/gitleaks-raw.json"
@@ -541,7 +546,7 @@ pipeline {
                     notifyStage('sast', 'Binary Decompilation & SAST', 'Running Semgrep native ruleset on decompiled code, JNI headers, and manifests...')
                     sh(prelude() + '''
                         PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
-                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e SEMGREP_SEND_METRICS=off "$SEMGREP_IMAGE" \
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e SEMGREP_SEND_METRICS=off "${SEMGREP_IMAGE:-semgrep/semgrep:1.85.0}" \
                             semgrep scan --config "$S/semgrep-rules.yml" --json --output "$R/semgrep.json" \
                             --metrics=off --disable-version-check --quiet "$PKG" \
                             || echo "Semgrep container error" > "$R/error-sast.txt"
@@ -592,7 +597,7 @@ pipeline {
                     notifyStage('malware_scan', 'Malware & Antivirus Heuristic Scan', 'Executing antivirus signature and reverse-shell heuristic inspection on native binaries...')
                     sh(prelude() + '''
                         PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
-                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/malware.py" "$PKG" "$R/malware.json" \
+                        docker run --rm $MOUNT --user "$ME" "${PYTHON_IMAGE:-python:3.12-alpine}" python3 "$S/malware.py" "$PKG" "$R/malware.json" \
                             || echo '{"passed": false, "clean": false, "details": "Malware scan container failed to run."}' > "$R/malware.json"
                     ''')
                 }
@@ -607,7 +612,7 @@ pipeline {
                     if (wants('license_compliance')) notifyStage('license_compliance', 'OSS License Compliance Audit', 'Auditing native third-party library licenses...')
                     sh(prelude() + '''
                         PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
-                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "${TRIVY_IMAGE:-aquasec/trivy:0.56.2}" \
                             fs --scanners vuln,license --license-full --format json --output "$R/trivy.json" \
                             --exit-code 0 --quiet "$PKG" \
                             || { echo "Trivy scanner failed" | tee "$R/error-dependency_scan.txt" > "$R/error-license_compliance.txt"; }
@@ -625,7 +630,7 @@ pipeline {
                     notifyStage('sbom', 'Software Bill of Materials (SBOM)', 'Generating CycloneDX 1.5 cryptographic SBOM with Trivy...')
                     sh(prelude() + '''
                         PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
-                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "${TRIVY_IMAGE:-aquasec/trivy:0.56.2}" \
                             fs --format cyclonedx --output "$R/sbom.json" --quiet "$PKG" \
                             || echo "Trivy SBOM did not run." > "$R/error-sbom.txt"
                     ''')
