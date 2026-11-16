@@ -19,8 +19,8 @@ export interface TransferOwnershipModalProps {
   onClose: () => void;
   formData: any;
   organizationId?: string;
-  /** Called with the updated app after a successful transfer. */
-  onTransferred: (updated: any) => void;
+  /** Called with the updated app and selected candidate after a successful transfer. */
+  onTransferred: (updated: any, selected?: any) => void;
 }
 
 const ELIGIBLE_ROLES = ['MA_DEVELOPER', 'ADMIN'];
@@ -111,7 +111,7 @@ export function TransferOwnershipModal({
         `${formData.name || 'MiniApp'} now belongs to ${selected.name || selected.email}.`,
         'Ownership transferred',
       );
-      onTransferred(updated);
+      onTransferred(updated, selected);
       onClose();
     } catch (err: any) {
       setError(err?.message || 'The transfer failed.');

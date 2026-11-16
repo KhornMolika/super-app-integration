@@ -583,7 +583,15 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     const previousOwnerId = app.ownerId || null;
     await manager.transaction(async (tx) => {
-      await tx.update(MiniApp, { id }, { ownerId: newOwnerId });
+      await tx.update(
+        MiniApp,
+        { id },
+        {
+          ownerId: newOwnerId,
+          ownerName: target.name || target.email,
+          ownerEmail: target.email,
+        },
+      );
       await tx.delete(MiniAppCollaborator, {
         miniAppId: id,
         userId: newOwnerId,
@@ -679,6 +687,7 @@ export class MiniappsService implements OnApplicationBootstrap {
         collaborators: true,
         versions: true,
         legal: true,
+        owner: true,
       },
     });
     await this.runs?.attach(app);
@@ -693,6 +702,7 @@ export class MiniappsService implements OnApplicationBootstrap {
         collaborators: true,
         versions: true,
         legal: true,
+        owner: true,
       },
     });
     if (app) await this.runs?.attach(app);

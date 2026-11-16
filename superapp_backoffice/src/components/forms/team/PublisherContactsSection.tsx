@@ -35,14 +35,14 @@ export function PublisherContactsSection({
   setIsEditingOwner,
 }: PublisherContactsSectionProps) {
   const ownerName =
-    formData.ownerName ||
     formData.owner?.name ||
+    formData.ownerName ||
     telegramStatus?.user?.name ||
     'Administrative Owner';
 
   const ownerEmail =
-    formData.ownerEmail ||
     formData.owner?.email ||
+    formData.ownerEmail ||
     telegramStatus?.user?.email ||
     '';
 

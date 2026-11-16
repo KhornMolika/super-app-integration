@@ -21,6 +21,7 @@ export interface TeamFormProps {
   handleChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   allErrors?: Record<string, string>;
   isEditable?: boolean;
+  onRefreshApp?: () => Promise<void> | void;
 }
 
 export default function TeamForm({
@@ -29,6 +30,7 @@ export default function TeamForm({
   handleChange,
   allErrors = {},
   isEditable = true,
+  onRefreshApp,
 }: TeamFormProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
@@ -154,18 +156,43 @@ export default function TeamForm({
 
   // After a transfer: new owner on the form, team reloaded (the previous owner
   // may now be a Maintainer), and the caller's own access may have dropped
-  const handleTransferred = (updated: any) => {
-    if (setFormData && updated) {
+  const handleTransferred = async (updated: any, selectedCandidate?: any) => {
+    const newOwnerName =
+      updated?.owner?.name ||
+      updated?.ownerName ||
+      selectedCandidate?.name ||
+      selectedCandidate?.email;
+    const newOwnerEmail =
+      updated?.owner?.email ||
+      updated?.ownerEmail ||
+      selectedCandidate?.email;
+    const newOwnerId =
+      updated?.ownerId ||
+      updated?.owner?.id ||
+      selectedCandidate?.id;
+
+    if (setFormData) {
       setFormData((prev: any) => ({
         ...prev,
-        ownerId: updated.ownerId ?? prev.ownerId,
-        owner: updated.owner ?? prev.owner,
-        ownerName: updated.owner?.name ?? prev.ownerName,
-        ownerEmail: updated.owner?.email ?? prev.ownerEmail,
+        ownerId: newOwnerId ?? prev.ownerId,
+        owner: updated?.owner || {
+          id: newOwnerId,
+          name: newOwnerName,
+          email: newOwnerEmail,
+        },
+        ownerName: newOwnerName ?? prev.ownerName,
+        ownerEmail: newOwnerEmail ?? prev.ownerEmail,
         myAccess: prev.myAccess === 'OWN' ? 'MAINTAIN' : prev.myAccess,
       }));
     }
-    loadCollaborators();
+    await loadCollaborators();
+    if (onRefreshApp) {
+      try {
+        await onRefreshApp();
+      } catch (e) {
+        console.error('Failed to refresh app after transfer:', e);
+      }
+    }
   };
 
   // Fetch Telegram status & profile info on mount

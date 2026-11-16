@@ -103,7 +103,14 @@ export function MiniAppSectionContent({
               </svg>
             }
           />
-          <TeamForm formData={formData} setFormData={setFormData} handleChange={handleChange} allErrors={allErrors} isEditable={isEditable} />
+          <TeamForm
+            formData={formData}
+            setFormData={setFormData}
+            handleChange={handleChange}
+            allErrors={allErrors}
+            isEditable={isEditable}
+            onRefreshApp={onRefreshApp}
+          />
         </Card>
       )}
 
