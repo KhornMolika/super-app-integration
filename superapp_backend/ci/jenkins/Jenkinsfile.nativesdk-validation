@@ -106,20 +106,20 @@ try:
                 content = f.read()
 
             # Package name regex
-            pkg_m = re.search(r'package=["\']([A-Za-z0-9_.]+)["\']', content)
+            pkg_m = re.search(r'package=[\'"]([A-Za-z0-9_.]+)[\'"]', content)
             if pkg_m and not pkg_name:
                 pkg_name = pkg_m.group(1)
 
             # Permissions regex
-            perm_matches = re.findall(r'<uses-permission[^>]+android:name=["\']([A-Za-z0-9_.]+)["\']', content)
+            perm_matches = re.findall(r'<uses-permission[^>]+android:name=[\'"]([A-Za-z0-9_.]+)[\'"]', content)
             for pm in perm_matches:
                 manifest_permissions.add(pm)
 
             # SDK versions regex
-            min_m = re.search(r'android:minSdkVersion=["\']([0-9]+)["\']', content)
+            min_m = re.search(r'android:minSdkVersion=[\'"]([0-9]+)[\'"]', content)
             if min_m:
                 min_sdk = int(min_m.group(1))
-            tgt_m = re.search(r'android:targetSdkVersion=["\']([0-9]+)["\']', content)
+            tgt_m = re.search(r'android:targetSdkVersion=[\'"]([0-9]+)[\'"]', content)
             if tgt_m:
                 target_sdk = int(tgt_m.group(1))
         except Exception:
@@ -131,10 +131,10 @@ try:
         try:
             with open(pl, "r", encoding="utf-8", errors="ignore") as f:
                 pcontent = f.read()
-            id_m = re.search(r'<key>CFBundleIdentifier</key>\s*<string>([^<]+)</string>', pcontent)
+            id_m = re.search(r'<key>CFBundleIdentifier</key>[ \t\r\n]*<string>([^<]+)</string>', pcontent)
             if id_m and not pkg_name:
                 pkg_name = id_m.group(1)
-            ver_m = re.search(r'<key>CFBundleShortVersionString</key>\s*<string>([^<]+)</string>', pcontent)
+            ver_m = re.search(r'<key>CFBundleShortVersionString</key>[ \t\r\n]*<string>([^<]+)</string>', pcontent)
             if ver_m and not version:
                 version = ver_m.group(1)
         except Exception:
@@ -264,8 +264,8 @@ SUSPICIOUS_PATTERNS = [
     (re.compile(rb"/dev/udp/[0-9a-zA-Z._-]+/[0-9]+"), "CRITICAL", "Reverse UDP shell redirect pattern (/dev/udp/)"),
     (re.compile(rb"meterpreter", re.IGNORECASE), "CRITICAL", "Metasploit Meterpreter payload signature detected"),
     (re.compile(rb"CobaltStrike", re.IGNORECASE), "CRITICAL", "Cobalt Strike beacon signature detected"),
-    (re.compile(rb"powershell(\.exe)?\s+(-(enc|encodedcommand)|-nop)", re.IGNORECASE), "HIGH", "Encoded PowerShell execution signature"),
-    (re.compile(rb"nc(\.traditional)?\s+-[e|c]\s+/bin/(ba)?sh", re.IGNORECASE), "CRITICAL", "Netcat command execution shell pipe"),
+    (re.compile(rb"powershell([.]exe)?[ \t\r\n]+(-(enc|encodedcommand)|-nop)", re.IGNORECASE), "HIGH", "Encoded PowerShell execution signature"),
+    (re.compile(rb"nc([.]traditional)?[ \t\r\n]+-[e|c][ \t\r\n]+/bin/(ba)?sh", re.IGNORECASE), "CRITICAL", "Netcat command execution shell pipe"),
 ]
 
 scanned_count = 0
@@ -277,7 +277,7 @@ for root, _, files in os.walk(pkg_dir):
             with open(file_path, "rb") as fp:
                 data = fp.read(4 * 1024 * 1024) # check first 4MB
 
-            rel = os.path.relpath(file_path, pkg_dir).replace("\\\\", "/")
+            rel = os.path.relpath(file_path, pkg_dir).replace(os.sep, "/")
             for pattern, severity, desc in SUSPICIOUS_PATTERNS:
                 if pattern.search(data):
                     findings.append({
@@ -332,14 +332,14 @@ PATTERNS = [
     (re.compile(r'xox[baprs]-[0-9]{10,13}-[a-zA-Z0-9-]+'), "slack-token", "Slack Bot or User Token"),
     (re.compile(r'gh[pousr]_[A-Za-z0-9_]{36,255}'), "github-pat", "GitHub Personal Access Token"),
     (re.compile(r'sk_live_[0-9a-zA-Z]{24}'), "stripe-secret-key", "Stripe Live Secret Key"),
-    (re.compile(r'eyJ[A-Za-z0-9-_=]+\.eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]{20,}'), "jwt-token", "Hardcoded JWT Bearer Token")
+    (re.compile(r'eyJ[A-Za-z0-9-_=]+[.]eyJ[A-Za-z0-9-_=]+[.][A-Za-z0-9-_.+/=]{20,}'), "jwt-token", "Hardcoded JWT Bearer Token")
 ]
 
 for root, _, files in os.walk(pkg_dir):
     for f in files:
         if f.endswith((".java", ".kt", ".swift", ".m", ".xml", ".plist", ".properties", ".gradle", ".json", ".txt", ".class")):
             fp = os.path.join(root, f)
-            rel = os.path.relpath(fp, pkg_dir).replace("\\\\", "/")
+            rel = os.path.relpath(fp, pkg_dir).replace(os.sep, "/")
             try:
                 with open(fp, "r", encoding="utf-8", errors="ignore") as tf:
                     for line_no, line in enumerate(tf, 1):
@@ -563,8 +563,8 @@ pipeline {
                             const R = process.env.R;
                             const ingest = fs.existsSync(R + "/ingest.json") ? JSON.parse(fs.readFileSync(R + "/ingest.json", "utf8")) : {};
                             const detected = ingest.detectedPermissions || [];
-                            const allowed = ("${params.ALLOWED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
-                            const required = ("${params.REQUIRED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                            const allowed = (process.env.ALLOWED_CAPABILITIES || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+                            const required = (process.env.REQUIRED_CAPABILITIES || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
                             
                             const allRequired = Array.from(new Set([...required, ...detected]));
                             const unauthorized = allRequired.filter(c => !allowed.includes(c));
