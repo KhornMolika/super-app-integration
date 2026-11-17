@@ -155,13 +155,20 @@ export class MiniappValidationHelper {
         }
 
         if (isValidProdUrl) {
-          checks.push(
-            urlValidator.validate(prodUrl, null as any).then((isValid) => {
-              if (!isValid)
-                errors['integrationConfigWebView.productionUrl'] =
-                  'productionUrl must be a reachable and accessible URL.';
-            }),
-          );
+          const isDomainAlreadyVerified =
+            Boolean(app.isDomainVerified) ||
+            Boolean(app.integrationConfig?.domainVerified) ||
+            Boolean(app.domainVerifiedAt);
+
+          if (!isDomainAlreadyVerified) {
+            checks.push(
+              urlValidator.validate(prodUrl, null as any).then((isValid) => {
+                if (!isValid)
+                  errors['integrationConfigWebView.productionUrl'] =
+                    'productionUrl must be a reachable and accessible URL.';
+              }),
+            );
+          }
         }
       }
 

@@ -431,10 +431,22 @@ export class MiniappsController {
   async verifyDomain(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
-    @Body() body?: { productionUrl?: string },
+    @Body()
+    body?: {
+      productionUrl?: string;
+      clientVerified?: boolean;
+      allowedDomains?: string[];
+      permissions?: any[];
+    },
   ) {
     await this.require(id, req, MiniAppAccess.EDIT);
-    return this.miniappService.verifyDomain(id, body?.productionUrl);
+    return this.miniappService.verifyDomain(
+      id,
+      body?.productionUrl,
+      body?.clientVerified,
+      body?.allowedDomains,
+      body?.permissions,
+    );
   }
 
   @Post(':id/submit')

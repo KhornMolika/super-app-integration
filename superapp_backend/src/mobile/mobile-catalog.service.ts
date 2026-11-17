@@ -14,6 +14,7 @@ import {
 } from '../capabilities/capability-gate.service';
 import { isAssetProxyLink } from '../storage/asset-url-signer';
 import { MiniAppVersionsService } from '../miniapps/versions/miniapp-versions.service';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 
 export interface CatalogItem {
   id: string;
@@ -31,6 +32,7 @@ export interface CatalogItem {
   termsAndConditions?: string | null;
   privacyPolicy?: string | null;
   status: string;
+  targetAudience?: string;
   nativeSdk?: { available: true };
   /** The app's Home widget (public fields only, never verifiedClass); omitted when it has none. */
   widget?: { widgetClass?: string; viewId?: string; url?: string };
@@ -125,7 +127,16 @@ export function toCatalogItem(
         }
       }
     }
+
+    if (
+      !config.webUrl &&
+      (config.productionUrl || config.testingUrl || config.url)
+    ) {
+      config.webUrl = config.productionUrl || config.testingUrl || config.url;
+    }
   }
+
+  const raw = app as any;
 
   let logo = app.logo ?? null;
   if (logo) {
@@ -181,7 +192,6 @@ export function toCatalogItem(
     }
   }
 
-  const raw = app as any;
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
@@ -205,6 +215,7 @@ export function toCatalogItem(
       raw.privacyPolicyDescription ??
       null,
     status: raw.catalogStatus ?? app.lifecycleStatus ?? raw.status ?? 'ACTIVE',
+    targetAudience: app.targetAudience ?? raw.targetAudience ?? 'PUBLIC',
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
@@ -231,6 +242,9 @@ export class MobileCatalogService {
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
     @Optional() private readonly capabilityGate?: CapabilityGateService,
     @Optional() private readonly versions?: MiniAppVersionsService,
+    @Optional()
+    @InjectRepository(StaffProfile)
+    private readonly staffProfiles?: Repository<StaffProfile>,
   ) {}
 
   /**
@@ -239,10 +253,11 @@ export class MobileCatalogService {
    * passed. Default: the official build.
    */
   async list(
-    queryOrQ?: (CatalogQueryDto & { build?: PhoneBuild }) | string,
+    queryOrQ?: (CatalogQueryDto & { build?: PhoneBuild; endUser?: { id: string; email?: string } }) | string,
     limitOrClientHost?: number | string,
     offsetParam?: number,
     clientHostParam?: string,
+    endUserParam?: { id: string; email?: string },
   ): Promise<CatalogPage> {
     let q: string | undefined;
     let limit = 20;
@@ -250,6 +265,7 @@ export class MobileCatalogService {
     let page: number | undefined;
     let clientHost: string | undefined;
     let build: PhoneBuild = 'release';
+    let endUser: { id: string; email?: string } | undefined;
 
     if (queryOrQ && typeof queryOrQ === 'object') {
       build = queryOrQ.build === 'debug' ? 'debug' : 'release';
@@ -259,11 +275,13 @@ export class MobileCatalogService {
       page = queryOrQ.page;
       clientHost =
         typeof limitOrClientHost === 'string' ? limitOrClientHost : undefined;
+      endUser = queryOrQ.endUser || endUserParam;
     } else {
       q = queryOrQ;
       limit = typeof limitOrClientHost === 'number' ? limitOrClientHost : 20;
       offset = typeof offsetParam === 'number' ? offsetParam : 0;
       clientHost = clientHostParam;
+      endUser = endUserParam;
     }
 
     if (page && page > 0) {
@@ -283,8 +301,10 @@ export class MobileCatalogService {
       'm.description',
       'm.logo',
       'm.integrationMethod',
+      'm.integrationConfig',
       'm.appStatus',
       'm.liveVersionId',
+      'm.targetAudience',
       'org.name',
       'org.code',
       'm.organizationId',
@@ -302,6 +322,49 @@ export class MobileCatalogService {
       );
     } else {
       qb.where('m.appStatus = :live', { live: AppStatus.LIVE });
+    }
+
+    // Target Audience Scoping:
+    // - Unauthenticated guest (no token) & Consumer users: strictly PUBLIC mini apps only
+    // - FSA Staff: PUBLIC, ALL_FSA_STAFF, and ORGANIZATION_ONLY for their organization
+    // - Super Admin: all mini apps
+    let staffProfile: StaffProfile | null = null;
+    if (this.staffProfiles && endUser?.id) {
+      try {
+        staffProfile = await this.staffProfiles.findOne({
+          where: { identityId: endUser.id },
+          relations: { role: true, organization: true },
+        });
+      } catch (_) {}
+    }
+
+    if (!staffProfile) {
+      qb.andWhere('(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience)', {
+        publicAudience: 'PUBLIC',
+      });
+    } else {
+      const roleName = (staffProfile.role?.name || '').toUpperCase();
+      if (roleName !== 'SUPER_ADMIN') {
+        if (staffProfile.organizationId) {
+          qb.andWhere(
+            '(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience OR UPPER(m.targetAudience) = :staffAudience OR (UPPER(m.targetAudience) = :orgAudience AND m.organizationId = :userOrgId))',
+            {
+              publicAudience: 'PUBLIC',
+              staffAudience: 'ALL_FSA_STAFF',
+              orgAudience: 'ORGANIZATION_ONLY',
+              userOrgId: staffProfile.organizationId,
+            },
+          );
+        } else {
+          qb.andWhere(
+            '(m.targetAudience IS NULL OR UPPER(m.targetAudience) = :publicAudience OR UPPER(m.targetAudience) = :staffAudience)',
+            {
+              publicAudience: 'PUBLIC',
+              staffAudience: 'ALL_FSA_STAFF',
+            },
+          );
+        }
+      }
     }
 
     if (q) {
@@ -323,7 +386,10 @@ export class MobileCatalogService {
       const v = served?.get(r.id);
       r.capabilities = (v?.capabilities ?? r.capabilities ?? []) as any;
       r.integrationMethod = v?.integration?.integrationMethod ?? r.integrationMethod;
-      r.integrationConfig = v?.integration?.integrationConfig ?? null;
+      r.integrationConfig =
+        v !== undefined
+          ? (v.integration?.integrationConfig ?? null)
+          : ((r as any).integrationConfig ?? null);
       r.homeWidget = (v?.integration?.homeWidget ?? null) as any;
       // The item status: ACTIVE when live, else the stage of the served version
       (r as any).catalogStatus = lifecycleOf({

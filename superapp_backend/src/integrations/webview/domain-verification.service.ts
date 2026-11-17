@@ -225,7 +225,19 @@ export class DomainVerificationService {
       }
 
       // 3. Check appId
-      if (!payload.appId || payload.appId !== expectedAppId) {
+      const candidateAppIds: string[] = [
+        typeof payload.appId === 'string' ? payload.appId : null,
+        ...(Array.isArray(payload.appIds) ? payload.appIds : []),
+      ].filter((id): id is string => Boolean(id));
+
+      const normalize = (id: string) =>
+        id.toLowerCase().replace(/^com\.fsa\./, '').replace(/_/g, '-');
+
+      const matchesAppId = candidateAppIds.some(
+        (id) => id === expectedAppId || normalize(id) === normalize(expectedAppId),
+      );
+
+      if (!matchesAppId) {
         return {
           success: false,
           message: `appId mismatch in association file: Expected "${expectedAppId}", found "${payload.appId || 'none'}".`,

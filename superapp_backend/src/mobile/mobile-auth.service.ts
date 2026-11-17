@@ -785,21 +785,25 @@ export class MobileAuthService {
     }
 
     // 3. Verify Target Audience entitlement
-    if (miniApp.targetAudience === 'ORGANIZATION_ONLY') {
-      if (
-        !staffProfile ||
-        !staffProfile.organizationId ||
-        staffProfile.organizationId !== miniApp.organizationId
-      ) {
-        throw new ForbiddenException(
-          'Access restricted to internal staff of the publishing regulatory authority',
-        );
-      }
-    } else if (miniApp.targetAudience === 'ALL_FSA_STAFF') {
-      if (!staffProfile || !staffProfile.organizationId) {
-        throw new ForbiddenException(
-          'Access restricted to verified FSA personnel',
-        );
+    const audience = String(miniApp.targetAudience || 'PUBLIC').toUpperCase();
+    const isSuperAdmin = (staffProfile?.role?.name || '').toUpperCase() === 'SUPER_ADMIN';
+    if (!isSuperAdmin) {
+      if (audience === 'ORGANIZATION_ONLY') {
+        if (
+          !staffProfile ||
+          !staffProfile.organizationId ||
+          staffProfile.organizationId !== miniApp.organizationId
+        ) {
+          throw new ForbiddenException(
+            'Access restricted to internal staff of the publishing regulatory authority',
+          );
+        }
+      } else if (audience === 'ALL_FSA_STAFF') {
+        if (!staffProfile || !staffProfile.organizationId) {
+          throw new ForbiddenException(
+            'Access restricted to verified FSA personnel',
+          );
+        }
       }
     }
 

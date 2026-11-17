@@ -119,6 +119,26 @@ describe('DomainVerificationService', () => {
       expect(res.verifiedAt).toBeInstanceOf(Date);
     });
 
+    it('verifies successfully when association JSON appId matches normalized slug or com.fsa prefix', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          appId: 'nova-insurance-fsa',
+          verificationToken: 'tok_live_123',
+          allowedDomains: ['insurance.example.com'],
+        }),
+      });
+
+      const res = await service.verifyDomainOwnership(
+        'https://insurance.example.com',
+        'com.fsa.nova_insurance_fsa',
+        'tok_live_123',
+      );
+
+      expect(res.success).toBe(true);
+    });
+
     it('fails when association JSON appId does not match', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,

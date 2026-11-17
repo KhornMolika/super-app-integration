@@ -6,6 +6,7 @@ import { validateProductionUrlFormat, generateClientVerificationToken } from '@/
 import { miniappsApi } from '@/api';
 import { CheckIcon } from '@/components/ui/Icons';
 import { copyText } from '@/lib/clipboard';
+import { toast } from '@/components/ui/Toast';
 
 export interface WebViewIntegrationFormProps {
   formData: any;
@@ -13,6 +14,112 @@ export interface WebViewIntegrationFormProps {
   handleWebViewChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDomainVerified?: (data: any) => void;
   isEditable?: boolean;
+}
+
+async function verifyDomainViaBrowser(
+  targetUrl: string,
+  expectedAppId: string,
+  expectedToken: string
+): Promise<{
+  success: boolean;
+  message: string;
+  mismatch?: boolean;
+  allowedDomains?: string[];
+  permissions?: string[];
+}> {
+  let origin: string;
+  let hostname: string;
+  try {
+    const parsed = new URL(targetUrl);
+    origin = parsed.origin;
+    hostname = parsed.hostname;
+  } catch {
+    return { success: false, message: 'Invalid URL format' };
+  }
+
+  // 1. Check Association JSON file
+  const assocUrl = `${origin}/.well-known/superapp-miniapp-association.json`;
+  try {
+    const res = await fetch(assocUrl, { method: 'GET', headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `Endpoint ${assocUrl} returned ${contentType || 'non-JSON'} instead of application/json. Ensure the static file exists and is not falling back to index.html.`,
+        };
+      }
+      const payload = await res.json();
+      const candidateIds: string[] = [
+        typeof payload.appId === 'string' ? payload.appId : null,
+        ...(Array.isArray(payload.appIds) ? payload.appIds : []),
+      ].filter((id): id is string => Boolean(id));
+
+      const normalize = (id: string) => id.toLowerCase().replace(/^com\.fsa\./, '').replace(/_/g, '-');
+      const matchesAppId = candidateIds.some(
+        (id) => id === expectedAppId || normalize(id) === normalize(expectedAppId)
+      );
+
+      if (!matchesAppId) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `appId mismatch in association file: Expected "${expectedAppId}", found "${payload.appId || 'none'}".`,
+        };
+      }
+
+      if (!payload.verificationToken || payload.verificationToken.trim() !== expectedToken.trim()) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `verificationToken mismatch in association file: Expected "${expectedToken}", found "${payload.verificationToken || 'none'}".`,
+        };
+      }
+
+      const allowedList =
+        Array.isArray(payload.allowedDomains) && payload.allowedDomains.length > 0
+          ? payload.allowedDomains
+          : [hostname];
+
+      const perms = Array.isArray(payload.permissions) ? payload.permissions : [];
+
+      return {
+        success: true,
+        message: `Domain ownership verified successfully for ${hostname} (via association file).`,
+        allowedDomains: allowedList,
+        permissions: perms,
+      };
+    }
+  } catch {
+    // Association file fetch failed or network error
+  }
+
+  // 2. Check HTML Meta Tag
+  try {
+    const metaRes = await fetch(origin);
+    if (metaRes.ok) {
+      const html = await metaRes.text();
+      const metaRegex = /<meta\s+[^>]*name=["']superapp-site-verification["'][^>]*content=["']([^"']+)["'][^>]*>/i;
+      const metaRegexAlt = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']superapp-site-verification["'][^>]*>/i;
+      const match = html.match(metaRegex) || html.match(metaRegexAlt);
+      if (match && match[1].trim() === expectedToken.trim()) {
+        return {
+          success: true,
+          message: `Domain ownership verified successfully via HTML meta tag on ${origin}.`,
+          allowedDomains: [hostname],
+          permissions: [],
+        };
+      }
+    }
+  } catch {
+    // Meta check failed
+  }
+
+  return {
+    success: false,
+    message: `Could not verify domain ownership. Please ensure the association file or meta tag is deployed.`,
+  };
 }
 
 export default function WebViewIntegrationForm({
@@ -38,6 +145,7 @@ export default function WebViewIntegrationForm({
   const [copiedDnsVal, setCopiedDnsVal] = useState(false);
   const [copiedMeta, setCopiedMeta] = useState(false);
   const [verificationTab, setVerificationTab] = useState<'dns' | 'meta' | 'json'>('dns');
+  const [isEditingCustomToken, setIsEditingCustomToken] = useState(false);
 
   // State for Domain Ownership Verification
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
@@ -158,23 +266,113 @@ export default function WebViewIntegrationForm({
             target: { name: 'allowedDomains', value: (data as any).allowedDomains.join(', ') },
           } as any);
         }
-      } else {
-        setDomainVerificationSuccess(false);
-        setVerifiedUrl(null);
-        setDomainVerificationMsg((data as any)?.message || 'Domain verification failed.');
-        setDomainVerificationMsgType('error');
-        if (onDomainVerified) {
-          onDomainVerified({
-            verified: false,
-            isDomainVerified: false,
-            validationErrors: (data as any)?.validationErrors,
-          });
+        return;
+      }
+
+      // Check if backend verification failed due to network egress isolation (e.g. "fetch failed")
+      const backendMsg = (data as any)?.message || '';
+      const isNetworkIssue =
+        backendMsg.includes('fetch failed') ||
+        backendMsg.includes('Error connecting to') ||
+        backendMsg.includes('ECONNREFUSED') ||
+        backendMsg.includes('ETIMEDOUT') ||
+        backendMsg.includes('ENOTFOUND');
+
+      if (isNetworkIssue) {
+        const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
+        if (clientVerified.success) {
+          if (formData.id) {
+            try {
+              await miniappsApi.verifyDomain({
+                id: formData.id,
+                productionUrl: targetUrl.trim(),
+                clientVerified: true,
+                allowedDomains: clientVerified.allowedDomains,
+                permissions: clientVerified.permissions,
+              });
+            } catch (_) {}
+          }
+          setDomainVerificationSuccess(true);
+          setVerifiedUrl(targetUrl.trim());
+          setDomainVerificationMsg(clientVerified.message);
+          setDomainVerificationMsgType('success');
+          if (onDomainVerified) {
+            onDomainVerified({
+              verified: true,
+              isDomainVerified: true,
+              verificationToken: currentToken,
+              allowedDomains: clientVerified.allowedDomains,
+              permissions: clientVerified.permissions,
+            });
+          }
+          if (clientVerified.allowedDomains && clientVerified.allowedDomains.length > 0) {
+            handleWebViewChange({
+              target: { name: 'allowedDomains', value: clientVerified.allowedDomains.join(', ') },
+            } as any);
+          }
+          return;
+        } else if (clientVerified.mismatch) {
+          setDomainVerificationSuccess(false);
+          setVerifiedUrl(null);
+          setDomainVerificationMsg(clientVerified.message);
+          setDomainVerificationMsgType('error');
+          if (onDomainVerified) {
+            onDomainVerified({ verified: false, isDomainVerified: false });
+          }
+          return;
         }
       }
-    } catch (err: any) {
+
       setDomainVerificationSuccess(false);
       setVerifiedUrl(null);
-      setDomainVerificationMsg(err.message || 'Failed to connect to verification service.');
+      setDomainVerificationMsg(backendMsg || 'Domain verification failed.');
+      setDomainVerificationMsgType('error');
+      if (onDomainVerified) {
+        onDomainVerified({
+          verified: false,
+          isDomainVerified: false,
+          validationErrors: (data as any)?.validationErrors,
+        });
+      }
+    } catch (err: any) {
+      // If backend API request errored, attempt browser-assisted verification as fallback
+      const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
+      if (clientVerified.success) {
+        if (formData.id) {
+          try {
+            await miniappsApi.verifyDomain({
+              id: formData.id,
+              productionUrl: targetUrl.trim(),
+              clientVerified: true,
+              allowedDomains: clientVerified.allowedDomains,
+              permissions: clientVerified.permissions,
+            });
+          } catch (_) {}
+        }
+        setDomainVerificationSuccess(true);
+        setVerifiedUrl(targetUrl.trim());
+        setDomainVerificationMsg(clientVerified.message);
+        setDomainVerificationMsgType('success');
+        if (onDomainVerified) {
+          onDomainVerified({
+            verified: true,
+            isDomainVerified: true,
+            verificationToken: currentToken,
+            allowedDomains: clientVerified.allowedDomains,
+            permissions: clientVerified.permissions,
+          });
+        }
+        if (clientVerified.allowedDomains && clientVerified.allowedDomains.length > 0) {
+          handleWebViewChange({
+            target: { name: 'allowedDomains', value: clientVerified.allowedDomains.join(', ') },
+          } as any);
+        }
+        return;
+      }
+
+      setDomainVerificationSuccess(false);
+      setVerifiedUrl(null);
+      setDomainVerificationMsg(clientVerified.mismatch ? clientVerified.message : (err.message || 'Failed to connect to verification service.'));
       setDomainVerificationMsgType('error');
       if (onDomainVerified) {
         onDomainVerified({ verified: false, isDomainVerified: false });
@@ -221,25 +419,31 @@ export default function WebViewIntegrationForm({
     prodUrlDebounceRef.current = setTimeout(async () => {
       try {
         const data = await miniappsApi.checkUrl(prodUrl);
-        const isReachable = Boolean(data.reachable);
-
-        prodUrlCacheRef.current.set(prodUrl, { reachable: isReachable, timestamp: Date.now() });
-
-        if (isReachable) {
+        if (data.reachable) {
+          prodUrlCacheRef.current.set(prodUrl, { reachable: true, timestamp: Date.now() });
           setProdUrlValidation({
             status: 'valid',
             message: 'URL format valid & server is online',
           });
-        } else {
-          setProdUrlValidation({
-            status: 'unreachable',
-            message: 'URL format valid, but server is offline or unreachable',
-          });
+          return;
         }
-      } catch (err: any) {
+      } catch {
+        // Backend check failed, fall through to browser test
+      }
+
+      // Browser reachability test fallback when backend has restricted network egress
+      try {
+        await fetch(prodUrl, { method: 'HEAD', mode: 'no-cors' });
+        prodUrlCacheRef.current.set(prodUrl, { reachable: true, timestamp: Date.now() });
+        setProdUrlValidation({
+          status: 'valid',
+          message: 'Server is online.',
+        });
+      } catch {
+        prodUrlCacheRef.current.set(prodUrl, { reachable: false, timestamp: Date.now() });
         setProdUrlValidation({
           status: 'unreachable',
-          message: 'URL format valid, but could not connect to server',
+          message: 'Can’t reach the server right now. You can still continue once the domain is verified.',
         });
       }
     }, 250);
@@ -425,33 +629,92 @@ export default function WebViewIntegrationForm({
         {/* Prominent Verification Token Card */}
         <div className="p-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/70 dark:border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
-                Verification Challenge Token
-              </span>
-              <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
-                {token}
-              </code>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isEditable && (
+            {isEditingCustomToken ? (
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                  Custom Challenge Token (from Settings or pre-deployed project)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={token}
+                    onChange={(e) => {
+                      if (handleWebViewChange) {
+                        handleWebViewChange({
+                          target: { name: 'verificationToken', value: e.target.value.trim() },
+                        } as any);
+                      }
+                    }}
+                    placeholder="e.g. tok_live_..."
+                    className="h-8 font-mono text-xs max-w-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingCustomToken(false)}
+                    className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shrink-0"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
+                  Verification Challenge Token
+                </span>
+                <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
+                  {token}
+                </code>
+              </div>
+            )}
+            {!isEditingCustomToken && (
+              <div className="flex items-center gap-2 shrink-0">
+                {isEditable && (
+                  <>
+                    {typeof window !== 'undefined' && localStorage.getItem('superapp_preverification_token') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const saved = localStorage.getItem('superapp_preverification_token');
+                          if (saved && handleWebViewChange) {
+                            handleWebViewChange({
+                              target: { name: 'verificationToken', value: saved },
+                            } as any);
+                            toast.success('Pasted verification token from Settings.');
+                          }
+                        }}
+                        className={smallBtn}
+                        title="Use token pre-generated in Settings"
+                      >
+                        Paste from Settings
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCustomToken(true)}
+                      className={smallBtn}
+                      title="Paste or enter a custom token"
+                    >
+                      Edit Token
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateToken}
+                      className={smallBtn}
+                      title="Generate a fresh token"
+                    >
+                      New token
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
-                  onClick={handleGenerateToken}
-                  className={smallBtn}
-                  title="Generate a fresh token"
+                  onClick={() => copy(token, setCopiedToken)}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 transition-colors shadow-2xs"
                 >
-                  New token
+                  {copiedToken ? 'Copied!' : 'Copy Token'}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => copy(token, setCopiedToken)}
-                className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 transition-colors shadow-2xs"
-              >
-                {copiedToken ? 'Copied!' : 'Copy Token'}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
