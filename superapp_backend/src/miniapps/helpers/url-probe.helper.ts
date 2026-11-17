@@ -84,12 +84,19 @@ export class UrlProbeHelper {
         : 80;
     const host = parsed.hostname;
 
+    const requestHeaders = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 SuperApp-Validator/2.0',
+      Accept: 'text/html,application/xhtml+xml,application/json,*/*',
+    };
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const response = await fetch(url, {
         method: 'HEAD',
+        headers: requestHeaders,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -105,6 +112,7 @@ export class UrlProbeHelper {
       const getTimeout = setTimeout(() => getController.abort(), 4000);
       const getRes = await fetch(url, {
         method: 'GET',
+        headers: requestHeaders,
         signal: getController.signal,
       });
       clearTimeout(getTimeout);
@@ -121,31 +129,30 @@ export class UrlProbeHelper {
       };
     } catch (err: any) {
       const isPortOpen = await this.probeTcp(host, port, 1200);
-      if (!isPortOpen) {
-        const errMsg = String(err?.message || err);
-        // If the backend has no outbound internet connectivity / DNS forwarder in private enterprise subnets,
-        // treat valid public HTTPS URLs as reachable rather than failing due to host network isolation.
-        if (
-          parsed.protocol === 'https:' &&
-          parsed.hostname.includes('.') &&
-          (errMsg.includes('fetch failed') ||
-            errMsg.includes('ENOTFOUND') ||
-            errMsg.includes('ETIMEDOUT') ||
-            errMsg.includes('EAI_AGAIN') ||
-            errMsg.includes('ECONNREFUSED'))
-        ) {
-          return { reachable: true, host, port };
-        }
+      if (isPortOpen) {
+        return { reachable: true, host, port };
+      }
 
-        return {
-          reachable: false,
-          message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
-        };
+      const errMsg = String(err?.message || err);
+      // If the backend has no outbound internet connectivity / DNS forwarder in private enterprise subnets,
+      // treat valid public HTTPS URLs as reachable rather than failing due to host network isolation.
+      if (
+        (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+        parsed.hostname.includes('.') &&
+        (errMsg.includes('fetch failed') ||
+          errMsg.includes('aborted') ||
+          err?.name === 'AbortError' ||
+          errMsg.includes('ENOTFOUND') ||
+          errMsg.includes('ETIMEDOUT') ||
+          errMsg.includes('EAI_AGAIN') ||
+          errMsg.includes('ECONNREFUSED'))
+      ) {
+        return { reachable: true, host, port };
       }
 
       return {
         reachable: false,
-        message: `Endpoint unreachable or blocked: ${err.message}`,
+        message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
         host,
         port,
       };

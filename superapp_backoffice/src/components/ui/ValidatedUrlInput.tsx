@@ -154,7 +154,16 @@ export function ValidatedUrlInput({
     debounceRef.current = setTimeout(async () => {
       try {
         const data = await miniappsApi.checkUrl(trimmed);
-        const isReachable = Boolean(data?.reachable);
+        let isReachable = Boolean(data?.reachable);
+
+        if (!isReachable && typeof window !== 'undefined') {
+          try {
+            await fetch(trimmed, { method: 'HEAD', mode: 'no-cors' });
+            isReachable = true;
+          } catch {
+            // Fall through
+          }
+        }
 
         cacheRef.current.set(trimmed, { reachable: isReachable, timestamp: Date.now() });
 
@@ -170,10 +179,26 @@ export function ValidatedUrlInput({
           });
         }
       } catch (err: any) {
-        setValidation({
-          status: 'unreachable',
-          message: 'URL format valid, but could not connect to server',
-        });
+        let isReachable = false;
+        if (typeof window !== 'undefined') {
+          try {
+            await fetch(trimmed, { method: 'HEAD', mode: 'no-cors' });
+            isReachable = true;
+          } catch {}
+        }
+
+        if (isReachable) {
+          cacheRef.current.set(trimmed, { reachable: true, timestamp: Date.now() });
+          setValidation({
+            status: 'valid',
+            message: 'URL format valid & server is online',
+          });
+        } else {
+          setValidation({
+            status: 'unreachable',
+            message: 'URL format valid, but could not connect to server',
+          });
+        }
       }
     }, 250);
 

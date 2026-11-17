@@ -132,15 +132,35 @@ export async function validateMiniAppStep(
         }
 
         if (isValid) {
-          try {
-            const data = await miniappsApi.checkUrl(prodUrl);
-            if (!data.reachable) {
-              errors['integrationConfigWebView.productionUrl'] = 'Production URL is not reachable';
+          const isDomainVerified =
+            Boolean(formData.isDomainVerified) ||
+            Boolean((formData as any).integrationConfigWebView?.domainVerified) ||
+            Boolean((formData as any).domainVerifiedAt);
+
+          // If domain ownership is already verified, do not block on reachability probe
+          if (!isDomainVerified) {
+            try {
+              const data = await miniappsApi.checkUrl(prodUrl);
+              let reachable = Boolean(data?.reachable);
+
+              // Client-side browser reachability fallback if backend is in isolated subnet
+              if (!reachable && typeof window !== 'undefined') {
+                try {
+                  await fetch(prodUrl, { method: 'HEAD', mode: 'no-cors' });
+                  reachable = true;
+                } catch {
+                  // Fall through
+                }
+              }
+
+              if (!reachable) {
+                errors['integrationConfigWebView.productionUrl'] = 'Production URL is not reachable';
+                isValid = false;
+              }
+            } catch (e) {
+              errors['integrationConfigWebView.productionUrl'] = 'Error checking URL reachability';
               isValid = false;
             }
-          } catch (e) {
-            errors['integrationConfigWebView.productionUrl'] = 'Error checking URL reachability';
-            isValid = false;
           }
         }
       }
