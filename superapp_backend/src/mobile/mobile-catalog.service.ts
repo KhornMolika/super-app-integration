@@ -301,7 +301,6 @@ export class MobileCatalogService {
       'm.description',
       'm.logo',
       'm.integrationMethod',
-      'm.integrationConfig',
       'm.appStatus',
       'm.liveVersionId',
       'm.targetAudience',
