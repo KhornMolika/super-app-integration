@@ -21,8 +21,10 @@ param(
     [string]$CommitMessage,
 
     [Parameter(Position=4)]
-    [switch]$Yes
-)
+    [switch]$Yes,
+
+    [Parameter(Position=5)]
+    [switch]$SyncDevelopment = $true
 
 $ErrorActionPreference = "Continue"
 
@@ -199,6 +201,13 @@ function Push-ToOrigin {
     git push origin ("{0}:{1}" -f $SourceBranch, $TargetBranch)
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Monorepo successfully pushed to origin/$TargetBranch!`n" -ForegroundColor Green
+        if ($SyncDevelopment -and $TargetBranch -ne 'development') {
+            Write-Host "  -> Fast syncing origin/development..." -ForegroundColor Cyan
+            git push origin ("{0}:development" -f $SourceBranch)
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[OK] Synced origin/development!`n" -ForegroundColor Green
+            }
+        }
     } else {
         Write-Host "[ERROR] Failed to push to origin/$TargetBranch.`n" -ForegroundColor Red
     }
@@ -214,11 +223,15 @@ function Push-ToSuperAppManager {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-manager ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
+    $refSpecs = @(("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch))
+    if ($SyncDevelopment -and $TargetBranch -ne 'development') {
+        $refSpecs += ("{0}:refs/heads/development" -f $splitCommit)
+    }
+    git push superapp-manager $refSpecs --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Backoffice successfully pushed to superapp-manager/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Backoffice successfully pushed to superapp-manager ($($refSpecs -join ', '))!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to superapp-manager/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-manager ($TargetBranch).`n" -ForegroundColor Red
     }
 }
 
@@ -232,11 +245,15 @@ function Push-ToSuperAppBackend {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-backend ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
+    $refSpecs = @(("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch))
+    if ($SyncDevelopment -and $TargetBranch -ne 'development') {
+        $refSpecs += ("{0}:refs/heads/development" -f $splitCommit)
+    }
+    git push superapp-backend $refSpecs --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Backend successfully pushed to superapp-backend/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Backend successfully pushed to superapp-backend ($($refSpecs -join ', '))!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to superapp-backend/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-backend ($TargetBranch).`n" -ForegroundColor Red
     }
 }
 
@@ -250,11 +267,15 @@ function Push-ToSuperAppMobile {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-mobile ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
+    $refSpecs = @(("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch))
+    if ($SyncDevelopment -and $TargetBranch -ne 'development') {
+        $refSpecs += ("{0}:refs/heads/development" -f $splitCommit)
+    }
+    git push superapp-mobile $refSpecs --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Mobile SuperApp successfully pushed to superapp-mobile/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Mobile SuperApp successfully pushed to superapp-mobile ($($refSpecs -join ', '))!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to superapp-mobile/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-mobile ($TargetBranch).`n" -ForegroundColor Red
     }
 }
 
