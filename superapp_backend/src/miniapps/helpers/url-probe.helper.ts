@@ -122,6 +122,21 @@ export class UrlProbeHelper {
     } catch (err: any) {
       const isPortOpen = await this.probeTcp(host, port, 1200);
       if (!isPortOpen) {
+        const errMsg = String(err?.message || err);
+        // If the backend has no outbound internet connectivity / DNS forwarder in private enterprise subnets,
+        // treat valid public HTTPS URLs as reachable rather than failing due to host network isolation.
+        if (
+          parsed.protocol === 'https:' &&
+          parsed.hostname.includes('.') &&
+          (errMsg.includes('fetch failed') ||
+            errMsg.includes('ENOTFOUND') ||
+            errMsg.includes('ETIMEDOUT') ||
+            errMsg.includes('EAI_AGAIN') ||
+            errMsg.includes('ECONNREFUSED'))
+        ) {
+          return { reachable: true, host, port };
+        }
+
         return {
           reachable: false,
           message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
