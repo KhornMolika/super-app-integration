@@ -71,6 +71,22 @@ describe('toCatalogItem', () => {
     });
   });
 
+  it('populates webUrl from productionUrl or url for mobile clients', () => {
+    const item = toCatalogItem(
+      makeApp({
+        integrationConfig: {
+          productionUrl: 'https://mawebviewinsurance.vercel.app',
+        },
+      }),
+    );
+    expect(item.integrationConfig?.webUrl).toBe(
+      'https://mawebviewinsurance.vercel.app',
+    );
+    expect(item.integrationConfig?.productionUrl).toBe(
+      'https://mawebviewinsurance.vercel.app',
+    );
+  });
+
   it('returns the organization code, lowercased, as regulator', () => {
     expect(toCatalogItem(makeApp({ organizationCode: 'IRC' })).regulator).toBe('irc');
     expect(toCatalogItem(makeApp({ organizationCode: '' })).regulator).toBeNull();

@@ -127,7 +127,16 @@ export function toCatalogItem(
         }
       }
     }
+
+    if (
+      !config.webUrl &&
+      (config.productionUrl || config.testingUrl || config.url)
+    ) {
+      config.webUrl = config.productionUrl || config.testingUrl || config.url;
+    }
   }
+
+  const raw = app as any;
 
   let logo = app.logo ?? null;
   if (logo) {
@@ -183,7 +192,6 @@ export function toCatalogItem(
     }
   }
 
-  const raw = app as any;
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
@@ -293,6 +301,7 @@ export class MobileCatalogService {
       'm.description',
       'm.logo',
       'm.integrationMethod',
+      'm.integrationConfig',
       'm.appStatus',
       'm.liveVersionId',
       'm.targetAudience',
@@ -377,7 +386,10 @@ export class MobileCatalogService {
       const v = served?.get(r.id);
       r.capabilities = (v?.capabilities ?? r.capabilities ?? []) as any;
       r.integrationMethod = v?.integration?.integrationMethod ?? r.integrationMethod;
-      r.integrationConfig = v?.integration?.integrationConfig ?? null;
+      r.integrationConfig =
+        v !== undefined
+          ? (v.integration?.integrationConfig ?? null)
+          : ((r as any).integrationConfig ?? null);
       r.homeWidget = (v?.integration?.homeWidget ?? null) as any;
       // The item status: ACTIVE when live, else the stage of the served version
       (r as any).catalogStatus = lifecycleOf({
