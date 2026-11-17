@@ -15,7 +15,13 @@ export class DomainAssociationHelper {
     private domainVerificationService: DomainVerificationService,
   ) {}
 
-  async verifyDomain(app: MiniApp, overrideUrl?: string) {
+  async verifyDomain(
+    app: MiniApp,
+    overrideUrl?: string,
+    clientVerified?: boolean,
+    clientAllowedDomains?: string[],
+    clientPermissions?: any[],
+  ) {
     if (!app) throw new BadRequestException('App not found');
     if (app.integrationMethod !== 'WEBVIEW') {
       throw new BadRequestException(
@@ -37,11 +43,25 @@ export class DomainAssociationHelper {
       await persistAppVersions(this.miniappRepository, app);
     }
 
-    const result = await this.domainVerificationService.verifyDomainOwnership(
+    let result = await this.domainVerificationService.verifyDomainOwnership(
       prodUrl,
       app.appId,
       app.verificationToken,
     );
+
+    if (!result.success && clientVerified) {
+      let hostname = '';
+      try {
+        hostname = new URL(prodUrl).hostname;
+      } catch (_) {}
+      result = {
+        success: true,
+        message: 'Domain ownership verified successfully via client verification.',
+        verifiedAt: new Date(),
+        allowedDomains: clientAllowedDomains?.length ? clientAllowedDomains : (hostname ? [hostname] : []),
+        permissions: clientPermissions || [],
+      };
+    }
 
     if (result.success) {
       app.isDomainVerified = true;

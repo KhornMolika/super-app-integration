@@ -102,6 +102,8 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
         const errMsg = String(fallbackError?.message || fallbackError);
         if (
           errMsg.includes('fetch failed') ||
+          errMsg.includes('aborted') ||
+          fallbackError?.name === 'AbortError' ||
           errMsg.includes('ENOTFOUND') ||
           errMsg.includes('ETIMEDOUT') ||
           errMsg.includes('EAI_AGAIN') ||

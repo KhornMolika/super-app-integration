@@ -281,6 +281,17 @@ export default function WebViewIntegrationForm({
       if (isNetworkIssue) {
         const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
         if (clientVerified.success) {
+          if (formData.id) {
+            try {
+              await miniappsApi.verifyDomain({
+                id: formData.id,
+                productionUrl: targetUrl.trim(),
+                clientVerified: true,
+                allowedDomains: clientVerified.allowedDomains,
+                permissions: clientVerified.permissions,
+              });
+            } catch (_) {}
+          }
           setDomainVerificationSuccess(true);
           setVerifiedUrl(targetUrl.trim());
           setDomainVerificationMsg(clientVerified.message);
@@ -327,6 +338,17 @@ export default function WebViewIntegrationForm({
       // If backend API request errored, attempt browser-assisted verification as fallback
       const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
       if (clientVerified.success) {
+        if (formData.id) {
+          try {
+            await miniappsApi.verifyDomain({
+              id: formData.id,
+              productionUrl: targetUrl.trim(),
+              clientVerified: true,
+              allowedDomains: clientVerified.allowedDomains,
+              permissions: clientVerified.permissions,
+            });
+          } catch (_) {}
+        }
         setDomainVerificationSuccess(true);
         setVerifiedUrl(targetUrl.trim());
         setDomainVerificationMsg(clientVerified.message);

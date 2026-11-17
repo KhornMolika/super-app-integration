@@ -1233,10 +1233,22 @@ export class MiniappsService implements OnApplicationBootstrap {
     return this.retirement().restore(app, actor, this.retirementLog);
   }
 
-  async verifyDomain(id: string, overrideUrl?: string) {
+  async verifyDomain(
+    id: string,
+    overrideUrl?: string,
+    clientVerified?: boolean,
+    clientAllowedDomains?: string[],
+    clientPermissions?: any[],
+  ) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.domainAssociationHelper.verifyDomain(app, overrideUrl);
+    return this.domainAssociationHelper.verifyDomain(
+      app,
+      overrideUrl,
+      clientVerified,
+      clientAllowedDomains,
+      clientPermissions,
+    );
   }
 
   async verifyDomainStandalone(

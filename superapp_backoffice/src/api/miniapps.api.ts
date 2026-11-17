@@ -120,11 +120,19 @@ export const miniappsApi = {
   generateToken: () =>
     apiClient<{ token: string }>('/api/mini-apps/generate-token'),
 
-  verifyDomain: (data: { id?: string; productionUrl: string; appId?: string; verificationToken?: string }) => {
+  verifyDomain: (data: {
+    id?: string;
+    productionUrl: string;
+    appId?: string;
+    verificationToken?: string;
+    clientVerified?: boolean;
+    allowedDomains?: string[];
+    permissions?: any[];
+  }) => {
     if (data.id) {
       return apiClient<{ verified: boolean; error?: string }>(`/api/mini-apps/${data.id}/verify-domain`, {
         method: 'POST',
-        body: { productionUrl: data.productionUrl },
+        body: data,
       });
     }
     return apiClient<{ verified: boolean; error?: string }>('/api/mini-apps/verify-domain', {
