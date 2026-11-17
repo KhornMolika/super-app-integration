@@ -24,7 +24,8 @@ param(
     [switch]$Yes,
 
     [Parameter(Position=5)]
-    [switch]$SyncDevelopment = $true
+    [switch]$SyncDevelopment
+)
 
 $ErrorActionPreference = "Continue"
 
