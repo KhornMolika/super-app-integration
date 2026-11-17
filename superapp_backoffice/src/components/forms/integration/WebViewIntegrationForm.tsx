@@ -440,11 +440,19 @@ export default function WebViewIntegrationForm({
           message: 'Server is online.',
         });
       } catch {
-        prodUrlCacheRef.current.set(prodUrl, { reachable: false, timestamp: Date.now() });
-        setProdUrlValidation({
-          status: 'unreachable',
-          message: 'Can’t reach the server right now. You can still continue once the domain is verified.',
-        });
+        if (isVerified) {
+          prodUrlCacheRef.current.set(prodUrl, { reachable: true, timestamp: Date.now() });
+          setProdUrlValidation({
+            status: 'valid',
+            message: 'Domain ownership verified & server configured.',
+          });
+        } else {
+          prodUrlCacheRef.current.set(prodUrl, { reachable: false, timestamp: Date.now() });
+          setProdUrlValidation({
+            status: 'unreachable',
+            message: 'Can’t reach the server right now. You can still continue once the domain is verified.',
+          });
+        }
       }
     }, 250);
 
