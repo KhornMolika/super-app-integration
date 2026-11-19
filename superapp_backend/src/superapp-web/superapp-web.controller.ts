@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 import { SuperAppWebService } from './superapp-web.service';
@@ -46,6 +46,23 @@ export class SuperAppWebController {
   async info() {
     const build = await this.web.getBuild();
     return build ? { available: true, ...build.info, files: build.files.size } : { available: false };
+  }
+
+  /**
+   * Webhook endpoint: Called by Jenkins or Admin upon publishing a new web build to Nexus.
+   * Invalidates in-memory cache and immediately fetches the newly published build.
+   */
+  @Post(['-/refresh', 'refresh'])
+  @BypassTransform()
+  async triggerRefresh() {
+    const build = await this.web.refreshNow(true);
+    return {
+      success: Boolean(build),
+      message: build
+        ? `SuperApp Web build #${build.info.build} loaded`
+        : 'No SuperApp Web build available in Nexus',
+      info: build ? build.info : null,
+    };
   }
 
   @Get()

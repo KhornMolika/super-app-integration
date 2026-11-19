@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readTarGz } from './tar.util';
 import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface SuperAppWebInfo {
   build: number;
@@ -40,7 +41,26 @@ export class SuperAppWebService {
   static readonly ERROR_BACKOFF_MS = 60_000;
   static readonly AUTH_RATE_LIMIT_BACKOFF_MS = 300_000; // 5 minutes on 429/401 to let Nexus lockout clear
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly notificationsService?: NotificationsService,
+  ) {}
+
+  /**
+   * Event-driven Webhook: Triggers an immediate refresh of the web build (called via Webhook
+   * from Jenkins upon build upload, or manually by admin). Bypasses polling cooldown.
+   */
+  async refreshNow(force = false): Promise<SuperAppWebBuild | null> {
+    this.cooldownUntil = 0; // Clear cooldown
+    this.checkedAt = 0; // Invalidate cached timestamp
+    this.inflight ??= this.refresh().finally(() => (this.inflight = null));
+    try {
+      await this.inflight;
+    } catch (err: any) {
+      this.logger.warn(`Webhook refresh failed: ${err.message}`);
+    }
+    return this.current;
+  }
 
   /** The newest build, or null when none has been published yet (or Nexus is down with nothing cached). */
   async getBuild(): Promise<SuperAppWebBuild | null> {
@@ -115,6 +135,9 @@ export class SuperAppWebService {
       this.current = { info, files };
       this.cooldownUntil = 0; // Success: clear cooldown
       this.logger.log(`Serving web Super App ${info.version || 'build'} ${info.build} (${info.commit || '?'}), ${files.size} files`);
+      try {
+        this.notificationsService?.emitSuperAppWebUpdated(info);
+      } catch (_) {}
     } catch (err: any) {
       if (this.cooldownUntil <= Date.now()) {
         this.cooldownUntil = Date.now() + SuperAppWebService.ERROR_BACKOFF_MS;

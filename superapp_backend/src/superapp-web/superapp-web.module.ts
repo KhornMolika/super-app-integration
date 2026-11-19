@@ -8,5 +8,6 @@ import { SuperAppWebService } from './superapp-web.service';
   imports: [ConfigModule],
   controllers: [SuperAppWebController],
   providers: [SuperAppWebService],
+  exports: [SuperAppWebService],
 })
 export class SuperAppWebModule {}

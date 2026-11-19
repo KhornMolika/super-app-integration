@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { io } from 'socket.io-client';
 import { pubspecApi, SandboxBuildStatus } from '@/api/integrations.api';
 import { useAuth } from '@/lib/auth';
 import {
@@ -50,8 +51,35 @@ export default function SandboxBuildStatusIndicator() {
   useEffect(() => {
     setMounted(true);
     fetchStatus();
-    const interval = setInterval(fetchStatus, 4000);
-    return () => clearInterval(interval);
+
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000');
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('superapp.sandbox_build_updated', (data: any) => {
+      if (data && typeof data === 'object') {
+        setStatus({
+          ...data,
+          recentLogs: Array.isArray(data.recentLogs) ? data.recentLogs : [],
+        });
+      }
+    });
+
+    // Gentle fallback watchdog polling (every 20s) instead of aggressive 4s polling
+    const interval = setInterval(fetchStatus, 20000);
+
+    return () => {
+      clearInterval(interval);
+      socket.disconnect();
+    };
   }, []);
 
   // Auto-scroll terminal to bottom when new logs arrive while modal is open

@@ -332,7 +332,8 @@ pipeline {
                     // The backend serves the newest build (latest.json) at the Backoffice
                     // preview (/superapp-sandbox/) and the web Super App (/preview/)
                     withEnv(["REPO_BASE=${p('NEXUS_URL')}/repository/superapp-artifacts/superapp-web",
-                             "NEXUS_USER=${p('NEXUS_USER')}"]) {
+                             "NEXUS_USER=${p('NEXUS_USER')}",
+                             "API_BASE_URL=${p('API_BASE_URL')}"]) {
                         sh '''
                             set -e
                             ARCHIVE="superapp-web/$BUILD_NUMBER/superapp-web.tar.gz"
@@ -344,6 +345,13 @@ pipeline {
                             # latest.json last, so it never points at a missing archive
                             auth | curl -sSf -K - -H "Content-Type: application/json" --upload-file latest.json "$REPO_BASE/latest.json" > /dev/null
                             echo "Published web build $BUILD_NUMBER ($COMMIT) to $REPO_BASE"
+
+                            # Webhook to invalidate backend cache and trigger WebSocket updates immediately
+                            if [ -n "$API_BASE_URL" ]; then
+                                REFRESH_URL="${API_BASE_URL%/api}/api/superapp-web/refresh"
+                                echo "Triggering backend cache invalidation webhook at $REFRESH_URL"
+                                curl -sS -X POST "$REFRESH_URL" || true
+                            fi
                         '''
                     }
                 }
