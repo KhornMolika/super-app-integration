@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 import { miniappsApi } from '@/api';
 
 interface MiniAppActivity {
@@ -109,8 +111,23 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
   };
 
   return (
-    <div className="space-y-8">
-      {Object.entries(grouped).map(([date, acts]) => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Activity Timeline</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Chronological audit trail of actions, deployments, and state transitions.</p>
+        </div>
+        <Link
+          href={`/miniapps/${miniAppId}/activity`}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <span>Full Page</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
+      <div className="space-y-8">
+        {Object.entries(grouped).map(([date, acts]) => (
         <div key={date}>
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">{date}</h3>
           <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-700 before:to-transparent">
@@ -147,6 +164,7 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

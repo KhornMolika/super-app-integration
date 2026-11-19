@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
+import { ExternalLink } from 'lucide-react';
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -330,6 +332,15 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
                   </span>
                 </Button>
               )}
+
+              <Link
+                href={`/miniapps/${miniAppId}/pipeline`}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5"
+                title="Open dedicated pipeline workspace"
+              >
+                <span>Full Pipeline</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </Link>
 
               <button
                 type="button"

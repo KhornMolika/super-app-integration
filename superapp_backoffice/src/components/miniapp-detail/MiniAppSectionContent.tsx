@@ -9,6 +9,7 @@ import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm from '@/components/forms/IntegrationForm';
 import CapabilitiesForm from '@/components/forms/CapabilitiesForm';
 import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
+import { PackagePublishPanel } from '@/components/miniapp-detail/PackagePublishPanel';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import ActivityTab from '@/components/ui/ActivityTab';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
@@ -25,6 +26,7 @@ interface MiniAppSectionContentProps {
   allErrors: Record<string, string>;
   isEditable: boolean;
   canEdit?: boolean;
+  canPublish?: boolean;
   onStartEdit?: () => void;
   handleWebViewChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleFlutterChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
@@ -49,6 +51,7 @@ export function MiniAppSectionContent({
   allErrors,
   isEditable,
   canEdit = false,
+  canPublish = false,
   onStartEdit,
   handleWebViewChange,
   handleFlutterChange,
@@ -179,14 +182,22 @@ export function MiniAppSectionContent({
       )}
 
       {activeTab === 'versions' && (
-        <VersionHistoryTab
-          miniAppId={id}
-          miniAppName={formData.name || ''}
-          appId={formData.appId}
-          currentStatus={formData.status}
-          teamTelegramChatId={formData.teamTelegramChatId}
-          pendingRevision={formData.pendingRevision}
-        />
+        <div className="space-y-6">
+          <PackagePublishPanel
+            miniAppId={id}
+            formData={formData}
+            canPublish={canPublish}
+            onRefresh={onRefreshApp}
+          />
+          <VersionHistoryTab
+            miniAppId={id}
+            miniAppName={formData.name || ''}
+            appId={formData.appId}
+            currentStatus={formData.status}
+            teamTelegramChatId={formData.teamTelegramChatId}
+            pendingRevision={formData.pendingRevision}
+          />
+        </div>
       )}
 
       {activeTab === 'report' && (
