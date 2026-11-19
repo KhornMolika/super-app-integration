@@ -130,8 +130,12 @@ export interface NativeSdkIntegrationConfig extends ServerIntegrationFields {
 export interface DeepLinkIntegrationConfig extends ServerIntegrationFields {
   urlScheme?: string;
   packageName?: string;
+  bundleId?: string;
+  iosBundleId?: string;
   appStoreUrl?: string;
   playStoreUrl?: string;
+  webFallbackUrl?: string;
+  fallbackUrl?: string;
 }
 
 export interface IntegrationConfigByMethod {

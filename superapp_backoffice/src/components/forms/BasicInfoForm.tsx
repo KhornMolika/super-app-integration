@@ -224,10 +224,16 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{allErrors.name}</p>
         ) : (formData.appId || formData.slug) ? (
           <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              App ID: <code className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{formData.appId || formData.slug}</code>
-            </span>
-            {formData.slug && formData.appId && formData.appId !== formData.slug && (
+            {formData.appId ? (
+              <span>
+                App ID: <code className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{formData.appId}</code>
+              </span>
+            ) : (
+              <span className="text-slate-400 italic">
+                App ID: configured via integration method in Step 3
+              </span>
+            )}
+            {formData.slug && (
               <span className="text-slate-400 dark:text-slate-500">
                 · Slug: <code className="font-mono text-slate-600 dark:text-slate-400">{formData.slug}</code>
               </span>

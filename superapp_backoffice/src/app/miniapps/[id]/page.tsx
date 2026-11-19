@@ -228,8 +228,11 @@ function ManageMiniAppContent() {
           isSubmitting={isSubmitting}
         />
 
-        {/* Structured Remediation Banner for Changes Requested or Rejected */}
-        {(formData.status === 'CHANGES_REQUESTED' || formData.status === 'REJECTED') && (
+        {/* Structured Remediation Banner for Changes Requested, Rejected, or Under Review Verification */}
+        {(formData.status === 'CHANGES_REQUESTED' ||
+          formData.status === 'REJECTED' ||
+          ((formData.status === 'IN_REVIEW' || formData.status === 'SUBMITTED' || formData.status === 'APPROVED') &&
+            Boolean((formData as any).structuredFeedback?.checklist?.length))) && (
           <ChangesRequestedBanner
             status={formData.status}
             structuredFeedback={(formData as any).structuredFeedback}

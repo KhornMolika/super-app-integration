@@ -92,11 +92,20 @@ export class MiniAppRunsService {
 
   async listScans(
     miniAppId: string,
-    query?: { page?: number; limit?: number },
+    query?: { page?: number; limit?: number; version?: string; scope?: MiniAppScanScope },
   ): Promise<PaginatedResult<MiniAppScan>> {
     const { page, limit, skip } = pageOf(query);
+    const where: any = { miniAppId };
+    if (query?.scope) where.scope = query.scope;
+    if (query?.version) {
+      const raw = query.version.trim();
+      const vPrefixed = raw.startsWith('v') ? raw : `v${raw}`;
+      const unPrefixed = raw.startsWith('v') ? raw.slice(1) : raw;
+      where.version = In([raw, vPrefixed, unPrefixed]);
+    }
+
     const [rows, total] = await this.scans.findAndCount({
-      where: { miniAppId },
+      where,
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
@@ -106,16 +115,70 @@ export class MiniAppRunsService {
 
   async listBuilds(
     miniAppId: string,
-    query?: { page?: number; limit?: number },
+    query?: { page?: number; limit?: number; version?: string },
   ): Promise<PaginatedResult<MiniAppBuild>> {
     const { page, limit, skip } = pageOf(query);
+    const where: any = { miniAppId };
+    if (query?.version) {
+      const raw = query.version.trim();
+      const vPrefixed = raw.startsWith('v') ? raw : `v${raw}`;
+      const unPrefixed = raw.startsWith('v') ? raw.slice(1) : raw;
+      where.version = In([raw, vPrefixed, unPrefixed]);
+    }
+
     const [rows, total] = await this.builds.findAndCount({
-      where: { miniAppId },
+      where,
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
     });
     return createPaginatedResponse(rows, total, page, limit);
+  }
+
+  /**
+   * Authoritative scan run matching a specific version or scope.
+   */
+  async scanForVersion(
+    miniAppId: string,
+    version?: string | null,
+    scope?: MiniAppScanScope,
+  ): Promise<MiniAppScan | null> {
+    const where: any = { miniAppId };
+    if (scope) where.scope = scope;
+    if (version) {
+      const raw = version.trim();
+      const vPrefixed = raw.startsWith('v') ? raw : `v${raw}`;
+      const unPrefixed = raw.startsWith('v') ? raw.slice(1) : raw;
+      where.version = In([raw, vPrefixed, unPrefixed]);
+    }
+    const match = await this.scans.findOne({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+    if (match) return match;
+    return this.latestScan(miniAppId, scope || 'APP');
+  }
+
+  /**
+   * Authoritative build run matching a specific version.
+   */
+  async buildForVersion(
+    miniAppId: string,
+    version?: string | null,
+  ): Promise<MiniAppBuild | null> {
+    const where: any = { miniAppId };
+    if (version) {
+      const raw = version.trim();
+      const vPrefixed = raw.startsWith('v') ? raw : `v${raw}`;
+      const unPrefixed = raw.startsWith('v') ? raw.slice(1) : raw;
+      where.version = In([raw, vPrefixed, unPrefixed]);
+    }
+    const match = await this.builds.findOne({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+    if (match) return match;
+    return this.latestBuild(miniAppId);
   }
 
   /** Latest scan of a scope (APP: the app itself, REVISION: its pending revision). */

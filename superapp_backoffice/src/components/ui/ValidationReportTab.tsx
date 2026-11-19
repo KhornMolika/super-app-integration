@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal, PlayCircle } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, Printer, ArrowLeft, Layers } from 'lucide-react';
 import { miniappsApi } from '@/api';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
@@ -46,6 +48,7 @@ export interface ValidationReportProps {
   miniApp: any;
   onRefresh?: () => void;
   defaultSubTab?: 'findings' | 'engines' | 'sbom' | 'runs';
+  isStandalonePage?: boolean;
 }
 
 export interface StageCatalogItem {
@@ -260,7 +263,16 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   },
 };
 
-export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab }: ValidationReportProps) {
+export default function ValidationReportTab({
+  miniApp,
+  onRefresh,
+  defaultSubTab,
+  isStandalonePage = false,
+}: ValidationReportProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlVersion = searchParams?.get('version');
+
   const [mounted, setMounted] = useState(false);
   const [isReScanning, setIsReScanning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -268,6 +280,75 @@ export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab 
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showSbomModal, setShowSbomModal] = useState(false);
   const [configuredChecks, setConfiguredChecks] = useState<string[]>(miniApp.securityChecks || []);
+
+  // Multi-Version State
+  const [versionList, setVersionList] = useState<any[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
+  const [versionReportData, setVersionReportData] = useState<any>(null);
+  const [isLoadingVersionReport, setIsLoadingVersionReport] = useState(false);
+
+  // Load versions list & evaluate Smart Lifecycle Default
+  useEffect(() => {
+    if (!miniApp?.id) return;
+    miniappsApi
+      .getVersions(miniApp.id)
+      .then((res: any) => {
+        const raw = Array.isArray(res?.versions) ? res.versions : Array.isArray(res) ? res : [];
+        setVersionList(raw);
+
+        // 1. URL search param takes precedence if present
+        if (urlVersion && raw.some((v: any) => v.version === urlVersion)) {
+          setSelectedVersion(urlVersion);
+          return;
+        }
+
+        // 2. Smart Lifecycle Default:
+        // If testing active -> testing version; if revision active -> revision version; else live version
+        const testingVer = raw.find(
+          (v: any) => v.status === 'TESTING' || v.version === miniApp.activeTestVersion,
+        );
+        const revisionVer = raw.find(
+          (v: any) => v.status === 'IN_REVIEW' || v.version === miniApp.pendingRevision?.version,
+        );
+        const liveVer = raw.find(
+          (v: any) => v.status === 'ACTIVE' || v.version === miniApp.currentReleaseVersion,
+        );
+
+        if (miniApp.status === 'TESTING' && testingVer) {
+          setSelectedVersion(testingVer.version);
+        } else if (miniApp.status === 'IN_REVIEW' && revisionVer) {
+          setSelectedVersion(revisionVer.version);
+        } else if (liveVer) {
+          setSelectedVersion(liveVer.version);
+        } else if (raw.length > 0) {
+          setSelectedVersion(raw[0].version);
+        } else {
+          setSelectedVersion(miniApp.currentReleaseVersion || miniApp.activeTestVersion || 'v1.0.0');
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load versions list for report, using default:', err);
+        setSelectedVersion(miniApp.currentReleaseVersion || miniApp.activeTestVersion || 'v1.0.0');
+      });
+  }, [miniApp?.id, miniApp?.status, miniApp?.activeTestVersion, miniApp?.currentReleaseVersion, urlVersion]);
+
+  // When selectedVersion changes, fetch authoritative version report
+  useEffect(() => {
+    if (!miniApp?.id || !selectedVersion) return;
+    setIsLoadingVersionReport(true);
+    miniappsApi
+      .getVersionReport(miniApp.id, selectedVersion)
+      .then((data: any) => {
+        setVersionReportData(data);
+      })
+      .catch((err) => {
+        console.warn('Could not fetch dedicated version report, using parent miniApp state:', err);
+        setVersionReportData(null);
+      })
+      .finally(() => {
+        setIsLoadingVersionReport(false);
+      });
+  }, [miniApp?.id, selectedVersion]);
   
   // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom' | 'runs'
   const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom' | 'runs'>(
@@ -298,14 +379,18 @@ export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab 
     setMounted(true);
   }, []);
 
-  const report = miniApp.validationReport || null;
-  const stages = miniApp.validationStages || {};
+  const effectiveData = versionReportData || miniApp;
+  const report = effectiveData.validationReport || null;
+  const stages = effectiveData.validationStages || {};
   const issues = miniApp.issues || [];
   const findings = report?.findings || [];
-  const sbom = report?.sbom || miniApp.validationReport?.sbom || null;
-  const score = report?.score ?? (miniApp.validationStatus === 'PASSED' ? 100 : miniApp.validationStatus === 'FAILED' ? 45 : null);
-  const valStatus = (miniApp.validationStatus || 'PENDING').toUpperCase();
-  const isFlutterPackage = miniApp.integrationMethod === 'FLUTTER_PACKAGE';
+  const sbom = report?.sbom || effectiveData.validationReport?.sbom || null;
+  const valStatus = (effectiveData.validationStatus || 'PENDING').toUpperCase();
+  const score =
+    effectiveData.validationScore ??
+    report?.score ??
+    (valStatus === 'PASSED' ? 100 : valStatus === 'FAILED' ? 45 : null);
+  const isFlutterPackage = (effectiveData.integrationMethod || miniApp.integrationMethod) === 'FLUTTER_PACKAGE';
 
   // Keep configured checks synced with miniApp prop
   useEffect(() => {
@@ -928,6 +1013,149 @@ export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab 
         </div>,
         document.body
       )}
+
+      {/* Standalone Page Header (Print / Executive Banner) */}
+      {isStandalonePage && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 print:border-none print:shadow-none print:p-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800 print:hidden">
+            <Link
+              href={`/miniapps/${miniApp.id}?tab=report&version=${encodeURIComponent(selectedVersion || '')}`}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to MiniApp Console</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => typeof window !== 'undefined' && window.print()}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print / Save PDF</span>
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-bold tracking-widest text-brand-600 dark:text-brand-400 uppercase">
+                Official Regulatory Attestation & Security Verification Report
+              </span>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                {miniApp.name || miniApp.appId}
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                App ID: <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{miniApp.appId}</span> &bull; Integration: <span className="font-semibold text-slate-700 dark:text-slate-300">{miniApp.integrationMethod || 'WEBVIEW'}</span> &bull; Target Version: <span className="font-bold text-brand-600 dark:text-brand-400 font-mono">{selectedVersion || 'Latest'}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
+                <span className="text-slate-400 text-[10px] uppercase block tracking-wider font-bold">Lifecycle</span>
+                <span className="text-slate-800 dark:text-slate-200 capitalize font-medium">{effectiveData.status || miniApp.status}</span>
+              </div>
+              <div className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${
+                valStatus === 'PASSED' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 text-emerald-700 dark:text-emerald-300' :
+                valStatus === 'FAILED' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-700 dark:text-rose-300' :
+                'bg-amber-50 dark:bg-amber-950/30 border-amber-200 text-amber-700 dark:text-amber-300'
+              }`}>
+                <span className="opacity-75 text-[10px] uppercase block tracking-wider font-bold">Audit Status</span>
+                <span>{valStatus}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Version Context Switcher Bar */}
+      <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-6 print:hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Left: Context Indicator & Version selector */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-750">
+              <Layers className="w-4 h-4 text-brand-500" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                Release Version
+              </span>
+            </div>
+
+            {/* Version Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {versionList.length > 0 ? (
+                versionList.map((ver) => {
+                  const isSelected = (ver.version || ver) === selectedVersion;
+                  const verName = ver.version || ver;
+                  const isLive = ver.status === 'ACTIVE' || verName === miniApp.currentReleaseVersion;
+                  const isTesting = ver.status === 'TESTING' || verName === miniApp.activeTestVersion;
+                  const isReview = ver.status === 'IN_REVIEW';
+
+                  return (
+                    <button
+                      key={ver.id || verName}
+                      type="button"
+                      onClick={() => {
+                        setSelectedVersion(verName);
+                        // Update URL parameter without reload
+                        if (typeof window !== 'undefined') {
+                          const params = new URLSearchParams(window.location.search);
+                          params.set('version', verName);
+                          router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+                        }
+                      }}
+                      className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm ring-1 ring-brand-500/30'
+                          : 'bg-transparent hover:bg-white/60 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <span className="font-mono font-semibold">{verName}</span>
+                      {isLive && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          Live
+                        </span>
+                      )}
+                      {isTesting && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                          Testing
+                        </span>
+                      )}
+                      {isReview && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          Review
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-1 bg-white dark:bg-slate-850 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-750">
+                  {selectedVersion || 'v1.0.0'} (Default)
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Quick actions & Loading feedback */}
+          <div className="flex items-center gap-2 self-end md:self-center">
+            {isLoadingVersionReport && (
+              <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                <RefreshIcon className="w-3.5 h-3.5 animate-spin text-brand-500" />
+                <span>Loading report...</span>
+              </span>
+            )}
+            {!isStandalonePage && (
+              <Link
+                href={`/miniapps/${miniApp.id}/security?version=${encodeURIComponent(selectedVersion || '')}`}
+                target="_blank"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors"
+                title="Open dedicated shareable and printable report page"
+              >
+                <ExternalLinkIcon className="w-3.5 h-3.5 text-brand-500" />
+                <span>Full Report Page</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Executive Security Summary Card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
@@ -2043,7 +2271,7 @@ export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab 
 
       {/* Tab 4: Scans & Builds History */}
       {activeViewTab === 'runs' && (
-        <RunHistoryTab miniAppId={miniApp.id} />
+        <RunHistoryTab miniAppId={miniApp.id} versionFilter={selectedVersion} />
       )}
 
       {/* CycloneDX 1.5 SBOM Inspector Modal */}

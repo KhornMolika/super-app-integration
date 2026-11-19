@@ -95,8 +95,12 @@ export interface FlutterPackageConfigDto {
 export interface DeepLinkConfigDto {
   urlScheme: string;
   packageName?: string;
+  bundleId?: string;
+  iosBundleId?: string;
   appStoreUrl?: string;
   playStoreUrl?: string;
+  webFallbackUrl?: string;
+  fallbackUrl?: string;
 }
 
 export interface NativeSdkConfigDto {

@@ -847,7 +847,7 @@ export class MiniappsController {
   async getScans(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
-    @Query() query: PaginationQueryDto,
+    @Query() query: PaginationQueryDto & { version?: string; scope?: any },
   ) {
     await this.require(id, req, MiniAppAccess.VIEW);
     return this.runs!.listScans(id, query);
@@ -859,10 +859,22 @@ export class MiniappsController {
   async getBuilds(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
-    @Query() query: PaginationQueryDto,
+    @Query() query: PaginationQueryDto & { version?: string },
   ) {
     await this.require(id, req, MiniAppAccess.VIEW);
     return this.runs!.listBuilds(id, query);
+  }
+
+  /** Authoritative security report, SBOM, and build status for a specific version. */
+  @Get(':id/versions/:version/report')
+  @RequirePermissions('miniapp:read')
+  async getVersionReport(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('version') version: string,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
+    return this.miniappService.getVersionReport(id, version);
   }
 
   @Get(':id/diff')

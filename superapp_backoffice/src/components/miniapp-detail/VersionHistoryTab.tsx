@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
@@ -712,6 +713,16 @@ export default function VersionHistoryTab({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                           </svg>
                         </button>
+                        <Link
+                          href={`/miniapps/${miniAppId}/security?version=${encodeURIComponent(rec.version)}`}
+                          target="_blank"
+                          className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                          title={`Security & Compliance Report for ${rec.version}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => openInviteModal(rec.version, rec.type === 'PRODUCTION' ? 'release' : 'test')}
