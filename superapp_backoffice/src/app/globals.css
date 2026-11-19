@@ -30,11 +30,33 @@
 :root {
   --background: #FAFAFA;
   --foreground: #09090b;
+
+  /* 60-30-10 Semantic Color Hierarchy */
+  --bg-dominant: #FAFAFA;          /* 60%: Neutral Canvas Base */
+  --bg-surface: #FFFFFF;           /* 30%: Structural Containers & Cards */
+  --bg-surface-muted: #F8FAFC;     /* 30%: Secondary Panels & Headers */
+  --border-subtle: #E2E8F0;        /* 30%: Crisp 1px Borders */
+  --text-primary: #0F172A;         /* 30%: High-contrast Headings */
+  --text-secondary: #475569;       /* 30%: Readable Body Typography */
+  --text-muted: #94A3B8;           /* 30%: Captions & Metadata */
+  --color-accent-action: #58761B;  /* 10%: Primary Action & Focus CTA */
+  --color-accent-highlight: #D99201; /* 10%: Alert / Warning Accent */
 }
 
 .dark {
   --background: #090b0a;
   --foreground: #f8fafc;
+
+  /* 60-30-10 Semantic Color Hierarchy (Dark Mode) */
+  --bg-dominant: #090B0A;          /* 60%: Low-saturation Dark Base */
+  --bg-surface: #0F172A;           /* 30%: Elevated Dark Cards (slate-900) */
+  --bg-surface-muted: #1E293B;     /* 30%: Muted Secondary Panels (slate-800) */
+  --border-subtle: #1E293B;        /* 30%: Subtle 1px Borders */
+  --text-primary: #F8FAFC;         /* 30%: Crisp White Headings */
+  --text-secondary: #CBD5E1;       /* 30%: High-contrast Slate Body */
+  --text-muted: #64748B;           /* 30%: Dark Muted Metadata */
+  --color-accent-action: #6D8B2C;  /* 10%: Vibrant Brand Action CTA */
+  --color-accent-highlight: #E6A71C; /* 10%: Dark Warning Accent */
 
   /* Brighten body & secondary slate typography in dark mode */
   --color-slate-100: #ffffff;
@@ -50,6 +72,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-dominant: var(--bg-dominant);
+  --color-surface: var(--bg-surface);
+  --color-surface-muted: var(--bg-surface-muted);
+  --color-border-subtle: var(--border-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -134,6 +160,30 @@ body {
   .animate-radar-sweep {
     animation: radarSweep 16s linear infinite;
   }
+  .gpu-accelerated {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  .animate-shimmer-fast {
+    animation: scanShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .animate-heartbeat-ring {
+    animation: heartbeatHalo 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .animate-success-pop {
+    animation: successPop 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .motion-stepper-card {
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+  }
+  .motion-stepper-card:hover {
+    transform: translateY(-1.5px);
+  }
 }
 
 @keyframes fadeIn {
@@ -195,6 +245,52 @@ body {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes scanShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes heartbeatHalo {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.12;
+  }
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  65% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer-fast,
+  .animate-heartbeat-ring,
+  .animate-success-pop,
+  .motion-stepper-card:hover {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 

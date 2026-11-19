@@ -151,8 +151,11 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   // Fetch MiniApp Configuration
   const fetchApp = useCallback(async (isRetry = false, isSilent = false) => {
     if (!id || id === 'superapp') return;
-    if (!isSilent) setIsLoading(true);
-    if (!isRetry) setFetchError(null);
+    // If formData already has an id (data has already been loaded), always treat background fetches as silent
+    // to prevent unmounting the page / triggering full-screen loading spinners.
+    const silent = isSilent || Boolean(formData?.id);
+    if (!silent) setIsLoading(true);
+    if (!isRetry && !silent) setFetchError(null);
 
     try {
       const raw = await miniappsApi.getById(id);
@@ -241,7 +244,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
       setFetchError(error?.message || 'Error connecting to backend.');
       toast.error('Error connecting to backend.', 'Connection Error');
     } finally {
-      if (!isSilent) setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [id]);
 

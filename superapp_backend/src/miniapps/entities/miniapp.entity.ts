@@ -352,6 +352,22 @@ export class MiniApp {
   @Column({ nullable: true })
   activeTestVersion?: string;
 
+  /** Structured review feedback (rejection reason, category, remediation checklist, reviewer notes) */
+  @Column({ type: 'jsonb', nullable: true })
+  structuredFeedback?: {
+    category?: string;
+    checklist?: Array<{
+      id: string;
+      description: string;
+      resolved?: boolean;
+      resolutionNote?: string;
+    }>;
+    notes?: string;
+    reviewerId?: string;
+    createdAt?: string;
+    targetFiles?: string[];
+  } | null;
+
   /*
    * Latest scan and build runs, not columns: they live in mini_app_scans and
    * mini_app_builds. MiniAppRunsService.attach() fills them on loaded apps

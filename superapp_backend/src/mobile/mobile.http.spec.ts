@@ -1,4 +1,5 @@
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -23,7 +24,11 @@ import { MobileAuthService } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileProfileService } from './mobile-profile.service';
 import { MobileRegulatorsService } from './mobile-regulators.service';
-import { Organization } from '../organizations/entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from '../organizations/entities/organization.entity';
+import { TransformInterceptor } from '../common/interceptors/transform.interceptor';
 import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
@@ -143,6 +148,8 @@ describe('Mobile HTTP (in-process)', () => {
         transformOptions: { enableImplicitConversion: true },
       }),
     );
+    // Same global envelope as main.ts, so these tests see the bodies the app gets.
+    app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
     await app.init();
     server = app.getHttpServer();
     authService = authInstance;
@@ -167,6 +174,29 @@ describe('Mobile HTTP (in-process)', () => {
       .expect(200);
     return res.body;
   }
+
+  it.each(['/mobile', '/api/mobile'])(
+    'lists regulators as a bare { items } body under %s (no response envelope)',
+    async (prefix) => {
+      const orgs = app.get(getRepositoryToken(Organization));
+      const fsa = await orgs.save({
+        code: 'FSA',
+        name: 'Non-Bank Financial Services Authority',
+        status: OrganizationStatus.ACTIVE,
+      });
+      await orgs.save({
+        code: 'FTC',
+        name: 'Financial Technology Center (FTC)',
+        status: OrganizationStatus.ACTIVE,
+        parentId: fsa.id,
+        parent: fsa,
+      });
+      const res = await request(server).get(`${prefix}/regulators`).expect(200);
+      expect(res.body).toEqual({
+        items: [{ key: 'ftc', name: 'Financial Technology Center (FTC)' }],
+      });
+    },
+  );
 
   it.each(['/mobile', '/api/mobile'])(
     'full flow with statuses under %s',

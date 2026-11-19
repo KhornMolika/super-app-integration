@@ -1,3 +1,4 @@
+import { StructuredReviewDecisionDto } from './dto/miniapp-actions.dto';
 import {
   Injectable,
   Logger,
@@ -918,7 +919,11 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async submitForReview(id: string, actorId: string) {
+  async submitForReview(
+    id: string,
+    actorId: string,
+    resolutionData?: { checklistResolutions?: Array<{ id: string; resolved: boolean; resolutionNote?: string }> },
+  ) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
 
@@ -948,10 +953,16 @@ export class MiniappsService implements OnApplicationBootstrap {
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
+      resolutionData,
     );
   }
 
-  async rescan(id: string, actorId = 'system', customChecks?: string[]) {
+  async rescan(
+    id: string,
+    actorId = 'system',
+    customChecks?: string[],
+    failedOnly?: boolean,
+  ) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
     return this.lifecycleHelper.rescan(
@@ -960,6 +971,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
       customChecks,
+      failedOnly,
     );
   }
 
@@ -1122,7 +1134,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     return approved;
   }
 
-  async reject(id: string, reason: string, actorId: string) {
+  async reject(id: string, reason: string | StructuredReviewDecisionDto | any, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
     return this.lifecycleHelper.reject(
@@ -1134,7 +1146,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async requestChanges(id: string, reason: string, actorId: string) {
+  async requestChanges(id: string, reason: string | StructuredReviewDecisionDto | any, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
     return this.lifecycleHelper.requestChanges(

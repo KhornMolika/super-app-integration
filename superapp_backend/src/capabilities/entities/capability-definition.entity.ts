@@ -26,6 +26,9 @@ export class CapabilityDefinition {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Column({ default: true })
+  isAllowed!: boolean;
+
   @Column({ default: false })
   isDeprecated!: boolean;
 

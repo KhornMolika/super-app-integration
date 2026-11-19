@@ -369,6 +369,7 @@ export class MiniappLifecycleHelper {
       oldVal?: any,
       newVal?: any,
     ) => Promise<void>,
+    resolutionData?: { checklistResolutions?: Array<{ id: string; resolved: boolean; resolutionNote?: string }> },
   ) {
     const currentStatus = (
       app.lifecycleStatus || (app as any).status
@@ -386,6 +387,25 @@ export class MiniappLifecycleHelper {
       method,
       app.securityChecks,
     );
+    // Merge developer resolution notes into structured feedback checklist if provided
+    if (resolutionData?.checklistResolutions && app.structuredFeedback?.checklist) {
+      const resMap = new Map(resolutionData.checklistResolutions.map((r: any) => [r.id, r]));
+      app.structuredFeedback.checklist = app.structuredFeedback.checklist.map((item: any) => {
+        const res = resMap.get(item.id);
+        if (res) {
+          return {
+            ...item,
+            resolved: Boolean(res.resolved),
+            resolutionNote: res.resolutionNote || item.resolutionNote || '',
+          };
+        }
+        return item;
+      });
+      if (app.pendingRevision?.structuredFeedback?.checklist) {
+        app.pendingRevision.structuredFeedback.checklist = app.structuredFeedback.checklist;
+      }
+    }
+
     app.validationStages = initialStages;
     app.lifecycleStatus = MiniAppLifecycleStatus.SUBMITTED;
     app.validationStatus = 'RUNNING';
@@ -410,12 +430,11 @@ export class MiniappLifecycleHelper {
       : [];
     const requiredPerms = declaredPerms;
 
-    // SuperApp Host Supported Capabilities (Zero-Hardcoded Policy: Query real PostgreSQL registry)
+    // SuperApp Host Supported Capabilities (Dynamically query Super Admin allowed whitelist)
     let allowedCaps: string[] = [];
     if (this.capabilitiesService) {
       try {
-        const realCaps = await this.capabilitiesService.getCapabilities();
-        allowedCaps = realCaps.map((c) => c.key.toLowerCase());
+        allowedCaps = await this.capabilitiesService.getAllowedCapabilityKeys();
       } catch (err: any) {
         this.logger.warn(
           `Could not fetch dynamic capabilities for lifecycle: ${err.message}`,
@@ -533,25 +552,45 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
     customChecks?: string[],
+    failedOnly?: boolean,
   ) {
     const id = app.id;
-
-    if (customChecks && customChecks.length > 0) {
-      app.securityChecks = customChecks;
-      await this.miniappRepository.save(app);
-      await persistAppVersions(this.miniappRepository, app);
-    }
-
     const method = (app.integrationMethod || 'WEBVIEW') as
       'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
-    const activeChecks =
-      app.securityChecks && app.securityChecks.length > 0
-        ? app.securityChecks
-        : getDefaultChecksForMethod(method);
 
-    const initialStages = buildDynamicValidationStages(method, activeChecks);
+    let activeChecks: string[];
+    let initialStages: any;
 
-    app.validationStages = initialStages;
+    if (failedOnly && customChecks && customChecks.length > 0) {
+      // Re-scan failed checks only: preserve existing configured profile checks
+      activeChecks = customChecks;
+
+      const existingStages = (app.validationStages as any) || {};
+      for (const check of customChecks) {
+        if (existingStages[check]) {
+          existingStages[check].status = 'RUNNING';
+          existingStages[check].details = 'Awaiting re-scan execution...';
+          existingStages[check].updatedAt = new Date().toISOString();
+        }
+      }
+      initialStages = existingStages;
+      app.validationStages = existingStages;
+    } else {
+      if (customChecks && customChecks.length > 0) {
+        app.securityChecks = customChecks;
+        await this.miniappRepository.save(app);
+        await persistAppVersions(this.miniappRepository, app);
+      }
+
+      activeChecks =
+        app.securityChecks && app.securityChecks.length > 0
+          ? app.securityChecks
+          : getDefaultChecksForMethod(method);
+
+      initialStages = buildDynamicValidationStages(method, activeChecks);
+      app.validationStages = initialStages;
+    }
+
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
     await persistAppVersions(this.miniappRepository, app);
@@ -574,14 +613,24 @@ export class MiniappLifecycleHelper {
       : [];
     const requiredPerms = declaredPerms;
 
-    // SuperApp Host Supported Capabilities whitelist
-    const allowedCaps = [
-      'camera',
-      'geolocator',
-      'location',
-      'local_auth',
-      'biometrics',
-    ];
+    // SuperApp Host Supported Capabilities whitelist (dynamically retrieved from Super Admin allowlist policy)
+    let allowedCaps: string[] = [];
+    if (this.capabilitiesService) {
+      try {
+        allowedCaps = await this.capabilitiesService.getAllowedCapabilityKeys();
+      } catch (err: any) {
+        this.logger.warn(`Could not fetch allowed capabilities: ${err.message}`);
+      }
+    }
+    if (allowedCaps.length === 0) {
+      allowedCaps = [
+        'camera',
+        'geolocator',
+        'location',
+        'local_auth',
+        'biometrics',
+      ];
+    }
     const requiredCaps = requiredPerms;
 
     const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -982,7 +1031,7 @@ export class MiniappLifecycleHelper {
 
   async reject(
     app: MiniApp,
-    reason: string,
+    decision: any,
     actorId: string,
     logActivityFn: (
       miniAppId: string,
@@ -995,6 +1044,26 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
+    const reason = typeof decision === 'string' ? decision : (decision?.reason || 'Administrative review decision.');
+    const category = typeof decision === 'object' ? (decision?.category || 'GENERAL') : 'GENERAL';
+    const checklist = typeof decision === 'object' && Array.isArray(decision?.checklist) ? decision.checklist : [];
+    const targetFiles = typeof decision === 'object' && Array.isArray(decision?.targetFiles) ? decision.targetFiles : [];
+
+    const structuredFeedback = {
+      category,
+      checklist: checklist.map((c: any) => ({
+        id: c.id || String(Date.now() + Math.random()),
+        description: c.description || '',
+        resolved: false,
+        resolutionNote: '',
+      })),
+      notes: reason,
+      reviewerId: actorId,
+      createdAt: new Date().toISOString(),
+      targetFiles,
+    };
+    app.structuredFeedback = structuredFeedback;
+
     const currentStatus = (
       app.lifecycleStatus ||
       (app as any).status ||
@@ -1056,7 +1125,7 @@ export class MiniappLifecycleHelper {
 
   async requestChanges(
     app: MiniApp,
-    reason: string,
+    decision: any,
     actorId: string,
     logActivityFn: (
       miniAppId: string,
@@ -1069,6 +1138,26 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
+    const reason = typeof decision === 'string' ? decision : (decision?.reason || 'Please update the configuration and resubmit.');
+    const category = typeof decision === 'object' ? (decision?.category || 'GENERAL') : 'GENERAL';
+    const checklist = typeof decision === 'object' && Array.isArray(decision?.checklist) ? decision.checklist : [];
+    const targetFiles = typeof decision === 'object' && Array.isArray(decision?.targetFiles) ? decision.targetFiles : [];
+
+    const structuredFeedback = {
+      category,
+      checklist: checklist.map((c: any) => ({
+        id: c.id || String(Date.now() + Math.random()),
+        description: c.description || '',
+        resolved: false,
+        resolutionNote: '',
+      })),
+      notes: reason,
+      reviewerId: actorId,
+      createdAt: new Date().toISOString(),
+      targetFiles,
+    };
+    app.structuredFeedback = structuredFeedback;
+
     const currentStatus = (
       app.lifecycleStatus ||
       (app as any).status ||
@@ -1088,6 +1177,7 @@ export class MiniappLifecycleHelper {
         changesRequestedReason:
           reason || 'Please update the configuration and resubmit.',
         changesRequestedAt: new Date().toISOString(),
+        structuredFeedback,
       };
       await this.miniappRepository.save(app);
       await persistAppVersions(this.miniappRepository, app);

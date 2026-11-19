@@ -293,7 +293,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
 
 export function getDefaultChecksForMethod(method: string): string[] {
   const norm = (method || 'WEBVIEW').toUpperCase();
-  if (norm === 'FLUTTER_PACKAGE' || norm === 'NATIVE_SDK') {
+  if (norm === 'FLUTTER_PACKAGE') {
     return [
       'secret_scan',
       'sast',
@@ -303,10 +303,21 @@ export function getDefaultChecksForMethod(method: string): string[] {
       'license_compliance',
     ];
   }
+  if (norm === 'NATIVE_SDK') {
+    return [
+      'secret_scan',
+      'sast',
+      'dependency_scan',
+      'capability_gate',
+      'malware_scan',
+      'sbom',
+      'license_compliance',
+    ];
+  }
   if (norm === 'DEEP_LINK') {
     return ['scheme_audit', 'secret_scan', 'store_url_audit', 'capability_gate'];
   }
-  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'capability_gate'];
+  return ['ssrf', 'domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'capability_gate'];
 }
 
 export function buildDynamicValidationStages(

@@ -623,14 +623,24 @@ export class MiniappValidationHelper {
         : [];
       const requiredPerms = declaredPerms;
 
-      // SuperApp Host Supported Capabilities whitelist
-      const allowedCaps = [
-        'camera',
-        'geolocator',
-        'location',
-        'local_auth',
-        'biometrics',
-      ];
+      // SuperApp Host Supported Capabilities whitelist (dynamically retrieved from Super Admin allowlist policy)
+      let allowedCaps: string[] = [];
+      if (this.capabilitiesService) {
+        try {
+          allowedCaps = await this.capabilitiesService.getAllowedCapabilityKeys();
+        } catch (err: any) {
+          this.logger.warn(`Could not fetch allowed capabilities: ${err.message}`);
+        }
+      }
+      if (allowedCaps.length === 0) {
+        allowedCaps = [
+          'camera',
+          'geolocator',
+          'location',
+          'local_auth',
+          'biometrics',
+        ];
+      }
       const requiredCaps = requiredPerms;
 
       const allowedDomains = Array.isArray(cfg.allowedDomains)

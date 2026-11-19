@@ -392,7 +392,14 @@ boolean wants(String id) {
 
 /** Shows a stage as running in the Back Office via real-time WebSocket event. */
 void notifyStage(String id, String name, String details) {
-    withEnv(["N_ID=${id}", "N_NAME=${name}", "N_DETAILS=${details}"]) {
+    withEnv([
+        "N_ID=${id}",
+        "N_NAME=${name}",
+        "N_DETAILS=${details}",
+        "BUILD_NUM=${env.BUILD_NUMBER ?: ''}",
+        "B_URL=${env.BUILD_URL ?: ''}",
+        "J_NAME=${env.JOB_NAME ?: 'miniapp-validation-native-sdk'}",
+    ]) {
         sh '''
             set +x
             node -e '
@@ -400,7 +407,16 @@ void notifyStage(String id, String name, String details) {
                 fetch(e.STAGE_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-callback-token": e.CALLBACK_TOKEN || "" },
-                    body: JSON.stringify({ miniAppId: e.MINIAPP_ID, stageId: e.N_ID, stageName: e.N_NAME, status: "RUNNING", details: e.N_DETAILS }),
+                    body: JSON.stringify({
+                        miniAppId: e.MINIAPP_ID,
+                        stageId: e.N_ID,
+                        stageName: e.N_NAME,
+                        status: "RUNNING",
+                        details: e.N_DETAILS,
+                        buildNumber: Number(e.BUILD_NUM) || undefined,
+                        buildUrl: e.B_URL || undefined,
+                        jobName: e.J_NAME || undefined,
+                    }),
                 }).then((r) => console.log("Stage " + e.N_ID + ": HTTP " + r.status), (err) => console.log("Stage update failed: " + err.message));
             ' || true
         '''
@@ -691,6 +707,9 @@ pipeline {
                         const report = {
                             miniAppId: e.MINIAPP_ID,
                             method: "NATIVE_SDK",
+                            buildNumber: Number(process.env.BUILD_NUMBER) || undefined,
+                            buildUrl: process.env.BUILD_URL || undefined,
+                            jobName: process.env.JOB_NAME || "miniapp-validation-native-sdk",
                             commitSha: text(S + "/git.sha") || undefined,
                             stages: stages.length ? stages : undefined,
                             sourceRoot: ingest.root,

@@ -43,6 +43,9 @@ import {
   RescanDto,
   AddCollaboratorDto,
   TransferOwnershipDto,
+  StructuredReviewDecisionDto,
+  SubmitReviewDto,
+  ReasonDto,
 } from './dto/miniapp-actions.dto';
 import { CollaboratorRole } from './entities/miniapp-collaborator.entity';
 import { MiniAppAccessService } from './access/miniapp-access.service';
@@ -454,10 +457,15 @@ export class MiniappsController {
   async submitForReview(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
+    @Body() body?: SubmitReviewDto | any,
   ) {
+    const actualReq = req?.user ? req : ((body as any)?.user ? body : req);
+    const actualBody: SubmitReviewDto | undefined = req?.user
+      ? body
+      : ((body as any)?.user ? req : body);
     // Owner, MAINTAINER collaborator, organization admin or Super Admin
-    await this.require(id, req, MiniAppAccess.MAINTAIN);
-    return this.miniappService.submitForReview(id, req.user.sub);
+    await this.require(id, actualReq, MiniAppAccess.MAINTAIN);
+    return this.miniappService.submitForReview(id, actualReq?.user?.sub, actualBody);
   }
 
   @Post(':id/rescan')
@@ -468,7 +476,12 @@ export class MiniappsController {
     @Req() req: any,
   ) {
     await this.require(id, req, MiniAppAccess.EDIT);
-    return this.miniappService.rescan(id, req.user?.sub, body?.securityChecks);
+    return this.miniappService.rescan(
+      id,
+      req.user?.sub,
+      body?.securityChecks,
+      body?.failedOnly,
+    );
   }
 
   /** Publishes (or confirms) the scanned Flutter package in Nexus pub-hosted. */
@@ -510,22 +523,24 @@ export class MiniappsController {
   @RequirePermissions('miniapp:reject')
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('reason') reason: string,
+    @Body() body: StructuredReviewDecisionDto | ReasonDto | any,
     @Req() req: any,
   ) {
     await this.require(id, req, MiniAppAccess.ADMIN);
-    return this.miniappService.reject(id, reason, req.user.sub);
+    const payload = body?.notes || body?.reason || body?.category ? body : (body?.reason || body || '');
+    return this.miniappService.reject(id, payload, req.user.sub);
   }
 
   @Post(':id/request-changes')
   @RequirePermissions('miniapp:reject')
   async requestChanges(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('reason') reason: string,
+    @Body() body: StructuredReviewDecisionDto | ReasonDto | any,
     @Req() req: any,
   ) {
     await this.require(id, req, MiniAppAccess.ADMIN);
-    return this.miniappService.requestChanges(id, reason, req.user.sub);
+    const payload = body?.notes || body?.reason || body?.category ? body : (body?.reason || body || '');
+    return this.miniappService.requestChanges(id, payload, req.user.sub);
   }
 
   @Post(':id/start-testing')

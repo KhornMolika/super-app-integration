@@ -11,10 +11,57 @@ import { Transform } from 'class-transformer';
 import { PG_UUID_PATTERN } from '../../common/utils/uuid.util';
 import { CollaboratorRole } from '../entities/miniapp-collaborator.entity';
 
+export class ReviewChecklistItemDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  description!: string;
+
+  @IsBoolean()
+  @IsOptional()
+  resolved?: boolean;
+
+  @IsString()
+  @IsOptional()
+  resolutionNote?: string;
+}
+
 export class ReasonDto {
   @IsString()
   @IsNotEmpty({ message: 'Reason is required' })
   reason!: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsArray()
+  @IsOptional()
+  checklist?: ReviewChecklistItemDto[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  targetFiles?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  notifyDev?: boolean;
+}
+
+export class StructuredReviewDecisionDto extends ReasonDto {}
+
+export class SubmitReviewDto {
+  @IsArray()
+  @IsOptional()
+  checklistResolutions?: Array<{
+    id: string;
+    resolved: boolean;
+    resolutionNote?: string;
+  }>;
 }
 
 export class RescanDto {
@@ -22,6 +69,10 @@ export class RescanDto {
   @IsString({ each: true })
   @IsOptional()
   securityChecks?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  failedOnly?: boolean;
 }
 
 export class VerifyDomainStandaloneDto {

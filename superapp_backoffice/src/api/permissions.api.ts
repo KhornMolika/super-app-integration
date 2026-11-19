@@ -22,6 +22,7 @@ export interface Permission {
     flutterPlugin?: string;
   };
   status?: string;
+  isAllowed?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -38,6 +39,7 @@ export interface CapabilityItem {
   providerPackage?: string;
   jsBridgeMethod?: string;
   status: 'Active' | 'Beta' | 'Proposed';
+  isAllowed?: boolean;
   associatedMiniAppsCount?: number;
 }
 
@@ -178,6 +180,17 @@ export const permissionsApi = {
 
   getById: (id: string) =>
     apiClient<Permission>(`/api/permissions/${id}`),
+
+  toggleAllowed: (id: string, isAllowed: boolean) =>
+    apiClient<CapabilityItem>(`/api/permissions/${id}/toggle-allow`, {
+      method: 'PATCH',
+      body: { isAllowed },
+    }).then((res) => unwrapItem<CapabilityItem>(res)),
+
+  getAllowedKeys: () =>
+    apiClient<{ allowedKeys: string[] }>('/api/permissions/allowed-keys').then((res) =>
+      unwrapItem<{ allowedKeys: string[] }>(res)?.allowedKeys ?? []
+    ),
 
   update: (id: string, data: Partial<Permission>) =>
     apiClient<Permission>(`/api/permissions/${id}`, {

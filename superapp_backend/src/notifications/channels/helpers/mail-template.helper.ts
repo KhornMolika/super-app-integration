@@ -445,6 +445,96 @@ export class MailTemplateHelper {
     };
   }
 
+  public static renderMalwareIncidentEmail(
+    appName: string,
+    threatSignatures: string[],
+    purgedFiles: string[],
+    detectedAt: string,
+    detailsUrl: string,
+  ): { subject: string; html: string } {
+    const escAppName = this.escapeHtml(appName);
+    const escUrl = this.escapeHtml(detailsUrl);
+    const escDate = this.escapeHtml(detectedAt || new Date().toISOString());
+
+    const threatListHtml = threatSignatures
+      .map(
+        (sig) => `
+      <li style="margin-bottom: 8px; font-size: 13px; list-style-type: square; color: #991b1b;">
+        <strong style="color: #7f1d1d;">${this.escapeHtml(sig)}</strong>
+      </li>
+    `,
+      )
+      .join('');
+
+    const filesListHtml = purgedFiles.length
+      ? purgedFiles
+          .map(
+            (file) => `
+      <li style="margin-bottom: 6px; font-family: monospace; font-size: 12px; color: #475569;">
+        ${this.escapeHtml(file)}
+      </li>
+    `,
+          )
+          .join('')
+      : '<li style="font-size: 12px; color: #64748b;">Uploaded package archive in quarantine bucket</li>';
+
+    const contentHtml = `
+      <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #991b1b; font-weight: 600;">
+        URGENT SECURITY ALERT: Malicious binary signatures or prohibited payload patterns were detected in the artifact submitted for MiniApp "${escAppName}".
+      </p>
+
+      <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin: 24px 0;">
+        <div style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #b91c1c; letter-spacing: 0.5px;">
+          Detected Threat Signatures (${threatSignatures.length})
+        </div>
+        <ul style="margin: 0 0 16px 20px; padding: 0;">
+          ${threatListHtml}
+        </ul>
+
+        <div style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.5px;">
+          Zero-Trust Automated Action Taken:
+        </div>
+        <p style="font-size: 13px; color: #334155; margin: 0 0 10px 0; line-height: 1.5;">
+          In accordance with the Super App Zero-Trust Security Policy, the following quarantined artifact(s) have been <strong>permanently deleted from storage</strong> at ${escDate}:
+        </p>
+        <ul style="margin: 0 0 0 20px; padding: 0;">
+          ${filesListHtml}
+        </ul>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">
+          Required Developer Action Before Resubmission:
+        </div>
+        <ol style="margin: 0 0 0 20px; padding: 0; font-size: 12px; color: #334155; line-height: 1.6;">
+          <li>Conduct a comprehensive local scan of all compiled binaries and dependencies with ClamAV and YARA.</li>
+          <li>Ensure no obfuscated native libraries, unauthorized FFI bindings, or reverse-shell binaries are packaged.</li>
+          <li>Verify your CI build environment and dependencies are uncompromised.</li>
+          <li>Build a clean package and submit a new revision via the Backoffice.</li>
+        </ol>
+      </div>
+
+      <div style="text-align: left; margin: 28px 0;">
+        <a href="${escUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+          View Security Incident in Backoffice
+        </a>
+      </div>
+    `;
+
+    return {
+      subject: `CRITICAL SECURITY INCIDENT: Package Quarantined & Purged for "${appName}"`,
+      html: this.renderEmailLayout({
+        category: 'CRITICAL SECURITY INCIDENT',
+        categoryColor: '#ef4444',
+        title: 'Zero-Trust Malware Auto-Purge Executed',
+        borderAccentColor: '#dc2626',
+        contentHtml,
+        signatureTeam: 'SuperApp Security & Threat Governance',
+      }),
+    };
+  }
+
   public static renderRegistrationFailureEmail(
     appName: string,
     errors: Record<string, string>,

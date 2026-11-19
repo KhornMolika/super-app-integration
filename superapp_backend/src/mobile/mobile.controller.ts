@@ -48,6 +48,12 @@ import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { UpdateProfileDto } from './dto/profile.dto';
 import { phoneBuildOf } from '../miniapps/status/app-status';
 
+import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
+
+// The mobile app reads bare response bodies ({ items }, the profile, ...), not
+// the { success, data } envelope the back office uses. Errors are unaffected:
+// they come from AllExceptionsFilter, not TransformInterceptor.
+@BypassTransform()
 @Controller(['mobile', 'api/mobile'])
 export class MobileController {
   constructor(
@@ -59,7 +65,7 @@ export class MobileController {
     private readonly avatars: MobileAvatarService,
     private readonly account: MobileAccountService,
     private readonly regulators: MobileRegulatorsService,
-  ) {}
+  ) { }
 
   @Post('auth/register')
   @HttpCode(202)

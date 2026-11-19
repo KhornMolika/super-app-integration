@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { CapabilityItem } from '@/api/permissions.api';
+import { CapabilityItem, permissionsApi } from '@/api/permissions.api';
+import { toast } from '@/components/ui/Toast';
+import { useCapabilityView } from '@/components/capabilities/capability-view';
 import {
   Copy,
   Check,
@@ -14,6 +16,9 @@ import {
   X,
   Table as TableIcon,
   LayoutGrid,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
@@ -38,16 +43,55 @@ export function CapabilitiesTab({
   onSyncGitLab,
   isSyncingGitLab = false,
 }: CapabilitiesTabProps) {
+  const view = useCapabilityView();
+  const canManageAllowlist = view.canEditCatalog;
+
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedIntegrationMethod, setSelectedIntegrationMethod] =
     useState<IntegrationMethodOption>('ALL');
+  const [allowlistFilter, setAllowlistFilter] = useState<'ALL' | 'ALLOWED' | 'DISALLOWED'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [isTogglingId, setIsTogglingId] = useState<string | null>(null);
 
-  const safeCapabilities = Array.isArray(capabilities) ? capabilities : [];
+  const [localCaps, setLocalCaps] = useState<CapabilityItem[]>(capabilities);
+  useEffect(() => {
+    setLocalCaps(capabilities);
+  }, [capabilities]);
+
+  const safeCapabilities = Array.isArray(localCaps) ? localCaps : [];
+
+  const handleToggleAllowed = async (capId: string, currentAllowed: boolean) => {
+    const next = !currentAllowed;
+    setIsTogglingId(capId);
+    setLocalCaps((prev) =>
+      prev.map((c) => (c.id === capId ? { ...c, isAllowed: next } : c))
+    );
+    try {
+      await permissionsApi.toggleAllowed(capId, next);
+      toast.success(
+        next
+          ? 'Capability allowed for SuperApp MiniApp integrations.'
+          : 'Capability disallowed (quarantined by host policy).'
+      );
+    } catch (err: any) {
+      setLocalCaps((prev) =>
+        prev.map((c) => (c.id === capId ? { ...c, isAllowed: currentAllowed } : c))
+      );
+      toast.error(err?.message || 'Failed to update capability allowlist policy.');
+    } finally {
+      setIsTogglingId(null);
+    }
+  };
+
+  const allowedCount = useMemo(
+    () => safeCapabilities.filter((c) => c.isAllowed !== false).length,
+    [safeCapabilities]
+  );
+  const disallowedCount = safeCapabilities.length - allowedCount;
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -74,13 +118,21 @@ export function CapabilitiesTab({
     { value: 'DEEP_LINK', label: 'Deep Link (URI Protocol)' },
   ];
 
-  // Filter capabilities by search, category, and integration method syntax
+  // Filter capabilities by search, category, integration method, and allowlist
   const filteredCapabilities = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return safeCapabilities.filter((cap) => {
       const visual = getCapabilityVisual(cap.key, cap.name, cap.description);
 
       if (selectedCategory !== 'ALL' && visual.category !== selectedCategory) {
+        return false;
+      }
+
+      if (allowlistFilter === 'ALLOWED' && cap.isAllowed === false) {
+        return false;
+      }
+
+      if (allowlistFilter === 'DISALLOWED' && cap.isAllowed !== false) {
         return false;
       }
 
@@ -113,7 +165,7 @@ export function CapabilitiesTab({
 
       return true;
     });
-  }, [safeCapabilities, searchQuery, selectedCategory, selectedIntegrationMethod]);
+  }, [safeCapabilities, searchQuery, selectedCategory, selectedIntegrationMethod, allowlistFilter]);
 
   // Pagination calculation
   const totalItems = filteredCapabilities.length;
@@ -191,6 +243,76 @@ export function CapabilitiesTab({
 
   return (
     <div className="space-y-4">
+      {/* SuperAdmin Host Allowlist Status & Scope Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                SuperApp Host Capability Whitelist
+              </h4>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                {allowedCount} of {safeCapabilities.length} Allowed
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Decide which device and bridge capabilities MiniApps are authorized to declare during security validation.
+            </p>
+          </div>
+        </div>
+
+        {/* Allowlist Filter Pills */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setAllowlistFilter('ALL');
+              setCurrentPage(1);
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              allowlistFilter === 'ALL'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            All ({safeCapabilities.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAllowlistFilter('ALLOWED');
+              setCurrentPage(1);
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+              allowlistFilter === 'ALLOWED'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+            }`}
+          >
+            <Check className="w-3 h-3" />
+            <span>Allowed ({allowedCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAllowlistFilter('DISALLOWED');
+              setCurrentPage(1);
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+              allowlistFilter === 'DISALLOWED'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+            }`}
+          >
+            <X className="w-3 h-3" />
+            <span>Disallowed ({disallowedCount})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Search, Filter & View Toggle Toolbar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
         {/* Search Input */}
@@ -313,7 +435,8 @@ export function CapabilitiesTab({
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Integration Method Call</th>
                   <th className="py-3 px-4">Provider Package</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Catalog Status</th>
+                  <th className="py-3 px-4">Host Allowlist</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -437,6 +560,54 @@ export function CapabilitiesTab({
                             <Smartphone className="w-2.5 h-2.5" />
                             <span>{cap.platform || 'Cross-Platform'}</span>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Host Allowlist Policy Toggle Column */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {canManageAllowlist && (
+                            <button
+                              type="button"
+                              disabled={isTogglingId === cap.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleAllowed(cap.id, cap.isAllowed !== false);
+                              }}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
+                                cap.isAllowed !== false
+                                  ? 'bg-emerald-600 dark:bg-emerald-500'
+                                  : 'bg-slate-300 dark:bg-slate-700'
+                              } ${isTogglingId === cap.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              title={`Click to ${cap.isAllowed !== false ? 'disallow' : 'allow'} this capability for MiniApps`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                  cap.isAllowed !== false ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          )}
+
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                              cap.isAllowed !== false
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                            }`}
+                          >
+                            {cap.isAllowed !== false ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>Allowed</span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                                <span>Disallowed</span>
+                              </>
+                            )}
+                          </span>
                         </div>
                       </td>
 
@@ -581,13 +752,39 @@ export function CapabilitiesTab({
                   </div>
                 </div>
 
-                {/* Footer with View Details Link */}
+                {/* Footer with Allowlist Toggle & View Details Link */}
                 <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                    <span className="font-medium">{cap.platform}</span>
-                    <span>•</span>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                      ● Live in Shell
+                  <div className="flex items-center gap-2">
+                    {canManageAllowlist && (
+                      <button
+                        type="button"
+                        disabled={isTogglingId === cap.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleAllowed(cap.id, cap.isAllowed !== false);
+                        }}
+                        className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          cap.isAllowed !== false
+                            ? 'bg-emerald-600 dark:bg-emerald-500'
+                            : 'bg-slate-300 dark:bg-slate-700'
+                        } ${isTogglingId === cap.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title={`Click to ${cap.isAllowed !== false ? 'disallow' : 'allow'} this capability`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                            cap.isAllowed !== false ? 'translate-x-3' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    )}
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        cap.isAllowed !== false
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                      }`}
+                    >
+                      {cap.isAllowed !== false ? 'Allowed' : 'Disallowed'}
                     </span>
                   </div>
 

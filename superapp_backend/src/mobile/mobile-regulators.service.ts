@@ -12,13 +12,21 @@ export interface RegulatorItem {
 /** Always first: FTC publishes the FSA's own apps. */
 const FIRST_CODE = 'FTC';
 
-/** True for the organizations the app lists as regulators. */
+/** The authority the listed organizations sit under. */
+const PARENT_CODE = 'FSA';
+
+/** Listed although their names don't say "Regulator". */
+const ALSO_LISTED_CODES = new Set([FIRST_CODE, 'IAU']);
+
+/**
+ * True for the organizations the app lists: FTC, IAU and the sector regulators
+ * directly under the FSA. The FSA's departments (GAD, PD, TLAD) are left out.
+ */
 function isListedRegulator(org: Organization): boolean {
-  const code = org.code?.toUpperCase();
+  if (org.parent?.code !== PARENT_CODE) return false;
   return (
-    code === FIRST_CODE ||
-    org.name.toLowerCase().includes('regulator') ||
-    (org as any).metadata?.entityType === 'SECTOR_REGULATOR'
+    ALSO_LISTED_CODES.has(org.code.toUpperCase()) ||
+    /\bregulator\b/i.test(org.name)
   );
 }
 
@@ -26,11 +34,15 @@ function isListedRegulator(org: Organization): boolean {
 export class MobileRegulatorsService {
   constructor(
     @InjectRepository(Organization) private readonly organizations: Repository<Organization>,
-  ) {}
+  ) { }
 
   /** Active FTC and sector regulators under the FSA: FTC first, then by name. */
   async list(): Promise<{ items: RegulatorItem[] }> {
-    const rows = await this.organizations.find({ where: { status: OrganizationStatus.ACTIVE } });
+    // TypeORM only fills `parent` when the relation is requested; otherwise it is undefined.
+    const rows = await this.organizations.find({
+      where: { status: OrganizationStatus.ACTIVE },
+      relations: { parent: true },
+    });
     const items = rows
       .filter((o) => o.code && isListedRegulator(o))
       .sort((a, b) =>

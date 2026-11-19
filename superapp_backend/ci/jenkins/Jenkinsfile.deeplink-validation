@@ -499,6 +499,9 @@ pipeline {
                             const payload = {
                                 miniAppId,
                                 integrationMethod: "DEEP_LINK",
+                                buildNumber: Number(process.env.BUILD_NUMBER) || undefined,
+                                buildUrl: process.env.BUILD_URL || undefined,
+                                jobName: process.env.JOB_NAME || "miniapp-validation-deep-link",
                                 status,
                                 score: Math.max(0, score),
                                 findings,
@@ -540,6 +543,9 @@ def notifyStage(String stageId, String stageName, String status, String details)
         "CB_URL=${params.CALLBACK_URL ?: ''}",
         "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
         "MA_ID=${params.MINIAPP_ID ?: ''}",
+        "BUILD_NUM=${env.BUILD_NUMBER ?: ''}",
+        "B_URL=${env.BUILD_URL ?: ''}",
+        "J_NAME=${env.JOB_NAME ?: 'miniapp-validation-deep-link'}",
     ]) {
         sh '''
         set +x
@@ -560,7 +566,10 @@ def notifyStage(String stageId, String stageName, String status, String details)
                             stageId: process.env.STAGE_ID,
                             stageName: process.env.STAGE_NAME,
                             status: process.env.STAGE_STATUS,
-                            details: process.env.STAGE_DETAILS
+                            details: process.env.STAGE_DETAILS,
+                            buildNumber: Number(process.env.BUILD_NUM) || undefined,
+                            buildUrl: process.env.B_URL || undefined,
+                            jobName: process.env.J_NAME || undefined,
                         })
                     });
                     console.log("Stage update [" + process.env.STAGE_ID + "] status: " + res.status);
