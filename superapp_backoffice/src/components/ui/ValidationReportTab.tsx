@@ -7,8 +7,9 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, PlayCircle } from 'lucide-react';
 import { miniappsApi } from '@/api';
+import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
 import {
   PackageIcon,
@@ -44,6 +45,7 @@ import { copyText } from '@/lib/clipboard';
 export interface ValidationReportProps {
   miniApp: any;
   onRefresh?: () => void;
+  defaultSubTab?: 'findings' | 'engines' | 'sbom' | 'runs';
 }
 
 export interface StageCatalogItem {
@@ -258,7 +260,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   },
 };
 
-export default function ValidationReportTab({ miniApp, onRefresh }: ValidationReportProps) {
+export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab }: ValidationReportProps) {
   const [mounted, setMounted] = useState(false);
   const [isReScanning, setIsReScanning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -267,8 +269,16 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   const [showSbomModal, setShowSbomModal] = useState(false);
   const [configuredChecks, setConfiguredChecks] = useState<string[]>(miniApp.securityChecks || []);
   
-  // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom'
-  const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom'>('findings');
+  // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom' | 'runs'
+  const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom' | 'runs'>(
+    defaultSubTab || 'findings'
+  );
+
+  useEffect(() => {
+    if (defaultSubTab) {
+      setActiveViewTab(defaultSubTab);
+    }
+  }, [defaultSubTab]);
   
   // Expanded stage cards state for finding breakdown
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
@@ -1477,6 +1487,19 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             </span>
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => setActiveViewTab('runs')}
+          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+            activeViewTab === 'runs'
+              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <PlayCircle className="w-4 h-4 text-indigo-500" />
+          <span>Scans & Builds History</span>
+        </button>
       </div>
 
       {/* Tab 2: Pipeline Stage Execution Timeline with Multi-Issue Accordions */}
@@ -2014,6 +2037,11 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           </div>
         )}
       </Card>
+      )}
+
+      {/* Tab 4: Scans & Builds History */}
+      {activeViewTab === 'runs' && (
+        <RunHistoryTab miniAppId={miniApp.id} />
       )}
 
       {/* CycloneDX 1.5 SBOM Inspector Modal */}

@@ -1,6 +1,17 @@
 'use client';
 
 import React from 'react';
+import {
+  Info,
+  Scale,
+  Users,
+  Code2,
+  KeyRound,
+  History,
+  ShieldCheck,
+  Activity,
+  AlertCircle,
+} from 'lucide-react';
 
 export type MiniAppTabType =
   | 'overview'
@@ -28,7 +39,6 @@ export default function MiniAppDetailTabs({
   allErrors = {},
   issuesCount = 0,
   validationStatus,
-  currentReleaseVersion,
 }: MiniAppDetailTabsProps) {
   const hasErrorInTab = (tab: MiniAppTabType) => {
     const errorKeys = Object.keys(allErrors);
@@ -56,136 +66,86 @@ export default function MiniAppDetailTabs({
     }
   };
 
-  const tabs: Array<{ id: MiniAppTabType; label: string; icon: React.ReactNode }> = [
-    {
-      id: 'overview',
-      label: 'General Information',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'legal',
-      label: 'Legal & Compliance',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'team',
-      label: 'Team & Collaborators',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'integration',
-      label: 'Technical Integration',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'permissions',
-      label: 'Capabilities',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'versions',
-      label: 'Versions & Releases',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-      ),
-    },
-    {
-      id: 'report',
-      label: 'Security & Compliance Report',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'runs',
-      label: 'Scans & Builds',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'activity',
-      label: 'Activity & Audit Log',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
+  const tabs: Array<{
+    id: MiniAppTabType;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { id: 'overview', label: 'General Info', icon: Info },
+    { id: 'legal', label: 'Legal & Policy', icon: Scale },
+    { id: 'team', label: 'Team', icon: Users },
+    { id: 'integration', label: 'Integration', icon: Code2 },
+    { id: 'permissions', label: 'Capabilities', icon: KeyRound },
+    { id: 'versions', label: 'Versions', icon: History },
+    { id: 'report', label: 'Security Scan', icon: ShieldCheck },
+    { id: 'activity', label: 'Activity Log', icon: Activity },
   ];
 
   return (
-    <div className="bg-slate-100/90 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar mb-6 shadow-xs">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
-        const hasIssue = hasErrorInTab(tab.id);
+    <nav
+      aria-label="MiniApp navigation tabs"
+      className="relative mb-6 border-b border-slate-200 dark:border-slate-800"
+    >
+      {/* Clean Flat Underline Navigation Tabs */}
+      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar -mb-px">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const hasIssue = hasErrorInTab(tab.id);
+          const Icon = tab.icon;
 
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onSelectTab(tab.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm tracking-tight transition-all duration-200 ease-out active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer ${
-              isActive
-                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-300 shadow-xs border border-slate-200/70 dark:border-slate-700/70 font-bold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/50 border border-transparent'
-            }`}
-          >
-            <span className={`shrink-0 transition-colors ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`}>
-              {tab.icon}
-            </span>
-            <span>{tab.label}</span>
-
-            {/* Error indicator dot */}
-            {hasIssue && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="This section has validation issues" />
-            )}
-
-            {/* Tab specific badges */}
-            {tab.id === 'report' && validationStatus && (
-              <span
-                className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                  validationStatus === 'PASSED'
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                    : validationStatus === 'RUNNING'
-                    ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300 animate-pulse'
-                    : validationStatus === 'FAILED'
-                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
-                    : 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onSelectTab(tab.id)}
+              className={`group flex items-center gap-2 px-3.5 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer select-none border-b-2 shrink-0 ${
+                isActive
+                  ? 'border-brand-600 dark:border-brand-400 text-brand-700 dark:text-brand-300 font-bold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 font-medium'
+              }`}
+            >
+              {/* Vector Icon */}
+              <Icon
+                className={`w-4 h-4 shrink-0 transition-colors ${
+                  isActive
+                    ? 'text-brand-600 dark:text-brand-400'
+                    : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'
                 }`}
-              >
-                {validationStatus === 'RUNNING' ? 'SCANNING' : validationStatus}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+              />
+
+              {/* Label */}
+              <span>{tab.label}</span>
+
+              {/* Validation Error Warning Dot */}
+              {hasIssue && (
+                <span className="flex items-center gap-0.5" title="Section contains validation errors">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                </span>
+              )}
+
+              {/* Security Scan Status Pill */}
+              {tab.id === 'report' && validationStatus && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 border ${
+                    validationStatus === 'PASSED'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      : validationStatus === 'RUNNING'
+                      ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800 animate-pulse'
+                      : validationStatus === 'FAILED'
+                      ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {validationStatus === 'RUNNING' ? 'SCANNING' : validationStatus}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

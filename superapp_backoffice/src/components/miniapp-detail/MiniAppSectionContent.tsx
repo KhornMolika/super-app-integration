@@ -179,7 +179,9 @@ export function MiniAppSectionContent({
         <ValidationReportTab miniApp={formData} onRefresh={onRefreshApp} />
       )}
 
-      {activeTab === 'runs' && <RunHistoryTab miniAppId={id} />}
+      {activeTab === 'runs' && (
+        <ValidationReportTab miniApp={formData} onRefresh={onRefreshApp} defaultSubTab="runs" />
+      )}
 
       {activeTab === 'activity' && (
         <ActivityTab miniAppId={id} />

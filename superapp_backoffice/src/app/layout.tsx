@@ -5,6 +5,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { ConfirmationProvider } from '@/components/ui/ConfirmationProvider';
 import { ToastProvider } from '@/components/ui/Toast';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { AppShell } from '@/components/ui/AppShell';
 
 const plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'] });
@@ -28,7 +29,9 @@ export default function RootLayout({
         <AuthProvider>
           <ConfirmationProvider>
             <ToastProvider>
-              <AppShell>{children}</AppShell>
+              <NotificationProvider>
+                <AppShell>{children}</AppShell>
+              </NotificationProvider>
             </ToastProvider>
           </ConfirmationProvider>
         </AuthProvider>

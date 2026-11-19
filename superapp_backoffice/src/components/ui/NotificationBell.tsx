@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { notificationsApi, NotificationItem } from '@/api';
-import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { NotificationItem } from '@/api';
+import { useNotifications } from '@/context/NotificationContext';
 import {
   getNotificationTarget,
   getNotificationTypeStyle,
@@ -12,49 +12,18 @@ import {
 } from '@/lib/notification-target.helper';
 
 export function NotificationBell() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
-
-  const fetchNotifications = async () => {
-    try {
-      const data = await notificationsApi.getAll();
-      const rawList = Array.isArray(data) ? data : (data as any)?.data || [];
-      const validList = rawList.filter((n: any) => n && typeof n === 'object' && n.id);
-      setNotifications(validList);
-    } catch (error) {
-      console.error('Failed to fetch initial notifications', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleNewNotification = useCallback((notificationData: any) => {
-    // Normalize payload in case backend emitted { type: 'notification.created', data: saved }
-    const item: NotificationItem =
-      notificationData?.data && typeof notificationData.data === 'object' && notificationData.data.id
-        ? notificationData.data
-        : notificationData;
-
-    if (!item || !item.id || item.id === 'undefined') return;
-
-    setNotifications((prev) => {
-      if (prev.some((n) => n.id === item.id)) {
-        return prev.map((n) => (n.id === item.id ? item : n));
-      }
-      return [item, ...prev];
-    });
-  }, []);
-
-  useNotificationSocket(handleNewNotification);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -85,7 +54,6 @@ export function NotificationBell() {
     setIsOpen(false);
   }, [pathname]);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const hasUnread = unreadCount > 0;
   const isActive = pathname.startsWith('/notifications') || isOpen;
 
@@ -94,8 +62,7 @@ export function NotificationBell() {
     if (isMarkingAll || unreadCount === 0) return;
     setIsMarkingAll(true);
     try {
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      await notificationsApi.markAllAsRead();
+      await markAllAsRead();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     } finally {
@@ -107,10 +74,7 @@ export function NotificationBell() {
     if (!item?.id || item.id === 'undefined') return;
     // 1. Mark as read immediately if unread
     if (!item.isRead) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
-      );
-      notificationsApi.markAsRead(item.id).catch(() => {});
+      markAsRead(item.id);
     }
 
     // 2. Close dropdown and navigate to dedicated Notification Detail Page
@@ -122,10 +86,7 @@ export function NotificationBell() {
     e.stopPropagation();
     if (!item?.id || item.id === 'undefined') return;
     if (!item.isRead) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
-      );
-      notificationsApi.markAsRead(item.id).catch(() => {});
+      markAsRead(item.id);
     }
     setIsOpen(false);
 
