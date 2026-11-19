@@ -6,6 +6,8 @@ import { io } from 'socket.io-client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
+import { ActionMenu } from '@/components/ui/ActionMenu';
+import { MoreHorizontal } from 'lucide-react';
 import { miniappsApi } from '@/api';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
 import {
@@ -944,63 +946,14 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap self-start lg:self-center">
-            {sbom && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSbomModal(true)}
-                className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-800 hover:bg-brand-50 dark:hover:bg-brand-950/30"
-              >
-                <ClipboardCheckIcon className="w-4 h-4 text-brand-500" />
-                <span>Inspect SBOM ({sbomComponents.length})</span>
-              </Button>
-            )}
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDownloadAuditJson}
-              className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-              title="Download audit report as JSON"
-            >
-              <DownloadIcon className="w-4 h-4 text-slate-500" />
-              <span>Download Audit</span>
-            </Button>
-
-            {valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleReScan(failedStageIds, true)}
-                disabled={isReScanning || isCancelling}
-                className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800/80 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all shadow-xs"
-                title={`Re-scan only the ${failedStageIds.length} failed check(s)`}
-              >
-                <RefreshIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>Re-Scan Failed Only ({failedStageIds.length})</span>
-              </Button>
-            )}
-
-            {valStatus === 'RUNNING' && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelScan}
-                disabled={isCancelling}
-                className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-900/50 text-sm h-10 px-3.5 flex items-center gap-1.5 font-semibold transition-all"
-              >
-                <XCircleIcon className="w-4 h-4" />
-                <span>{isCancelling ? 'Stopping...' : 'Stop / Reset Scan'}</span>
-              </Button>
-            )}
-
+          <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0">
+            {/* Configure Profile Button */}
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowConfigModal(true)}
               disabled={isReScanning || isCancelling}
-              className="flex items-center gap-2 text-sm font-semibold h-10 px-3.5"
+              className="flex items-center gap-2 text-xs sm:text-sm font-semibold h-10 px-3.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               <ShieldIcon className="w-4 h-4 text-slate-500" />
               <span>Configure Profile</span>
@@ -1009,18 +962,70 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               </span>
             </Button>
 
+            {/* Primary Action Button: Re-Run Scan */}
             <Button
               type="button"
               variant="primary"
               onClick={() => handleReScan()}
               disabled={isReScanning || isCancelling}
-              className={`flex items-center gap-2 text-sm font-semibold h-10 px-4 transition-all ${
+              className={`flex items-center gap-2 text-xs sm:text-sm font-semibold h-10 px-4 transition-all ${
                 isScanningActive ? 'opacity-90 shadow-md ring-2 ring-brand-500/20' : ''
               }`}
             >
               <RefreshIcon className={`w-4 h-4 ${isScanningActive ? 'animate-spin' : ''}`} />
-              <span>{isScanningActive ? 'Running Security Scan...' : 'Re-Run Security Scan'}</span>
+              <span>{isScanningActive ? 'Running...' : 'Re-Run Security Scan'}</span>
             </Button>
+
+            {/* Ellipsis (...) Dropdown for Utility Actions */}
+            <ActionMenu
+              align="right"
+              ariaLabel="More report actions"
+              trigger={
+                <div
+                  className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-xs cursor-pointer"
+                  title="More actions"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </div>
+              }
+              items={[
+                ...(sbom
+                  ? [
+                      {
+                        label: `Inspect SBOM (${sbomComponents.length})`,
+                        icon: <ClipboardCheckIcon className="w-4 h-4 text-brand-500" />,
+                        onClick: () => setShowSbomModal(true),
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Download Audit JSON',
+                  icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
+                  onClick: handleDownloadAuditJson,
+                },
+                ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
+                  ? [
+                      {
+                        label: `Re-Scan Failed Only (${failedStageIds.length})`,
+                        icon: <RefreshIcon className="w-4 h-4 text-amber-500" />,
+                        onClick: () => handleReScan(failedStageIds, true),
+                        disabled: isReScanning || isCancelling,
+                      },
+                    ]
+                  : []),
+                ...(valStatus === 'RUNNING'
+                  ? [
+                      {
+                        label: isCancelling ? 'Stopping...' : 'Stop / Reset Scan',
+                        icon: <XCircleIcon className="w-4 h-4 text-rose-500" />,
+                        onClick: handleCancelScan,
+                        disabled: isCancelling,
+                        variant: 'danger' as const,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </div>
         </div>
 
