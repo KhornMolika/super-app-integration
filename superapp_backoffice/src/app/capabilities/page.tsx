@@ -81,14 +81,21 @@ function CapabilitiesContent() {
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      params.delete('page');
+      params.delete('q');
       if (newTab === 'PROPOSALS') {
         params.set('tab', 'proposals');
+        params.delete('category');
+        params.delete('method');
+        params.delete('allowlist');
+        params.delete('view');
         if (proposalSubFilter !== 'PENDING') {
           params.set('filter', proposalSubFilter.toLowerCase());
         }
       } else {
         params.delete('tab');
         params.delete('filter');
+        params.delete('mine');
       }
       const q = params.toString();
       const newUrl = q ? `${pathname}?${q}` : pathname;

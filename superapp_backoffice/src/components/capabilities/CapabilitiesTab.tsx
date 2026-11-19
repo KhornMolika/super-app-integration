@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { CapabilityItem, permissionsApi } from '@/api/permissions.api';
 import { toast } from '@/components/ui/Toast';
@@ -46,16 +47,91 @@ export function CapabilitiesTab({
   const view = useCapabilityView();
   const canManageAllowlist = view.canEditCatalog;
 
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const initialSearch = searchParams?.get('q') || '';
+  const initialCategory = searchParams?.get('category') || 'ALL';
+  const initialMethod = (searchParams?.get('method') as IntegrationMethodOption) || 'ALL';
+  const initialAllowlist = (searchParams?.get('allowlist') as 'ALL' | 'ALLOWED' | 'DISALLOWED') || 'ALL';
+  const initialPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
+  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '10', 10));
+  const initialView = searchParams?.get('view') === 'grid' ? 'grid' : 'table';
+
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedIntegrationMethod, setSelectedIntegrationMethod] =
-    useState<IntegrationMethodOption>('ALL');
-  const [allowlistFilter, setAllowlistFilter] = useState<'ALL' | 'ALLOWED' | 'DISALLOWED'>('ALL');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+    useState<IntegrationMethodOption>(initialMethod);
+  const [allowlistFilter, setAllowlistFilter] = useState<'ALL' | 'ALLOWED' | 'DISALLOWED'>(initialAllowlist);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialLimit);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(initialView);
   const [isTogglingId, setIsTogglingId] = useState<string | null>(null);
+
+  // 300ms debounced search input -> searchQuery
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput, searchQuery]);
+
+  // Synchronize state with browser URL search params
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    else params.delete('q');
+
+    if (selectedCategory !== 'ALL') params.set('category', selectedCategory);
+    else params.delete('category');
+
+    if (selectedIntegrationMethod !== 'ALL') params.set('method', selectedIntegrationMethod);
+    else params.delete('method');
+
+    if (allowlistFilter !== 'ALL') params.set('allowlist', allowlistFilter);
+    else params.delete('allowlist');
+
+    if (currentPage > 1) params.set('page', String(currentPage));
+    else params.delete('page');
+
+    if (pageSize !== 10) params.set('limit', String(pageSize));
+    else params.delete('limit');
+
+    if (viewMode !== 'table') params.set('view', viewMode);
+    else params.delete('view');
+
+    const qs = params.toString();
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    if (window.location.pathname + window.location.search !== target && window.history?.replaceState) {
+      window.history.replaceState(null, '', target);
+    }
+  }, [searchQuery, selectedCategory, selectedIntegrationMethod, allowlistFilter, currentPage, pageSize, viewMode, pathname]);
+
+  // Handle popstate on browser Back/Forward
+  useEffect(() => {
+    const onPop = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q') || '';
+      setSearchInput(q);
+      setSearchQuery(q);
+      setSelectedCategory(params.get('category') || 'ALL');
+      setSelectedIntegrationMethod((params.get('method') as IntegrationMethodOption) || 'ALL');
+      setAllowlistFilter((params.get('allowlist') as any) || 'ALL');
+      setCurrentPage(Math.max(1, parseInt(params.get('page') || '1', 10)));
+      setPageSize(Math.max(5, parseInt(params.get('limit') || '10', 10)));
+      setViewMode(params.get('view') === 'grid' ? 'grid' : 'table');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const [localCaps, setLocalCaps] = useState<CapabilityItem[]>(capabilities);
   useEffect(() => {
@@ -320,18 +396,16 @@ export function CapabilitiesTab({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by name, key, or method (e.g. .postMessage, .takePhoto)..."
             className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
           />
-          {searchQuery && (
+          {searchInput && (
             <button
               type="button"
               onClick={() => {
+                setSearchInput('');
                 setSearchQuery('');
                 setCurrentPage(1);
               }}
