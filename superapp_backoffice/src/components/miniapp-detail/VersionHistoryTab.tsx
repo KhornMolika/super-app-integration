@@ -161,8 +161,8 @@ export default function VersionHistoryTab({
   onOpenReviewDiff,
 }: VersionHistoryTabProps) {
   // Rolling back changes what users get: admins only, and never on an archived app
-  const { role } = useAuth();
-  const canRollback = role === 'SUPER_ADMIN' && currentStatus !== 'ARCHIVED';
+  const { role, can } = useAuth();
+  const canRollback = (role === 'SUPER_ADMIN' || can?.('miniapp:approve')) && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
   const [capsByVersion, setCapsByVersion] = useState<Record<string, VersionCapability[]>>({});
   const [loading, setLoading] = useState(true);
