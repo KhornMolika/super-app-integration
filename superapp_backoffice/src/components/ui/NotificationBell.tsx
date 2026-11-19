@@ -21,9 +21,14 @@ export function NotificationBell() {
   } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -120,7 +125,7 @@ export function NotificationBell() {
           />
         </svg>
 
-        {unreadCount > 0 && (
+        {mounted && unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-xs animate-in zoom-in duration-200">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
@@ -136,7 +141,7 @@ export function NotificationBell() {
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                 Notifications
               </h4>
-              {unreadCount > 0 ? (
+              {mounted && unreadCount > 0 ? (
                 <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                   {unreadCount} new
                 </span>

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { NotificationItem } from '@/api';
 import { useNotifications } from '@/context/NotificationContext';
 import { toast } from '@/components/ui/Toast';
@@ -19,14 +19,76 @@ import {
   NotificationCategory,
   NotificationFiltersState,
   NotificationReadStatus,
+  NotificationSeverity,
+  NotificationTimeframe,
   DEFAULT_FILTERS,
   matchNotification,
   getNotificationCategory,
   countActiveFilters,
 } from '@/components/notifications/notification-filter.types';
 
-export default function NotificationsPage() {
+function readNotificationState(params: URLSearchParams): {
+  searchQuery: string;
+  filters: NotificationFiltersState;
+  page: number;
+  pageSize: number;
+} {
+  const q = params.get('q') || '';
+  const statusParam = (params.get('status') || 'ALL').toUpperCase();
+  const readStatus = (['ALL', 'UNREAD', 'READ'].includes(statusParam) ? statusParam : 'ALL') as NotificationReadStatus;
+
+  const rawCats = params.get('categories') || '';
+  const categories = rawCats
+    ? (rawCats.split(',').filter((c) => ['SECURITY', 'TESTING', 'REVIEW', 'SYSTEM'].includes(c)) as NotificationCategory[])
+    : [];
+
+  const rawSeverity = (params.get('severity') || 'ALL').toUpperCase();
+  const severity = (['ALL', 'ALERT', 'SUCCESS', 'INFO'].includes(rawSeverity) ? rawSeverity : 'ALL') as NotificationSeverity;
+
+  const rawTime = (params.get('timeframe') || 'ALL').toUpperCase();
+  const timeframe = (['ALL', 'TODAY', 'WEEK', 'MONTH'].includes(rawTime) ? rawTime : 'ALL') as NotificationTimeframe;
+
+  const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
+  const pageSize = Math.max(5, parseInt(params.get('limit') || '10', 10) || 10);
+
+  return {
+    searchQuery: q,
+    filters: {
+      readStatus,
+      categories,
+      severity,
+      timeframe,
+      searchQuery: q,
+    },
+    page,
+    pageSize,
+  };
+}
+
+function writeNotificationState(
+  q: string,
+  filters: NotificationFiltersState,
+  page: number,
+  limit: number
+): string {
+  const p = new URLSearchParams();
+  if (q.trim()) p.set('q', q.trim());
+  if (filters.readStatus !== 'ALL') p.set('status', filters.readStatus);
+  if (filters.categories && filters.categories.length > 0) {
+    p.set('categories', filters.categories.join(','));
+  }
+  if (filters.severity !== 'ALL') p.set('severity', filters.severity);
+  if (filters.timeframe !== 'ALL') p.set('timeframe', filters.timeframe);
+  if (page > 1) p.set('page', String(page));
+  if (limit !== 10) p.set('limit', String(limit));
+  return p.toString();
+}
+
+function NotificationsPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const {
     notifications,
     unreadCount,
@@ -38,19 +100,52 @@ export default function NotificationsPage() {
     refreshNotifications,
   } = useNotifications();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<NotificationFiltersState>(DEFAULT_FILTERS);
+  // Initialize from URL search parameters
+  const initialState = useMemo(() => readNotificationState(searchParams), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [searchInput, setSearchInput] = useState(initialState.searchQuery);
+  const [searchQuery, setSearchQuery] = useState(initialState.searchQuery);
+  const [filters, setFilters] = useState<NotificationFiltersState>(initialState.filters);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(initialState.page);
+  const [pageSize, setPageSize] = useState(initialState.pageSize);
 
-  // Reset page to 1 whenever filters or search query changes
+  // 300ms Debounced search input -> searchQuery state
   useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, searchQuery]);
+    const timer = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, searchQuery]);
+
+  // Synchronize state changes to URL search params (replaceState prevents cluttered history entries)
+  useEffect(() => {
+    const qs = writeNotificationState(searchQuery, filters, currentPage, pageSize);
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    if (typeof window !== 'undefined' && window.location.pathname + window.location.search !== target) {
+      window.history.replaceState(null, '', target);
+    }
+  }, [searchQuery, filters, currentPage, pageSize, pathname]);
+
+  // Listen to browser Back / Forward (popstate)
+  useEffect(() => {
+    const onPop = () => {
+      const next = readNotificationState(new URLSearchParams(window.location.search));
+      setSearchInput(next.searchQuery);
+      setSearchQuery(next.searchQuery);
+      setFilters(next.filters);
+      setCurrentPage(next.page);
+      setPageSize(next.pageSize);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const handleMarkAsRead = async (id: string) => {
     if (!id || id === 'undefined' || id === 'null') return;
@@ -87,7 +182,6 @@ export default function NotificationsPage() {
   };
 
   const handleCardClick = (e: React.MouseEvent, item: NotificationItem) => {
-    // If clicked on an interactive button or action, don't trigger card navigation
     if ((e.target as HTMLElement).closest('button, a')) {
       return;
     }
@@ -121,6 +215,7 @@ export default function NotificationsPage() {
   // Handlers for Quick Status Tabs
   const handleSetReadStatus = (status: NotificationReadStatus) => {
     setFilters((prev) => ({ ...prev, readStatus: status }));
+    setCurrentPage(1);
   };
 
   // Remove a specific category from active filters
@@ -129,11 +224,14 @@ export default function NotificationsPage() {
       ...prev,
       categories: prev.categories.filter((c) => c !== cat),
     }));
+    setCurrentPage(1);
   };
 
   const handleClearAllFilters = () => {
     setFilters(DEFAULT_FILTERS);
+    setSearchInput('');
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const hasAnyActiveFilters =
@@ -252,18 +350,21 @@ export default function NotificationsPage() {
             <div className="relative flex-1 lg:w-72">
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search title, mini app, message..."
                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 pl-9 pr-8 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 shadow-xs"
               />
               <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              {searchQuery && (
+              {searchInput && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchInput('');
+                    setSearchQuery('');
+                  }}
                   className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -521,4 +622,18 @@ export default function NotificationsPage() {
     )}
   </div>
 );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-64 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <NotificationsPageContent />
+    </Suspense>
+  );
 }

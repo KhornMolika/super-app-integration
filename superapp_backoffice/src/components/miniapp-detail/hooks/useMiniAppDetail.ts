@@ -176,7 +176,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
               : (activeOrRev.integrationConfig?.allowedDomains || ''),
           } : { productionUrl: '', allowedDomains: '', stagingUrl: '' },
           integrationConfigFlutter: activeOrRev.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? activeOrRev.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
-          integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '', playStoreUrl: '' },
+          integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', bundleId: '', appStoreUrl: '', playStoreUrl: '', webFallbackUrl: '' },
           integrationConfigNativeSdk: activeOrRev.integrationMethod === IntegrationMethod.NATIVE_SDK ? (activeOrRev.integrationConfig || {}) : {
             iosModuleName: '',
             iosTypeName: '',

@@ -722,7 +722,37 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       {formData.integrationConfigDeepLink?.packageName || '-'}
                     </code>
                   </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                      iOS Bundle ID
+                    </span>
+                    <code className="font-mono text-xs text-slate-700 dark:text-slate-300">
+                      {formData.integrationConfigDeepLink?.bundleId || formData.integrationConfigDeepLink?.iosBundleId || '-'}
+                    </code>
+                  </div>
                 </div>
+                {(() => {
+                  const webFallback =
+                    formData.integrationConfigDeepLink?.webFallbackUrl ||
+                    (formData.integrationConfigDeepLink as any)?.fallbackUrl;
+                  if (!webFallback) return null;
+                  return (
+                    <div>
+                      <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                        <GlobeIcon className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                        <span>Universal Web Fallback</span>
+                      </span>
+                      <a
+                        href={webFallback}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-mono text-brand-600 hover:underline break-all block truncate"
+                      >
+                        {webFallback}
+                      </a>
+                    </div>
+                  );
+                })()}
                 {formData.integrationConfigDeepLink?.playStoreUrl && (
                   <div>
                     <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">

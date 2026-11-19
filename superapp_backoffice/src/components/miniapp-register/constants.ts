@@ -77,8 +77,11 @@ export function getInitialRegisterFormData(): Partial<CreateMiniAppDto> {
     integrationConfigDeepLink: {
       urlScheme: '',
       packageName: '',
+      bundleId: '',
+      iosBundleId: '',
       appStoreUrl: '',
       playStoreUrl: '',
+      webFallbackUrl: '',
     },
     homeWidget: null,
     permissions: [],

@@ -40,6 +40,8 @@ import {
 } from '../utils/stepValidation.utils';
 import { STEP_SECTIONS, TOTAL_STEPS } from '../constants';
 
+export const DRAFT_STORAGE_KEY = 'fsa_register_miniapp_draft';
+
 export function useMiniAppRegister() {
   const router = useRouter();
   const { can, user } = useAuth();
@@ -54,6 +56,34 @@ export function useMiniAppRegister() {
   }, [can, router]);
 
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>(getInitialRegisterFormData());
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+
+  // Restore draft from localStorage on initial mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.formData && typeof parsed.formData === 'object') {
+          setFormData((prev) => ({
+            ...prev,
+            ...parsed.formData,
+          }));
+          if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
+          setHasRestoredDraft(true);
+          const restoredStep = parsed.step;
+          if (!searchParams?.get('step') && restoredStep && restoredStep >= 1 && restoredStep <= TOTAL_STEPS) {
+            setStepState(restoredStep);
+            setMaxVisitedStep(restoredStep);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[RegistrationDraft] Failed to restore draft:', e);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-bind ownership and alert contacts directly from active authenticated user session
   useEffect(() => {
@@ -129,6 +159,41 @@ export function useMiniAppRegister() {
       }
     }
   }, [stepQuery]);
+
+  // Auto-save form progress to localStorage (debounced 600ms)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!formData.name && !formData.description && !formData.slug && !formData.appId) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const toSave = {
+          formData,
+          step,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(toSave));
+        setDraftSavedAt(toSave.savedAt);
+      } catch (e) {
+        console.warn('[RegistrationDraft] Failed to auto-save draft:', e);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [formData, step]);
+
+  const handleDiscardDraft = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    } catch (_) {}
+    setFormData(getInitialRegisterFormData());
+    setStep(1);
+    setHasRestoredDraft(false);
+    setDraftSavedAt(null);
+    toast.info('Draft discarded. Started with a blank form.', 'Draft Reset');
+  };
 
   // Modal and submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -796,6 +861,14 @@ export function useMiniAppRegister() {
 
     try {
       const draft = await miniappsApi.createDraft(payload);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch (_) {}
+      setHasRestoredDraft(false);
+      setDraftSavedAt(null);
+
       if (draft?.id) {
         await sendSdkFiles(draft.id, payload);
         toast.success('Draft saved successfully.');
@@ -892,6 +965,13 @@ export function useMiniAppRegister() {
                 setIsSubmitting(false);
               } else {
                 clearInterval(pollTimer);
+                try {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem(DRAFT_STORAGE_KEY);
+                  }
+                } catch (_) {}
+                setHasRestoredDraft(false);
+                setDraftSavedAt(null);
                 setModalState({ isOpen: true, status: 'success' });
                 setTimeout(() => router.push(`/miniapps/${appId}`), 1200);
               }
@@ -967,6 +1047,13 @@ export function useMiniAppRegister() {
 
     try {
       await miniappsApi.createDraft(payload);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch (_) {}
+      setHasRestoredDraft(false);
+      setDraftSavedAt(null);
       setModalState({ isOpen: false, status: 'success' });
       router.push('/miniapps');
     } catch (e: any) {
@@ -1018,5 +1105,8 @@ export function useMiniAppRegister() {
     handleSubmit,
     handleConfirmUnsupported,
     handleFixLater,
+    hasRestoredDraft,
+    draftSavedAt,
+    handleDiscardDraft,
   };
 }

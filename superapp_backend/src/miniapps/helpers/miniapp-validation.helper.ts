@@ -417,6 +417,29 @@ export class MiniappValidationHelper {
             }),
         );
       }
+      const webFallback =
+        app.integrationConfig?.webFallbackUrl ||
+        app.integrationConfig?.fallbackUrl;
+      if (webFallback && webFallback.trim() !== '') {
+        checks.push(
+          urlValidator
+            .validate(webFallback, null as any)
+            .then((isValid) => {
+              if (!isValid)
+                errors['integrationConfigDeepLink.webFallbackUrl'] =
+                  'Universal web fallback URL must be a valid, reachable HTTPS URL.';
+            }),
+        );
+      }
+      const bundleId =
+        app.integrationConfig?.bundleId ||
+        app.integrationConfig?.iosBundleId;
+      if (bundleId && bundleId.trim() !== '') {
+        if (!/^[a-zA-Z0-9.-]+$/.test(bundleId.trim())) {
+          errors['integrationConfigDeepLink.bundleId'] =
+            'iOS Bundle Identifier contains invalid characters (must use reverse-DNS alphanumeric syntax, e.g., com.example.app).';
+        }
+      }
     }
 
     const termsUrl = app.legal?.termsUrl || (app as any).termsUrl;
