@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
-import { DotBadge, ZapIcon } from '@/components/ui/Icons';
+import { DotBadge, ZapIcon, ExternalLinkIcon } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
 
@@ -431,12 +431,26 @@ export function RevisionReviewModal({
               {/* 6. Tab Content: Metadata Delta */}
               {(activeTab === 'DIFF' || activeTab === 'METADATA') && Object.keys(metaDiff).length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Metadata &amp; Legal Info Changes</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Metadata &amp; Legal Info Changes</span>
+                    </h4>
+                    {miniAppId && (
+                      <a
+                        href={`/miniapps/${miniAppId}/legal`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                        title="Open full legal documents in a new tab"
+                      >
+                        <span>View Full Legal Page</span>
+                        <ExternalLinkIcon className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Object.entries(metaDiff).map(([key, val]: [string, any]) => (
