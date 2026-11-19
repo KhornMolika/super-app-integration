@@ -180,6 +180,22 @@ export async function validateMiniAppStep(
           'URL Scheme is required (e.g. trustregulator:// or myapp://open)';
         isValid = false;
       }
+      const webFallback = conf?.webFallbackUrl || (conf as any)?.fallbackUrl;
+      if (webFallback && webFallback.trim() !== '') {
+        if (!webFallback.trim().startsWith('https://')) {
+          errors['integrationConfigDeepLink.webFallbackUrl'] =
+            'Universal web fallback URL must use secure HTTPS (https://).';
+          isValid = false;
+        }
+      }
+      const bundle = conf?.bundleId || conf?.iosBundleId;
+      if (bundle && bundle.trim() !== '') {
+        if (!/^[a-zA-Z0-9.-]+$/.test(bundle.trim())) {
+          errors['integrationConfigDeepLink.bundleId'] =
+            'iOS Bundle Identifier contains invalid characters (must use alphanumeric, dots or dashes).';
+          isValid = false;
+        }
+      }
     }
 
     // The uploaded file a Flutter package artifact / Native SDK needs (same rule on the detail page)

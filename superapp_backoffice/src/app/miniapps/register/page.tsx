@@ -49,11 +49,33 @@ function RegisterMiniAppContent() {
     handleSubmit,
     handleConfirmUnsupported,
     handleFixLater,
+    hasRestoredDraft,
+    draftSavedAt,
+    handleDiscardDraft,
   } = useMiniAppRegister();
 
   return (
     <>
       <div className="w-full min-w-0 pb-6">
+        {hasRestoredDraft && (
+          <div className="mb-4 px-4 py-2.5 rounded-xl border border-sky-200 dark:border-sky-800/60 bg-sky-50 dark:bg-sky-950/30 flex items-center justify-between text-xs text-sky-800 dark:text-sky-300">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+              <span>
+                Auto-restored your in-progress draft
+                {draftSavedAt ? ` (saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer ml-3"
+            >
+              Discard draft & start fresh
+            </button>
+          </div>
+        )}
+
         <RegisterWizardHeader
           step={step}
           stepTitle={STEP_TITLES[step - 1]}

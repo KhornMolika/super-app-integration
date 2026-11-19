@@ -157,9 +157,10 @@ export function matchNotification(
   item: NotificationItem,
   filters: NotificationFiltersState
 ): boolean {
-  // Read Status
-  if (filters.readStatus === 'UNREAD' && item.isRead) return false;
-  if (filters.readStatus === 'READ' && !item.isRead) return false;
+  // Read Status: safely handle boolean and serialized string booleans
+  const isReadBool = item.isRead === true || (item.isRead as any) === 'true';
+  if (filters.readStatus === 'UNREAD' && isReadBool) return false;
+  if (filters.readStatus === 'READ' && !isReadBool) return false;
 
   // Categories (if any selected)
   if (filters.categories && filters.categories.length > 0) {
