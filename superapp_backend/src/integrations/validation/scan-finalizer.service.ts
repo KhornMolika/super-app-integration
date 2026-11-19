@@ -19,6 +19,7 @@ import { ValidationFindingDto } from './validation-callback.controller';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import { getDefaultChecksForMethod } from './validation-stage.catalog';
 import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
+import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 import { persistAppVersions } from '../../miniapps/versions/miniapp-versions.service';
 
 @Injectable()
@@ -46,6 +47,8 @@ export class ScanFinalizerService {
     private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
     @Optional()
     private readonly runs?: MiniAppRunsService,
+    @Optional()
+    private readonly pubspecService?: PubspecInjectorService,
   ) {}
 
   async finalizeScan(
@@ -158,7 +161,19 @@ export class ScanFinalizerService {
 
       // Scan passed: the uploaded package / SDK goes from MinIO quarantine to Nexus
       // (after the save above, so that save cannot drop what it records)
-      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id);
+      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id).then(async () => {
+        // MILESTONE 1: Auto-inject and rebuild Web Sandbox Preview so Admins & Devs can test live in IN_REVIEW
+        if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE' && this.pubspecService) {
+          try {
+            await this.pubspecService.injectMiniApp(app);
+            await this.pubspecService.regenerateRegistry();
+            void this.pubspecService.triggerSandboxRebuild(`Automated scan passed for ${app.name}`);
+            this.logger.log(`Triggered Web Sandbox Preview auto-build on scan pass for ${app.appId}`);
+          } catch (err: any) {
+            this.logger.warn(`Sandbox auto-build on scan pass warning for ${app.appId}: ${err?.message || err}`);
+          }
+        }
+      }).catch(() => {});
     } else {
       app.validationStatus = 'FAILED';
 

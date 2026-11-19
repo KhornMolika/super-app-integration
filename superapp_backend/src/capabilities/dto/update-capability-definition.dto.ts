@@ -19,6 +19,10 @@ export class UpdateCapabilityDefinitionDto {
 
   @IsBoolean()
   @IsOptional()
+  isAllowed?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   isDeprecated?: boolean;
 
   @IsString()

@@ -26,6 +26,7 @@ import ActionMenu from '@/components/ui/ActionMenu';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn, SortDirection } from '@/components/ui/DataTable';
 import { getAvatarColor } from '@/components/forms/team/team.utils';
+import { Globe, Building2, User, Layers, Clock, AlertTriangle, CheckCircle2, Smartphone, Sparkles } from 'lucide-react';
 
 /**
  * MiniApp catalog. Search, filters, sorting and paging all run on the API and
@@ -635,28 +636,76 @@ function MiniAppsContent() {
             <div
               role="tablist"
               aria-label="Which MiniApps"
-              className="mt-3 inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 text-xs"
+              className="mt-3 inline-flex items-center gap-1 rounded-full p-1 bg-slate-900/95 dark:bg-slate-950 border border-slate-800 shadow-xs text-xs"
             >
-              {(['all', 'mine'] as Scope[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="tab"
-                  aria-selected={scope === s}
-                  onClick={() => update({ scope: s })}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer ${
-                    scope === s
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {s === 'mine' ? 'Mine' : isPlatformAdmin ? 'All' : 'Organization'}
-                </button>
-              ))}
+              {(['all', 'mine'] as Scope[]).map((s) => {
+                const isSelected = scope === s;
+                const label = s === 'mine' ? 'Mine' : isPlatformAdmin ? 'All' : 'Organization';
+                const Icon = s === 'mine' ? User : isPlatformAdmin ? Globe : Building2;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() => update({ scope: s })}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all duration-150 cursor-pointer select-none ${
+                      isSelected
+                        ? 'bg-slate-800 text-white shadow-xs border border-slate-700/80 font-bold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-brand-400' : 'text-slate-500'}`} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
         <RegisterMiniAppButton />
+      </div>
+
+      {/* Compact Table Sub-Filters (First Image v.1 Capsule Style) */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div
+          role="tablist"
+          aria-label="Filter MiniApps by lifecycle status"
+          className="inline-flex items-center gap-1 rounded-full p-1 bg-slate-900/95 dark:bg-slate-950 border border-slate-800 shadow-xs text-xs"
+        >
+          {[
+            { id: 'ALL', label: 'All MiniApps', icon: Layers },
+            { id: 'IN_REVIEW', label: 'In Review', icon: Clock },
+            { id: 'CHANGES_REQUESTED', label: 'Changes Requested', icon: AlertTriangle },
+            { id: 'APPROVED', label: 'Approved', icon: CheckCircle2 },
+            { id: 'TESTING', label: 'Testing', icon: Smartphone },
+            { id: 'ACTIVE', label: 'Live / Released', icon: Sparkles },
+          ].map((subFilter) => {
+            const isSelected = state.stage === subFilter.id;
+            const Icon = subFilter.icon;
+            return (
+              <button
+                key={subFilter.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => update({ stage: subFilter.id, page: 1 })}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer select-none ${
+                  isSelected
+                    ? 'bg-slate-800 text-white shadow-xs border border-slate-700/80 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                }`}
+              >
+                <Icon
+                  className={`w-3.5 h-3.5 shrink-0 ${
+                    isSelected ? 'text-brand-400' : 'text-slate-500'
+                  }`}
+                />
+                <span>{subFilter.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {fetchError ? (
@@ -698,6 +747,76 @@ function MiniAppsContent() {
           paginationProps={pagination}
           onRowClick={(app) => router.push(`/miniapps/${app.id}`)}
           rowClassName="group cursor-pointer"
+          renderMobileCard={(app) => {
+            const phase = getMiniAppPhase(app as any);
+            const iso = app.updatedAt || app.createdAt;
+            return (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
+                    <div className="min-w-0">
+                      <span className="block font-bold text-slate-900 dark:text-slate-100 truncate text-sm">
+                        {app.name || '-'}
+                      </span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
+                        <span className="font-mono">{app.appId}</span>
+                        <span aria-hidden="true"> · </span>
+                        {METHOD_LABEL[app.integrationMethod || ''] || app.integrationMethod}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <ActionMenu
+                      ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
+                      items={[
+                        {
+                          label: 'Open',
+                          href: `/miniapps/${app.id}`,
+                          icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
+                        },
+                        {
+                          label: 'Download test build',
+                          hidden: !['testing', 'test-passed', 'live'].includes(phase),
+                          icon: <DevicePhoneIcon className="w-4 h-4 text-slate-400" />,
+                          onClick: () =>
+                            setApkVersion(
+                              (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.2.0',
+                            ),
+                        },
+                        {
+                          label: 'Issues',
+                          href: `/issues?appId=${app.id}`,
+                          icon: <BugIcon className="w-4 h-4 text-slate-400" />,
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <AppStatusBadge app={app} />
+                  <VersionStageBadge
+                    app={app}
+                    empty={
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                        -
+                      </span>
+                    }
+                  />
+                  {app.organization && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      {app.organizationCode || getOrganizationCode(app.organization)}
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
+                    {relativeTime(iso)}
+                  </span>
+                </div>
+              </div>
+            );
+          }}
         />
       )}
 

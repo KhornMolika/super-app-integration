@@ -54,6 +54,8 @@ export interface DataTableProps<T> {
   emptyAction?: React.ReactNode;
   // Pagination
   paginationProps?: PaginationProps;
+  // Custom mobile stacked card renderer
+  renderMobileCard?: (item: T, index: number) => React.ReactNode;
   // Custom toolbar actions (e.g. Create button)
   actions?: React.ReactNode;
   className?: string;
@@ -188,6 +190,7 @@ export function DataTable<T>({
   tableClassName = '',
   rowClassName = '',
   onRowClick,
+  renderMobileCard,
   enableSorting = true,
   defaultSortKey,
   defaultSortDirection = 'asc',
@@ -361,7 +364,53 @@ export function DataTable<T>({
 
       {/* 2. Structured Data Table Surface */}
       <Card className="!p-0 overflow-hidden shadow-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl">
-        <div className="overflow-x-auto min-h-[320px]">
+        {/* Mobile Stacked Card View (< sm: 640px) */}
+        {renderMobileCard && (
+          <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={`m-skel-${i}`} className="p-4 space-y-3 animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : sortedData.length === 0 ? (
+              <div className="px-4 py-12 text-center text-slate-500">
+                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm block">
+                  {emptyMessage}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 block">
+                  {emptySubMessage}
+                </span>
+                {isFiltered && onResetFilters && (
+                  <Button variant="secondary" onClick={onResetFilters} className="mt-3 text-xs">
+                    Clear all filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              sortedData.map((item, index) => (
+                <div
+                  key={keyExtractor(item, index)}
+                  onClick={onRowClick ? () => onRowClick(item, index) : undefined}
+                  className={`p-4 transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${
+                    onRowClick ? 'cursor-pointer active:bg-slate-100 dark:active:bg-slate-800' : ''
+                  }`}
+                >
+                  {renderMobileCard(item, index)}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tablet & Desktop Table View (>= sm: 640px with horizontal scroll) */}
+        <div className={`${renderMobileCard ? 'hidden sm:block ' : ''}overflow-x-auto min-h-[320px]`}>
           <table className={`w-full text-left border-collapse ${tableClassName}`}>
             {/* Header */}
             <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">

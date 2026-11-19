@@ -141,11 +141,21 @@ export const miniappsApi = {
     });
   },
 
-  triggerAction: (id: string, action: string, reason?: string, extra?: Record<string, unknown>) =>
-    apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/${action}`, {
+  triggerAction: (
+    id: string,
+    action: string,
+    reason?: string | Record<string, unknown>,
+    extra?: Record<string, unknown>
+  ) => {
+    const payload =
+      typeof reason === 'object' && reason !== null
+        ? { ...reason, ...(extra || {}) }
+        : { reason, ...(extra || {}) };
+    return apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/${action}`, {
       method: 'POST',
-      body: { reason, ...(extra || {}) },
-    }),
+      body: payload,
+    });
+  },
 
   getDiff: (id: string, baseVersion?: string, targetVersion?: string) =>
     apiClient<any>(`/api/mini-apps/${id}/diff`, { params: { baseVersion, targetVersion } }),
@@ -181,10 +191,13 @@ export const miniappsApi = {
       body: { targetVersion, reason },
     }),
 
-  rescan: (id: string, securityChecks?: string[]) =>
+  rescan: (id: string, securityChecks?: string[], failedOnly?: boolean) =>
     apiClient<any>(`/api/mini-apps/${id}/rescan`, {
       method: 'POST',
-      body: securityChecks && securityChecks.length > 0 ? { securityChecks } : {},
+      body: {
+        ...(securityChecks && securityChecks.length > 0 ? { securityChecks } : {}),
+        ...(failedOnly ? { failedOnly: true } : {}),
+      },
     }),
 
   /** Publishes (or confirms) the scanned Flutter package in Nexus pub-hosted. */

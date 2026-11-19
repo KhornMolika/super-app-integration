@@ -224,6 +224,32 @@ export class MailService {
     });
   }
 
+  async sendMalwareIncidentEmail(
+    toEmail: string,
+    appName: string,
+    threatSignatures: string[],
+    purgedFiles: string[],
+    detectedAt: string,
+    detailsUrl: string,
+  ): Promise<MailDispatchResult> {
+    const template = {
+      ...MailTemplateHelper.renderMalwareIncidentEmail(
+        appName,
+        threatSignatures,
+        purgedFiles,
+        detectedAt,
+        detailsUrl,
+      ),
+      from: `SuperApp Threat Governance <${this.fromEmail}>`,
+    };
+    return this.dispatchLifecycleNotification(toEmail, template, {
+      dummyLog: `[DUMMY] Would have sent Malware Incident Email to ${toEmail} for ${appName} (${threatSignatures.length} threats)`,
+      skippedLog: `[SKIPPED] Skipped Malware Incident Email to mock/test address: ${toEmail}`,
+      successLog: `Critical Malware Incident Email sent to ${toEmail} for ${appName}`,
+      errorLog: `Failed to send malware incident email to ${toEmail}`,
+    });
+  }
+
   async sendRegistrationFailureEmail(
     toEmail: string,
     appName: string,

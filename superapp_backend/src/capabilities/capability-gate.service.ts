@@ -18,6 +18,7 @@ import { SuperAppCapability } from '../super-app/entities/super-app-capability.e
 
 export type CapabilityUnsupportedReason =
   | 'NOT_IN_CATALOG'
+  | 'DISALLOWED_BY_POLICY'
   | 'RETIRED'
   | 'REQUIRES_NEWER_SUPER_APP';
 
@@ -105,6 +106,8 @@ export function evaluateAgainstCatalog(
 
     if (!def) {
       reason = 'NOT_IN_CATALOG';
+    } else if (def.isAllowed === false) {
+      reason = 'DISALLOWED_BY_POLICY';
     } else if (!def.isActive || def.isDeprecated) {
       reason = 'RETIRED';
     } else if (host && def.minSuperAppVersion && compareVersions(host, def.minSuperAppVersion) < 0) {
@@ -150,7 +153,9 @@ export function evaluateAgainstCatalog(
 /** Validation-report findings for the unsupported capabilities in an evaluation. */
 export function capabilityFindings(availability: CapabilityAvailability): CapabilityGateFinding[] {
   const describe = (c: CapabilityEvaluation) =>
-    c.reason === 'REQUIRES_NEWER_SUPER_APP'
+    c.reason === 'DISALLOWED_BY_POLICY'
+      ? 'is disallowed by the Super App host administrator policy'
+      : c.reason === 'REQUIRES_NEWER_SUPER_APP'
       ? `needs Super App ${c.availableFrom} or newer (host is ${availability.hostVersion})`
       : c.reason === 'RETIRED'
         ? 'has been retired from the Super App host'

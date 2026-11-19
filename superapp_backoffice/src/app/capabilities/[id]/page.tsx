@@ -98,6 +98,27 @@ export default function CapabilityDetailPage({
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Permission>>({});
   const [metadataText, setMetadataText] = useState('{}');
+  const [savingAllowlist, setSavingAllowlist] = useState(false);
+
+  const handleToggleAllowlist = async (currentAllowed: boolean) => {
+    if (!capability) return;
+    const next = !currentAllowed;
+    setSavingAllowlist(true);
+    setCapability((prev) => (prev ? { ...prev, isAllowed: next } : prev));
+    try {
+      await permissionsApi.toggleAllowed(capability.id, next);
+      toast.success(
+        next
+          ? 'Capability allowed for MiniApp integration.'
+          : 'Capability disallowed (quarantined by host policy).'
+      );
+    } catch (err: any) {
+      setCapability((prev) => (prev ? { ...prev, isAllowed: currentAllowed } : prev));
+      toast.error(err?.message || 'Failed to update host allowlist policy.');
+    } finally {
+      setSavingAllowlist(false);
+    }
+  };
 
   // Proposal Modal State
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
@@ -577,6 +598,48 @@ export default function CapabilityDetailPage({
                 </h3>
 
                 <div className="space-y-3 text-xs">
+                  {/* SuperAdmin Host Allowlist Decision */}
+                  <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Authorizes MiniApps to declare and bind this capability during security scans.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      {canManage && (
+                        <button
+                          type="button"
+                          disabled={savingAllowlist}
+                          onClick={() => handleToggleAllowlist(capability.isAllowed !== false)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
+                            capability.isAllowed !== false
+                              ? 'bg-emerald-600 dark:bg-emerald-500'
+                              : 'bg-slate-300 dark:bg-slate-700'
+                          } ${savingAllowlist ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={`Click to ${capability.isAllowed !== false ? 'disallow' : 'allow'} this capability`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                              capability.isAllowed !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      )}
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                          capability.isAllowed !== false
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                        }`}
+                      >
+                        {capability.isAllowed !== false ? 'Allowed for MiniApps' : 'Disallowed / Quarantined'}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500 dark:text-slate-400">Provider Package</span>
                     <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
@@ -622,6 +685,48 @@ export default function CapabilityDetailPage({
                 </h3>
 
                 <div className="space-y-3 text-xs">
+                  {/* SuperAdmin Host Allowlist Decision */}
+                  <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Authorizes MiniApps to declare and bind this capability during security scans.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      {canManage && (
+                        <button
+                          type="button"
+                          disabled={savingAllowlist}
+                          onClick={() => handleToggleAllowlist(capability.isAllowed !== false)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
+                            capability.isAllowed !== false
+                              ? 'bg-emerald-600 dark:bg-emerald-500'
+                              : 'bg-slate-300 dark:bg-slate-700'
+                          } ${savingAllowlist ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={`Click to ${capability.isAllowed !== false ? 'disallow' : 'allow'} this capability`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                              capability.isAllowed !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      )}
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                          capability.isAllowed !== false
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                        }`}
+                      >
+                        {capability.isAllowed !== false ? 'Allowed for MiniApps' : 'Disallowed / Quarantined'}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500 dark:text-slate-400">Registry Status</span>
                     <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">

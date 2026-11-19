@@ -11,6 +11,12 @@ type Severity = ValidationFindingDto['severity'];
 export interface RawScanReport {
   miniAppId: string;
   method?: string;
+  /** Jenkins build number */
+  buildNumber?: number | string;
+  /** Jenkins build console URL */
+  buildUrl?: string;
+  /** Jenkins job name */
+  jobName?: string;
   /** Commit the scan checked out (Git source) */
   commitSha?: string;
   /** Stages that ran, in order (the selected checks) */
@@ -409,5 +415,8 @@ export function normalizeScanReport(raw: RawScanReport): ValidationCallbackDto {
     checks,
     findings,
     sbom: raw.sbom || undefined,
+    buildNumber: raw.buildNumber,
+    buildUrl: raw.buildUrl,
+    jobName: raw.jobName,
   };
 }

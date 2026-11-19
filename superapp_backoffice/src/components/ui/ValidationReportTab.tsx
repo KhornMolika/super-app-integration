@@ -1,8 +1,9 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { miniappsApi } from '@/api';
@@ -21,6 +22,7 @@ import {
   CheckIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
+  ClockIcon,
   XIcon,
   XCircleIcon,
   ChevronDown,
@@ -83,6 +85,11 @@ export function getStageIcon(stageId: string, className = "w-4 h-4") {
     default:
       return <ShieldIcon className={className} />;
   }
+}
+
+function fileName(path?: string | null) {
+  if (!path) return '';
+  return String(path).split('?')[0].split('/').pop() || String(path);
 }
 
 export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
@@ -182,6 +189,22 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     defaultTitle: 'SuperApp Capability Boundary Verification',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
   },
+  scheme_audit: {
+    id: 'scheme_audit',
+    name: 'Custom URL Scheme Syntax & Security Audit',
+    tool: 'Scheme RFC Validator',
+    icon: 'link',
+    defaultTitle: 'RFC 3986 URI & Scheme Collision Audit',
+    description: 'Validates RFC 3986 URI format, reserved protocol collisions, and URL scheme injection vectors.',
+  },
+  store_url_audit: {
+    id: 'store_url_audit',
+    name: 'App Store & Play Store URL Safety',
+    tool: 'Store URL Safe Filter',
+    icon: 'shield',
+    defaultTitle: 'Store Fallback Security Verification',
+    description: 'Verifies fallback URLs point strictly to official app stores (Apple App Store, Google Play Store).',
+  },
   // Aliases for backwards compatibility
   secrets: {
     id: 'secrets',
@@ -241,6 +264,9 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showSbomModal, setShowSbomModal] = useState(false);
   const [configuredChecks, setConfiguredChecks] = useState<string[]>(miniApp.securityChecks || []);
+  
+  // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom'
+  const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom'>('findings');
   
   // Expanded stage cards state for finding breakdown
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
@@ -407,8 +433,20 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
       if (!allowedKeys.includes('capability_gate')) {
         allowedKeys.push('capability_gate');
       }
+      // Guarantee Flutter packages never retain malware_scan even if legacy data has it
+      if (isFlutterPackage) {
+        allowedKeys = allowedKeys.filter((k) => k !== 'malware_scan' && k !== 'malware');
+      }
+    } else if (miniApp.integrationMethod === 'DEEP_LINK') {
+      allowedKeys = ['scheme_audit', ...userSelected];
+      if (!allowedKeys.includes('capability_gate')) {
+        allowedKeys.push('capability_gate');
+      }
     } else {
       allowedKeys = ['ssrf', ...userSelected];
+      if (!allowedKeys.includes('capability_gate')) {
+        allowedKeys.push('capability_gate');
+      }
     }
     allowedKeys = Array.from(new Set(allowedKeys));
 
@@ -477,15 +515,121 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     });
   }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage, checkAliases, stageFindingsMap]);
 
-  const jenkinsBaseUrl = (process.env.NEXT_PUBLIC_JENKINS_URL || 'http://localhost:8085').replace(/\/+$/, '');
-  const jenkinsJobUrl = `${jenkinsBaseUrl}/job/miniapp-validation/`;
+  const { role } = useAuth();
+  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
 
-  const handleReScan = async (checksToRun?: string[]) => {
+  const [selectedStageLog, setSelectedStageLog] = useState<{
+    name: string;
+    tool: string;
+    details: string;
+    findings?: any[];
+  } | null>(null);
+  const [logCopied, setLogCopied] = useState(false);
+
+  const jenkinsBaseUrl = (process.env.NEXT_PUBLIC_JENKINS_URL || 'https://app.fintechcenterfsa.com/jenkins').replace(/\/+$/, '');
+  const methodJobMap: Record<string, string> = {
+    WEBVIEW: 'miniapp-validation-webview',
+    FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+    NATIVE_SDK: 'miniapp-validation-native-sdk',
+    DEEP_LINK: 'miniapp-validation-deep-link',
+  };
+  const targetJob = report?.jobName || methodJobMap[miniApp.integrationMethod] || 'miniapp-validation-flutter-package';
+  const buildNum = report?.buildNumber;
+
+  const dynamicCiLogsUrl = report?.buildUrl
+    ? `${report.buildUrl.replace(/\/+$/, '')}/console`
+    : buildNum
+    ? `${jenkinsBaseUrl}/job/${targetJob}/${buildNum}/console`
+    : `${jenkinsBaseUrl}/job/${targetJob}/`;
+  const jenkinsJobUrl = dynamicCiLogsUrl;
+
+  const failedStageIds = useMemo(() => {
+    return activeStages
+      .filter((st) => st.recorded?.status === 'FAILED' || (st.findings && st.findings.length > 0))
+      .map((st) => st.id);
+  }, [activeStages]);
+
+  const isPlatformFailure = useMemo(() => {
+    return (
+      report?.failureType === 'INFRASTRUCTURE' ||
+      (allFindings.length > 0 &&
+        allFindings.every(
+          (f) =>
+            f.engineId?.includes('error') ||
+            f.id.startsWith('SCANNER_ERROR_') ||
+            f.title.toLowerCase().includes('could not run')
+        ))
+    );
+  }, [report, allFindings]);
+
+  const isScanningActive = valStatus === 'RUNNING' || isReScanning;
+
+  // Supply Chain Pipeline Stepper calculations (for Flutter & Native SDK)
+  const rev = miniApp?.pendingRevision;
+  const inRevision = Boolean(rev?.integrationConfig);
+  const conf: Record<string, any> =
+    (inRevision ? rev.integrationConfig : miniApp?.integrationConfigFlutter || miniApp?.integrationConfig) || {};
+  const storagePath: string | undefined = conf.packageStoragePath || conf.minioKey;
+  const published = Boolean(conf.nexusPublishedVersion) && !conf.nexusPublishError;
+  const publishError: string | undefined = conf.nexusPublishError || undefined;
+
+  const minioStepState = storagePath ? 'done' : 'failed';
+  const securityScanStepState =
+    valStatus === 'PASSED' ? 'done' : valStatus === 'FAILED' ? 'failed' : isScanningActive ? 'running' : 'waiting';
+  const nexusStepState = published
+    ? 'done'
+    : publishError
+    ? 'failed'
+    : valStatus !== 'PASSED'
+    ? 'waiting'
+    : 'waiting';
+
+  const handleDownloadAuditJson = () => {
+    const dataToExport = {
+      exportedAt: new Date().toISOString(),
+      miniApp: {
+        id: miniApp.id,
+        appId: miniApp.appId,
+        name: miniApp.name,
+        integrationMethod: miniApp.integrationMethod,
+        version: miniApp.currentReleaseVersion || '1.0.0',
+        validationStatus: miniApp.validationStatus,
+        validationScore: score,
+      },
+      report,
+      stages,
+      findings: allFindings,
+    };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${miniApp.appId || 'miniapp'}-security-audit.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadSbom = () => {
+    if (!sbom) return;
+    const blob = new Blob([JSON.stringify(sbom, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${miniApp.appId || 'miniapp'}-sbom.cdx.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReScan = async (checksToRun?: string[], failedOnly?: boolean) => {
     setIsReScanning(true);
     setShowConfigModal(false);
     setReScanMessage('Initiating security scan...');
     try {
-      await miniappsApi.rescan(miniApp.id, checksToRun);
+      await miniappsApi.rescan(miniApp.id, checksToRun, failedOnly);
       setReScanMessage('Security scan initiated!');
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -569,7 +713,9 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
 
   const scannedTargetLabel = isFlutterPackage
     ? (miniApp.integrationConfig?.packageStoragePath
-        ? `MinIO Package: ${miniApp.integrationConfig.packageStoragePath}`
+        ? (isSuperAdmin
+            ? `MinIO Package: ${miniApp.integrationConfig.packageStoragePath}`
+            : `Package Archive: ${fileName(miniApp.integrationConfig.packageStoragePath)}`)
         : miniApp.integrationConfig?.repoUrl
         ? `Git Repo: ${miniApp.integrationConfig.repoUrl}${miniApp.integrationConfig.commitSha ? ` @ ${miniApp.integrationConfig.commitSha.substring(0, 7)}` : ''}`
         : 'Flutter Package Ingestion')
@@ -592,7 +738,6 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     });
   }, [miniApp.securityChecks, miniApp.integrationMethod]);
 
-  const isScanningActive = valStatus === 'RUNNING' || isReScanning;
   const completedStagesCount = activeStages.filter((st) => st.recorded?.status === 'COMPLETED').length;
   const runningStage = activeStages.find((st) => st.recorded?.status === 'RUNNING' || (!st.recorded && st.index === 1 && isScanningActive));
   const totalStagesCount = activeStages.length;
@@ -812,6 +957,31 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               </Button>
             )}
 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadAuditJson}
+              className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              title="Download audit report as JSON"
+            >
+              <DownloadIcon className="w-4 h-4 text-slate-500" />
+              <span>Download Audit</span>
+            </Button>
+
+            {valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleReScan(failedStageIds, true)}
+                disabled={isReScanning || isCancelling}
+                className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800/80 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all shadow-xs"
+                title={`Re-scan only the ${failedStageIds.length} failed check(s)`}
+              >
+                <RefreshIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Re-Scan Failed Only ({failedStageIds.length})</span>
+              </Button>
+            )}
+
             {valStatus === 'RUNNING' && (
               <Button
                 type="button"
@@ -885,69 +1055,347 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             </div>
           </div>
         )}
-      </div>
-
-      {/* Jenkins Offline Fallback Notice Banner */}
-      {report?.fallbackFromJenkins && (
-        <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              <ZapIcon className="w-5 h-5" />
+        {/* Integrated Supply Chain Attestation Stepper (Package Ingestion to Release) */}
+        {(isFlutterPackage || Boolean(storagePath)) && (
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {isSuperAdmin ? 'Supply Chain Attestation Pipeline' : 'Release Clearance & Distribution'}
+              </span>
+              <span className="text-xs font-mono text-slate-400 hidden sm:inline">
+                {isSuperAdmin
+                  ? 'MinIO Quarantine → Security Scan → Nexus Registry'
+                  : 'Package Ingestion → Security Clearance → SuperApp Release'}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-amber-900 dark:text-amber-200">
-                  Jenkins CI Unreachable — Completed via Local Security Engine
-                </h4>
-                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
-                  Auto-Recovered
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Step 1: MinIO Archive */}
+              <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 motion-stepper-card ${
+                minioStepState === 'done'
+                  ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs'
+                  : 'border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 hover:border-rose-300 dark:hover:border-rose-700'
+              }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 ${
+                    minioStepState === 'done'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 animate-success-pop'
+                      : 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300'
+                  }`}>
+                    <PackageIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">
+                      {isSuperAdmin ? '1. MinIO Quarantine' : '1. Package Ingestion'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
+                      {minioStepState === 'done'
+                        ? (isSuperAdmin && storagePath ? storagePath : (storagePath ? String(storagePath).split('/').pop() : 'Archive Uploaded'))
+                        : (isSuperAdmin ? 'No archive in MinIO' : 'No archive uploaded')}
+                    </div>
+                  </div>
+                </div>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                  minioStepState === 'done'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                }`}>
+                  {minioStepState === 'done' ? (isSuperAdmin ? 'Verified (MinIO)' : 'Archived') : 'Missing'}
                 </span>
               </div>
-              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
-                The primary Jenkins CI controller (<code>{jenkinsBaseUrl}</code>) could not be reached: <em>{report.fallbackReason || 'Connection Refused'}</em>. To prevent the pipeline from hanging, the security audit was automatically executed in-process using the Local Security Engine.
-              </p>
+
+              {/* Step 2: Automated Security Clearance */}
+              <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 motion-stepper-card ${
+                securityScanStepState === 'done'
+                  ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs'
+                  : securityScanStepState === 'running'
+                  ? 'border-brand-300 dark:border-brand-800/80 bg-brand-50/70 dark:bg-brand-950/40 text-brand-900 dark:text-brand-200 ring-1 ring-brand-500/30'
+                  : securityScanStepState === 'failed'
+                  ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 hover:border-rose-300 dark:hover:border-rose-700'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'
+              }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 ${
+                    securityScanStepState === 'done'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 animate-success-pop'
+                      : securityScanStepState === 'running'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300'
+                      : securityScanStepState === 'failed'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}>
+                    {securityScanStepState === 'running' && (
+                      <span className="absolute inset-0 rounded-lg bg-brand-400/50 animate-heartbeat-ring -z-10" />
+                    )}
+                    {securityScanStepState === 'running' ? (
+                      <RefreshIcon className="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400" />
+                    ) : (
+                      <ShieldCheckIcon className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">
+                      {isSuperAdmin ? '2. Security Audit & Gates' : '2. Security Clearance'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {securityScanStepState === 'done'
+                        ? (isSuperAdmin ? 'Clearance Approved (All Gates Passed)' : 'All Security Checks Cleared')
+                        : securityScanStepState === 'running'
+                        ? 'Analyzing package security...'
+                        : securityScanStepState === 'failed'
+                        ? `${allFindings.length} issue(s) detected - action required`
+                        : 'Awaiting execution'}
+                    </div>
+                  </div>
+                </div>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                  securityScanStepState === 'done'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                    : securityScanStepState === 'running'
+                    ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/80 dark:text-brand-200 ring-1 ring-brand-400/40 animate-pulse'
+                    : securityScanStepState === 'failed'
+                    ? (isSuperAdmin ? 'Quarantined' : 'Action Required')
+                    : 'Pending'
+                }`}>
+                  {securityScanStepState === 'done'
+                    ? 'Passed'
+                    : securityScanStepState === 'running'
+                    ? 'Auditing'
+                    : securityScanStepState === 'failed'
+                    ? (isSuperAdmin ? 'Quarantined' : 'Action Required')
+                    : 'Pending'}
+                </span>
+              </div>
+
+              {/* Step 3: Nexus Registry */}
+              <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 motion-stepper-card ${
+                nexusStepState === 'done'
+                  ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs'
+                  : nexusStepState === 'failed'
+                  ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 hover:border-rose-300 dark:hover:border-rose-700'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'
+              }`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 ${
+                    nexusStepState === 'done'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 animate-success-pop'
+                      : nexusStepState === 'failed'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}>
+                    <ClockIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">
+                      {isSuperAdmin ? '3. Nexus Pub-Hosted' : '3. SuperApp Release'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {nexusStepState === 'done'
+                        ? (isSuperAdmin
+                            ? (conf.nexusPublishedVersion ? `Published to Nexus (v${conf.nexusPublishedVersion})` : 'Published to Nexus')
+                            : 'Approved & Available for SuperApp Build')
+                        : nexusStepState === 'failed'
+                        ? (isSuperAdmin ? (publishError || 'Publish error') : 'Distribution blocked')
+                        : (isSuperAdmin ? 'Awaiting security scan approval' : 'Awaiting security clearance')}
+                    </div>
+                  </div>
+                </div>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                  nexusStepState === 'done'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                    : nexusStepState === 'failed'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {nexusStepState === 'done' ? 'Published' : nexusStepState === 'failed' ? 'Failed' : 'Waiting'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Prominent Failure Banner if pipeline or validation failed */}
-      {valStatus === 'FAILED' && (
-        <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 dark:bg-rose-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              <AlertTriangleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-base font-bold text-rose-900 dark:text-rose-200">
-                {allFindings.length > 0
-                  ? 'Security Audit: Action Required (Violations Detected)'
-                  : 'Automated Security Pipeline Encountered an Error'}
-              </h4>
-              <p className="text-sm text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
-                {allFindings.length > 0
-                  ? `Automated security checks detected ${allFindings.length} issue(s) across engines (unauthorized permissions, hardcoded secrets, or known CVE vulnerabilities). Review the breakdown per engine below.`
-                  : 'The automated validation pipeline encountered an execution error. Please check the Jenkins CI logs for details.'}
-              </p>
+        {/* Inline Verdict Banner (Integrated directly into Command Center) */}
+        {report?.fallbackFromJenkins && (
+          <div className="mt-4 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-base flex-shrink-0">
+                <ZapIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                    {isSuperAdmin
+                      ? 'Jenkins CI Unreachable — Completed via Local Security Engine'
+                      : 'Completed via Fallback Security Engine'}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
+                    Auto-Recovered
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                  {isSuperAdmin ? (
+                    <>The primary Jenkins CI controller (<code>{jenkinsBaseUrl}</code>) could not be reached: <em>{report.fallbackReason || 'Connection Refused'}</em>. Audit executed in-process using Local Security Engine.</>
+                  ) : (
+                    <>The automated security audit was executed successfully using the platform's in-process local security engine.</>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
-          {!report?.reportPath?.startsWith('local-scan://') && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={jenkinsJobUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-sm font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-sm"
-              >
-                <span>View CI Logs</span>
-                <ExternalLinkIcon className="w-4 h-4" />
-              </a>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* Pipeline Stage Execution Timeline with Multi-Issue Accordions */}
+        {valStatus === 'FAILED' && (
+          isPlatformFailure ? (
+            <div className="mt-4 p-4 rounded-xl border border-amber-300 dark:border-amber-800/80 bg-amber-50/90 dark:bg-amber-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-base flex-shrink-0">
+                  <AlertTriangleIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                      Platform Infrastructure Error (Super App Team Action Required)
+                    </h4>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-200/80 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                      Not a MiniApp Defect
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    The security scan encountered a platform infrastructure or scanner runtime error.
+                    The package artifact is preserved safely in storage and was <strong className="font-semibold">not</strong> rejected for security policy violations. The Super App team has been notified.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                {isSuperAdmin && !report?.reportPath?.startsWith('local-scan://') && (
+                  <a
+                    href={jenkinsJobUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors shadow-xs"
+                    title="Super Admin: View Jenkins build console output"
+                  >
+                    <span>View CI Console</span>
+                    <ExternalLinkIcon className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleReScan()}
+                  disabled={isReScanning}
+                  className="text-xs h-8 px-2.5 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-100/50 dark:hover:bg-amber-900/30"
+                >
+                  <RefreshIcon className={`w-3.5 h-3.5 mr-1 ${isReScanning ? 'animate-spin' : ''}`} />
+                  <span>Re-Trigger Scan</span>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 dark:bg-rose-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-base flex-shrink-0">
+                  <AlertTriangleIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                    {allFindings.length > 0
+                      ? `Security Audit: Action Required (${allFindings.length} Violations Detected)`
+                      : 'Automated Security Pipeline Encountered an Error'}
+                  </h4>
+                  <p className="text-xs text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
+                    {allFindings.length > 0
+                      ? `Automated security checks detected ${allFindings.length} issue(s) across engines (unauthorized permissions, hardcoded secrets, or known CVE vulnerabilities). Review the breakdown per engine below.`
+                      : 'The automated validation pipeline encountered an execution error. Please check the engine logs or contact support.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                {isSuperAdmin && !report?.reportPath?.startsWith('local-scan://') && (
+                  <a
+                    href={jenkinsJobUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-xs"
+                    title="Super Admin: View Jenkins build console output"
+                  >
+                    <span>View CI Logs</span>
+                    <ExternalLinkIcon className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadAuditJson}
+                  className="text-xs h-8 px-2.5 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-100/50 dark:hover:bg-rose-900/30"
+                >
+                  <DownloadIcon className="w-3.5 h-3.5 mr-1" />
+                  <span>Export Audit</span>
+                </Button>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* AppSec Command Center Sub-Navigation Tabs */}
+      <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveViewTab('findings')}
+          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+            activeViewTab === 'findings'
+              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <AlertTriangleIcon className={`w-4 h-4 ${allFindings.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+          <span>Findings & Remediation</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+            allFindings.length > 0
+              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+          }`}>
+            {allFindings.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveViewTab('engines')}
+          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+            activeViewTab === 'engines'
+              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
+          <span>Security Engines & Telemetry</span>
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+            {activeStages.length}
+          </span>
+        </button>
+
+        {sbom && (
+          <button
+            type="button"
+            onClick={() => setActiveViewTab('sbom')}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+              activeViewTab === 'sbom'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <ClipboardCheckIcon className="w-4 h-4 text-emerald-500" />
+            <span>SBOM & Dependencies</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              {sbomComponents.length}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Tab 2: Pipeline Stage Execution Timeline with Multi-Issue Accordions */}
+      {activeViewTab === 'engines' && (
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <CardHeader
@@ -983,13 +1431,13 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 {activeStages.length} Engines Configured
               </span>
             )}
-            {!report?.reportPath?.startsWith('local-scan://') && jenkinsJobUrl && (
+            {!report?.reportPath?.startsWith('local-scan://') && jenkinsJobUrl && isSuperAdmin && (
               <a
                 href={jenkinsJobUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 transition-colors shadow-xs"
-                title="Open Jenkins CI logs"
+                title="Super Admin: Open Jenkins CI logs"
               >
                 <span>CI Logs</span>
                 <ExternalLinkIcon className="w-3 h-3 text-slate-400" />
@@ -1098,6 +1546,24 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     </span>
 
                     {/* Stage-specific Actions */}
+                    {(recorded?.details || st.findings.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStageLog({
+                          name: st.name,
+                          tool: st.tool,
+                          details: recorded?.details || 'No detailed stdout recorded.',
+                          findings: st.findings,
+                        })}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-white dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex items-center gap-1"
+                        title="View engine output and execution details"
+                        aria-label="View engine output log"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span className="text-xs font-semibold hidden md:inline">Log</span>
+                      </button>
+                    )}
+
                     {st.id === 'sbom' && sbom && (
                       <button
                         type="button"
@@ -1184,9 +1650,10 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           })}
         </div>
       </Card>
+      )}
 
-      {/* Software Bill of Materials (SBOM) Card */}
-      {sbom && (
+      {/* Tab 3: Software Bill of Materials (SBOM) Card */}
+      {activeViewTab === 'sbom' && sbom && (
         <Card>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <CardHeader
@@ -1311,7 +1778,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         </Card>
       )}
 
-      {/* Security Findings & Remediation with Rich Search & Filtering */}
+      {/* Tab 1: Security Findings & Remediation with Rich Search & Filtering */}
+      {activeViewTab === 'findings' && (
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <CardHeader
@@ -1461,6 +1929,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           </div>
         )}
       </Card>
+      )}
 
       {/* CycloneDX 1.5 SBOM Inspector Modal */}
       {mounted && showSbomModal && sbom && createPortal(
@@ -1714,6 +2183,104 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                   <span>Run Custom Scan ({configuredChecks.length} checks)</span>
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Stage Output & Execution Details Log Drawer / Modal */}
+      {mounted && selectedStageLog && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-center items-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setSelectedStageLog(null)}
+          />
+
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-lg border border-slate-200 dark:border-slate-700">
+                  <CodeIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    {selectedStageLog.name} — Engine Output Log
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Tool / Engine: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{selectedStageLog.tool}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    copyText(selectedStageLog.details);
+                    setLogCopied(true);
+                    setTimeout(() => setLogCopied(false), 2000);
+                  }}
+                  className="text-xs h-8 px-2.5 flex items-center gap-1"
+                >
+                  {logCopied ? <CheckIcon className="w-3.5 h-3.5 text-emerald-500" /> : <CopyIcon className="w-3.5 h-3.5 text-slate-500" />}
+                  <span>{logCopied ? 'Copied!' : 'Copy Log'}</span>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStageLog(null)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close log drawer"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {selectedStageLog.findings && selectedStageLog.findings.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50">
+                  <h4 className="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <AlertTriangleIcon className="w-4 h-4 text-rose-600" />
+                    <span>Engine Findings ({selectedStageLog.findings.length})</span>
+                  </h4>
+                  <div className="space-y-1.5">
+                    {selectedStageLog.findings.map((f: any, i: number) => (
+                      <div key={i} className="text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+                        <span className="font-bold uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
+                          {f.severity}
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-white">{f.title}:</span>
+                        <span className="text-slate-600 dark:text-slate-400">{f.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1.5 block font-mono">
+                  Execution Standard Output & Sanitized Logs
+                </label>
+                <pre className="p-4 rounded-xl bg-slate-950 text-slate-100 font-mono text-xs overflow-x-auto whitespace-pre-wrap leading-relaxed border border-slate-800 shadow-inner max-h-[50vh]">
+                  {selectedStageLog.details}
+                </pre>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedStageLog(null)}
+                className="text-xs h-9 px-4"
+              >
+                Close Output
+              </Button>
             </div>
           </div>
         </div>,

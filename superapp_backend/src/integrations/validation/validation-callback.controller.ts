@@ -17,6 +17,7 @@ import { CapabilityGateService } from '../../capabilities/capability-gate.servic
 import type { RawScanReport } from './scan-report.normalizer';
 import { StorageService } from '../../storage/storage.service';
 import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
+import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 import {
   detectMalwareFindings,
   executeMalwarePurge,
@@ -30,6 +31,7 @@ import { NotificationsService, MailService } from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import { persistAppVersions } from '../../miniapps/versions/miniapp-versions.service';
+import { JenkinsService } from '../jenkins/jenkins.service';
 
 export interface ValidationFindingDto {
   id: string;
@@ -56,6 +58,9 @@ export interface ValidationCallbackDto {
   findings?: ValidationFindingDto[];
   sbom?: Record<string, any>;
   reportPath?: string;
+  buildNumber?: number | string;
+  buildUrl?: string;
+  jobName?: string;
 }
 
 @Controller(['integrations/validation', 'api/integrations/validation'])
@@ -83,6 +88,10 @@ export class ValidationCallbackController {
     private readonly capabilityGate?: CapabilityGateService,
     @Optional()
     private readonly runs?: MiniAppRunsService,
+    @Optional()
+    private readonly jenkinsService?: JenkinsService,
+    @Optional()
+    private readonly pubspecService?: PubspecInjectorService,
   ) {}
 
   @Post('stage')
@@ -97,9 +106,12 @@ export class ValidationCallbackController {
       stageName: string;
       status: string;
       details?: string;
+      buildNumber?: number | string;
+      buildUrl?: string;
+      jobName?: string;
     },
   ) {
-    const { miniAppId, stageId, stageName, status, details } = body;
+    const { miniAppId, stageId, stageName, status, details, buildNumber, buildUrl, jobName } = body;
     if (!miniAppId || !stageId) return { ok: false };
 
     const app = await this.miniappRepository.findOne({
@@ -107,6 +119,15 @@ export class ValidationCallbackController {
     });
     if (!app) return { ok: false };
     await this.runs?.loadScanInProgress(app);
+
+    if (buildNumber || buildUrl || jobName) {
+      app.validationReport = {
+        ...(app.validationReport || {}),
+        ...(buildNumber ? { buildNumber } : {}),
+        ...(buildUrl ? { buildUrl } : {}),
+        ...(jobName ? { jobName } : {}),
+      };
+    }
 
     const stages = app.validationStages || {};
 
@@ -273,15 +294,60 @@ export class ValidationCallbackController {
       }
     }
 
+    const prevReport = (app.validationReport as any) || {};
+    const isSubsetScan =
+      dto.checks &&
+      Object.keys(dto.checks).length > 0 &&
+      prevReport.checks &&
+      Object.keys(prevReport.checks).length > Object.keys(dto.checks).length;
+
+    let finalChecks = dto.checks;
+    let finalFindings = dto.findings || [];
+    let finalScore = dto.score;
+    let finalStatus = dto.status;
+    let finalSbom =
+      dto.sbom || dto.checks?.sbom?.manifest || prevReport.sbom || null;
+
+    if (isSubsetScan) {
+      finalChecks = { ...(prevReport.checks || {}), ...(dto.checks || {}) };
+      const scannedEngines = Object.keys(dto.checks || {});
+      const retainedFindings = (prevReport.findings || []).filter(
+        (f: any) =>
+          !scannedEngines.includes(f.engineId) &&
+          !scannedEngines.includes(f.category?.toLowerCase()),
+      );
+      finalFindings = [...retainedFindings, ...(dto.findings || [])];
+
+      // Recompute score
+      const count = (s: string) =>
+        finalFindings.filter(
+          (f: any) => f.severity === s && f.category !== 'REPORT',
+        ).length;
+      finalScore = Math.max(
+        0,
+        100 -
+          25 * count('CRITICAL') -
+          10 * count('HIGH') -
+          3 * count('MEDIUM') -
+          count('LOW'),
+      );
+      finalStatus = Object.values(finalChecks || {}).every((c: any) => c.passed)
+        ? 'PASSED'
+        : 'FAILED';
+    }
+
     app.validationReport = {
-      score: dto.score,
-      status: dto.status,
+      score: finalScore,
+      status: finalStatus,
       method: dto.method,
-      checks: dto.checks,
-      findings: dto.findings || [],
-      sbom: dto.sbom || dto.checks?.sbom?.manifest || null,
-      reportPath: dto.reportPath,
-      commitSha: dto.commitSha,
+      checks: finalChecks,
+      findings: finalFindings,
+      sbom: finalSbom,
+      reportPath: dto.reportPath || prevReport.reportPath,
+      commitSha: dto.commitSha || prevReport.commitSha,
+      buildNumber: dto.buildNumber || prevReport.buildNumber,
+      buildUrl: dto.buildUrl || prevReport.buildUrl,
+      jobName: dto.jobName || prevReport.jobName,
       completedAt: new Date().toISOString(),
     };
 
@@ -289,14 +355,14 @@ export class ValidationCallbackController {
     const currentStages = app.validationStages || {};
     for (const [stageId, stageObj] of Object.entries(currentStages)) {
       const s = stageObj as any;
-      const checkResult = dto.checks?.[stageId];
+      const checkResult = finalChecks?.[stageId];
       if (s && checkResult) {
         // The final report decides, also for a stage the pipeline already marked done
         s.status = checkResult.passed !== false ? 'COMPLETED' : 'FAILED';
         if (checkResult.details) s.details = checkResult.details;
         s.updatedAt = new Date().toISOString();
       } else if (s && (s.status === 'PENDING' || s.status === 'RUNNING')) {
-        if (dto.status === 'PASSED') {
+        if (finalStatus === 'PASSED') {
           s.status = 'COMPLETED';
           if (
             !s.details ||
@@ -318,12 +384,12 @@ export class ValidationCallbackController {
         ...app.pendingRevision,
         validationReport: app.validationReport,
         validationStages: app.validationStages,
-        validationStatus: dto.status === 'PASSED' ? 'PASSED' : 'FAILED',
-        revisionStatus: dto.status === 'PASSED' ? 'IN_REVIEW' : 'DRAFT',
+        validationStatus: finalStatus === 'PASSED' ? 'PASSED' : 'FAILED',
+        revisionStatus: finalStatus === 'PASSED' ? 'IN_REVIEW' : 'DRAFT',
       };
     }
 
-    if (dto.status === 'PASSED') {
+    if (finalStatus === 'PASSED') {
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
       if (
@@ -382,7 +448,19 @@ export class ValidationCallbackController {
       // Scan passed: the uploaded package / SDK goes from MinIO quarantine to Nexus.
       // Last, after every save of `app` here (a later save would drop what it records),
       // and not awaited, so Jenkins gets its answer without waiting for Nexus.
-      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id);
+      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id).then(async () => {
+        // MILESTONE 1: Auto-inject and rebuild Web Sandbox Preview so Admins & Devs can test live in IN_REVIEW
+        if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE' && this.pubspecService) {
+          try {
+            await this.pubspecService.injectMiniApp(app);
+            await this.pubspecService.regenerateRegistry();
+            void this.pubspecService.triggerSandboxRebuild(`Jenkins scan passed for ${app.name}`);
+            this.logger.log(`Triggered Web Sandbox Preview auto-build on Jenkins scan pass for ${app.appId}`);
+          } catch (err: any) {
+            this.logger.warn(`Sandbox auto-build on Jenkins scan pass warning for ${app.appId}: ${err?.message || err}`);
+          }
+        }
+      }).catch(() => {});
 
       return {
         success: true,
@@ -415,14 +493,111 @@ export class ValidationCallbackController {
               malwareIncident: purgeResult.report,
             },
           });
+
+          // Urgent in-app notification to developer (also dispatches to Telegram if configured)
+          await this.notificationsService.createNotification(
+            app.ownerId || '',
+            'CRITICAL: Package Quarantined & Purged',
+            `The package submitted for ${app.name || app.appId} was permanently purged due to detected malware/security violations (${malwareFindings.length} threat signature(s)).`,
+            'HIGH',
+            app.id,
+          );
+
+          // Dedicated high-priority security incident email to developer
+          const targetEmail =
+            app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+          if (targetEmail) {
+            try {
+              await this.mailService.sendMalwareIncidentEmail(
+                targetEmail,
+                app.name || app.appId || 'MiniApp',
+                purgeResult.report.threatSignatures,
+                purgeResult.report.purgedFiles,
+                purgeResult.report.detectedAt,
+                `${this.backofficeBaseUrl}/miniapps/${app.id}`,
+              );
+            } catch (mailErr: any) {
+              this.logger.warn(
+                `Failed to deliver malware incident email to ${targetEmail}: ${mailErr?.message || mailErr}`,
+              );
+            }
+          }
         }
       }
-      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
-      if (
-        !hasPendingRevision &&
-        resetToDraftStatuses.includes(app.lifecycleStatus)
-      ) {
-        app.lifecycleStatus = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
+
+      // Check if the failure is SOLELY due to platform / scanner infrastructure errors
+      const isPlatformFailureOnly =
+        (dto.findings || []).length > 0 &&
+        (dto.findings || []).every(
+          (f) =>
+            f.category === 'SCANNER_ERROR' ||
+            f.category === 'PLATFORM_ERROR' ||
+            f.category === 'REPORT' ||
+            f.id.startsWith('SCANNER_ERROR_'),
+        );
+
+      const existingRetries = Number(
+        (app.validationReport as any)?.autoRetryAttempt || 0,
+      );
+
+      // Attempt 1 automatic retry if this was purely a platform failure
+      if (isPlatformFailureOnly && existingRetries < 1 && this.jenkinsService) {
+        this.logger.warn(
+          `Platform scanner error encountered for MiniApp ${app.id}. Initiating automatic retry (Attempt 1/1)...`,
+        );
+
+        app.validationStatus = 'RUNNING';
+        app.validationReport = {
+          ...app.validationReport,
+          autoRetryAttempt: existingRetries + 1,
+          failureType: 'INFRASTRUCTURE_RETRYING',
+        };
+
+        const stages = app.validationStages || {};
+        for (const st of Object.values(stages) as any[]) {
+          if (st.status === 'FAILED') {
+            st.status = 'RUNNING';
+            st.details =
+              'Platform glitch detected. Automatically retrying scan (Attempt 1/1)...';
+          }
+        }
+        app.validationStages = stages;
+        await this.miniappRepository.save(app);
+        await persistAppVersions(this.miniappRepository, app);
+        await this.runs?.syncScan(app);
+
+        // Re-trigger Jenkins scan
+        const cfg = app.integrationConfig || {};
+        void this.jenkinsService.triggerMiniAppValidation({
+          miniAppId: app.id,
+          integrationMethod: (dto.method || app.integrationMethod) as any,
+          packageName: cfg.packageName || cfg.name || app.name,
+          version: cfg.packageVersion || cfg.version || '1.0.0',
+          integrationType: cfg.packageStoragePath ? 'ARTIFACT' : 'SOURCE_CODE',
+          sourceStoragePath: cfg.packageStoragePath || undefined,
+          repoUrl: cfg.repoUrl || undefined,
+          commitSha: dto.commitSha || cfg.commitSha || undefined,
+        });
+
+        return {
+          success: true,
+          status: 'RETRYING',
+          message: 'Automatic retry initiated for platform scanner error',
+        };
+      }
+
+      if (isPlatformFailureOnly) {
+        (app.validationReport ||= {}).failureType = 'INFRASTRUCTURE';
+        // DO NOT reset app.lifecycleStatus to DRAFT on platform infrastructure failures!
+      } else {
+        (app.validationReport ||= {}).failureType = 'SECURITY_VIOLATION';
+        const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
+        if (
+          !hasPendingRevision &&
+          resetToDraftStatuses.includes(app.lifecycleStatus)
+        ) {
+          app.lifecycleStatus = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
+        }
       }
 
       // Mark running/pending stages as FAILED

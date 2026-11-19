@@ -230,6 +230,9 @@ pipeline {
                         const payload = {
                             miniAppId,
                             integrationMethod: "WEBVIEW",
+                            buildNumber: Number("${env.BUILD_NUMBER ?: ''}") || undefined,
+                            buildUrl: "${env.BUILD_URL ?: ''}",
+                            jobName: "${env.JOB_NAME ?: 'miniapp-validation-webview'}",
                             status,
                             score: Math.max(0, score),
                             findings,
@@ -273,7 +276,10 @@ def notifyStage(String stageId, String stageName, String status, String details)
                         stageId: "${stageId}",
                         stageName: "${stageName}",
                         status: "${status}",
-                        details: "${details}"
+                        details: "${details}",
+                        buildNumber: Number("${env.BUILD_NUMBER ?: ''}") || undefined,
+                        buildUrl: "${env.BUILD_URL ?: ''}",
+                        jobName: "${env.JOB_NAME ?: 'miniapp-validation-webview'}"
                     })
                 });
                 console.log("Stage update [" + "${stageId}" + "] status: " + res.status);

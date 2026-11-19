@@ -1,0 +1,68 @@
+# UI/UX & Design System Rules (.cursorrules)
+
+## 1. Color System (60-30-10 Rule)
+Strictly enforce the 60-30-10 visual hierarchy across all layouts, components, and templates:
+
+- **60% Primary / Dominant Surface (Neutral Base):**
+  Use clean, low-saturation neutrals for page backgrounds, whitespace, and main canvases:
+  - Light mode: `#FAFAFA` (`bg-[#FAFAFA]` or `bg-slate-50`)
+  - Dark mode: `#090B0A` (`dark:bg-[#090b0a]` or `dark:bg-slate-950`)
+  - *Strict Rule*: The base canvas provides breathing room. Never use vibrant colors or busy patterns for large backgrounds.
+
+- **30% Secondary Surface & Typography (Structure & Contrast):**
+  Use subtle elevated cards, structured containers, crisp borders, and accessible typography:
+  - Surfaces & Containers: `bg-white dark:bg-slate-900`
+  - Subtle 1px borders: `border border-slate-200/80 dark:border-slate-800`
+  - Secondary panels & table headers: `bg-slate-50 dark:bg-slate-800/60`
+  - Primary text: `text-slate-900 dark:text-white`
+  - Body text: `text-slate-600 dark:text-slate-300` (WCAG AA 4.5:1 minimum contrast)
+  - Muted metadata & captions: `text-slate-400 dark:text-slate-500`
+
+- **10% Brand Accent (Action & Focus Only):**
+  Reserve vibrant brand colors strictly for primary CTAs, active navigation states, focus rings, and key status badges:
+  - Primary Action / CTAs: `bg-brand-500 hover:bg-brand-600 text-white font-semibold shadow-xs`
+  - Active nav & sub-tabs: `text-brand-600 dark:text-brand-400 border-b-2 border-brand-500 bg-brand-50/50 dark:bg-brand-950/20`
+  - Focus rings: `focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500`
+  - Status accents: `bg-emerald-100 text-emerald-800`, `bg-amber-100 text-amber-800`, `bg-rose-100 text-rose-800`
+  - *Strict Prohibition*: Never use the accent color for full-card backgrounds, large decorative slabs, or marketing fluff.
+
+- **Accessibility:**
+  Ensure all text maintains a minimum 4.5:1 WCAG AA contrast ratio against its background.
+
+---
+
+## 2. Clean & Modern Aesthetic Standards (2026/2027 Guidelines)
+
+- **Spacing & Whitespace:**
+  Use a strict `8px` spatial grid (`4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`):
+  - Cards & major panels: `p-6` (24px) padding, `gap-6` or `gap-8` between sections.
+  - Table ergonomics: High-density padding `py-3` to `py-3.5` on rows (avoid bloated `py-8`).
+  - Keep generous breathing room between sections while maintaining high information density inside cards.
+
+- **Typography Hierarchy:**
+  - Modern geometric sans-serif font (`Geist`, `Inter`, `Plus Jakarta Sans`).
+  - Headings: Tight tracking (`tracking-tight` / `-0.02em`), weights `600` (semibold) or `700` (bold).
+  - Data & Metrics: Always apply `tabular-nums` and `font-mono text-xs` for timestamps, counts, SHA digests, currency, and percentages.
+
+- **Borders & Elevation:**
+  - Favor flat, crisp `1px solid` borders with subtle opacity over heavy drop shadows (`border border-slate-200/80 dark:border-slate-800`).
+  - Shadows are reserved strictly for floating/elevated elements (`shadow-sm` on cards, `shadow-xl backdrop-blur-md` on dropdowns and modals).
+
+- **Border Radius System:**
+  - Form inputs, buttons, menu items: `rounded-xl` (10–12px) or `rounded-lg` (8px).
+  - Cards, panels, modal windows: `rounded-2xl` (16px).
+  - Badges, status chips, avatars: `rounded-full` (9999px).
+
+- **Progressive Disclosure:**
+  - Never overcrowd screens with 5+ vertically stacked cards.
+  - Use tabbed workspaces (`Findings`, `Telemetry`, `SBOM`), expandable accordions, slide-over drawers, or overflow menus (`...`).
+
+---
+
+## 3. Mandatory Component Architecture & Prohibitions
+
+- Always import primitives from `@/components/ui/inputs` (`Button`, `Input`, `Select`, `Textarea`), `@/components/ui/card` (`Card`, `CardHeader`), `@/components/ui/Toast` (`toast`), and `useConfirm()`.
+- **Prohibited**:
+  - Never introduce generic AI colors (e.g. `indigo-600`, `purple-600`, cyan).
+  - Never hardcode arbitrary hex colors in `style={{ color: '#...' }}`.
+  - Never assume light mode only; always provide explicit `dark:` classes.

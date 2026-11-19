@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api/miniapps.api';
 import { isFlutterArtifact } from '@/lib/miniapp-form.validator';
+import { useAuth } from '@/lib/auth';
 
 type StepState = 'done' | 'running' | 'failed' | 'waiting';
 
@@ -80,6 +81,8 @@ export interface PackagePublishPanelProps {
  */
 export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh }: PackagePublishPanelProps) {
   const [busy, setBusy] = useState(false);
+  const { role } = useAuth();
+  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   // A new version under review carries its own package and scan
   const rev = formData?.pendingRevision;
@@ -96,7 +99,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
 
   const archiveStep: Step = {
     key: 'minio',
-    title: 'Archive in MinIO',
+    title: isSuperAdmin ? '1. MinIO Quarantine' : '1. Package Ingestion',
     icon: <PackageIcon className="w-4 h-4" />,
     state: storagePath ? 'done' : 'failed',
     lines: storagePath
@@ -105,23 +108,23 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
           conf.archiveSize ? `${Math.round(Number(conf.archiveSize) / 1024)} KB` : '',
           conf.archiveChecksum ? `sha256 ${String(conf.archiveChecksum).slice(0, 12)}...` : '',
         ].filter(Boolean)
-      : ['No archive stored. Developer must attach the package archive.'],
+      : [isSuperAdmin ? 'No archive stored in MinIO. S3 bucket key missing.' : 'No archive uploaded. Developer must attach the package archive.'],
   };
 
   const scanState: StepState =
     scan === 'PASSED' ? 'done' : scan === 'FAILED' ? 'failed' : ['RUNNING', 'PENDING', 'QUEUED'].includes(scan) ? 'running' : 'waiting';
   const scanStep: Step = {
     key: 'scan',
-    title: 'Security scan',
+    title: isSuperAdmin ? '2. Security Audit & Gates' : '2. Security Clearance',
     icon: <ShieldCheckIcon className="w-4 h-4" />,
     state: scanState,
     lines: [
       scanState === 'done'
-        ? 'Passed security verification.'
+        ? (isSuperAdmin ? 'Clearance Approved (All Gates Passed)' : 'Passed security verification.')
         : scanState === 'failed'
-        ? 'Failed security scan. Package quarantined.'
+        ? (isSuperAdmin ? 'Failed automated gates. Archive quarantined in MinIO.' : 'Action required: Security violations detected.')
         : scanState === 'running'
-        ? 'Scanning archive from MinIO...'
+        ? (isSuperAdmin ? 'Analyzing package archive from MinIO...' : 'Analyzing package security...')
         : 'Pending mini app submission.',
     ],
   };
@@ -137,21 +140,23 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
     : 'waiting';
   const nexusStep: Step = {
     key: 'nexus',
-    title: 'Published to Nexus',
+    title: isSuperAdmin ? '3. Nexus Pub-Hosted' : '3. SuperApp Release',
     icon: <PackageIcon className="w-4 h-4" />,
     state: busy ? 'running' : nexusState,
     lines: busy
-      ? ['Publishing to Nexus repository...']
+      ? (isSuperAdmin ? ['Publishing to Nexus registry...'] : ['Preparing package for release...'])
       : published
       ? [
-          `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} in pub-hosted`,
-          conf.nexusPublishedAt ? `Published ${formatWhen(conf.nexusPublishedAt)}` : '',
+          isSuperAdmin
+            ? `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} in pub-hosted`
+            : `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} released`,
+          conf.nexusPublishedAt ? (isSuperAdmin ? `Published ${formatWhen(conf.nexusPublishedAt)}` : `Released ${formatWhen(conf.nexusPublishedAt)}`) : '',
         ].filter(Boolean)
       : publishError
-      ? [publishError]
+      ? [isSuperAdmin ? publishError : 'Distribution blocked. Contact Super Admin for clearance.']
       : scanState === 'done'
-      ? ['Not published yet. Will publish during build.']
-      : ['Awaiting security scan approval.'],
+      ? [isSuperAdmin ? 'Not published yet. Will publish to Nexus during build.' : 'Ready for SuperApp distribution during build.']
+      : ['Awaiting security clearance approval.'],
   };
 
   const steps = [archiveStep, scanStep, nexusStep];
@@ -240,10 +245,12 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                 {allDone
-                  ? `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} hosted in Nexus pub-hosted`
+                  ? (isSuperAdmin
+                      ? `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} hosted in Nexus pub-hosted`
+                      : `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} distributed in SuperApp`)
                   : hasError
-                  ? publishError || 'One or more package steps requires attention.'
-                  : 'MinIO quarantine → Security scan → Nexus pub-hosted.'}
+                  ? (isSuperAdmin ? (publishError || 'One or more package steps requires attention.') : 'One or more security checks require attention.')
+                  : (isSuperAdmin ? 'MinIO quarantine → Security scan → Nexus pub-hosted.' : 'Package Ingestion → Security Clearance → SuperApp Distribution.')}
               </p>
             </div>
           </div>
@@ -278,14 +285,18 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
         </div>
       ) : (
         /* Detailed Expanded View */
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
             <div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                Package Publishing Pipeline{inRevision ? ' (New Version)' : ''}
+                {isSuperAdmin
+                  ? `Package Publishing Pipeline${inRevision ? ' (New Version)' : ''}`
+                  : `Release Distribution Pipeline${inRevision ? ' (New Version)' : ''}`}
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                MinIO quarantine → Security scan → Nexus pub-hosted. Super App build reads the package from Nexus.
+                {isSuperAdmin
+                  ? 'MinIO quarantine → Security scan → Nexus pub-hosted. Super App build reads the package from Nexus.'
+                  : 'Package Ingestion → Security Clearance → SuperApp Distribution.'}
               </p>
             </div>
 
@@ -324,9 +335,14 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
               return (
                 <li
                   key={step.key}
-                  className="relative flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 min-w-0"
+                  className="relative flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 min-w-0 motion-stepper-card hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs"
                 >
-                  <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${style.ring}`}>
+                  <div className={`relative w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-transform duration-200 ${style.ring} ${
+                    step.state === 'done' ? 'animate-success-pop' : ''
+                  }`}>
+                    {step.state === 'running' && (
+                      <span className="absolute inset-0 rounded-lg bg-cyan-400/40 animate-heartbeat-ring -z-10" />
+                    )}
                     <StateIcon state={step.state} />
                   </div>
                   <div className="min-w-0 flex-1">

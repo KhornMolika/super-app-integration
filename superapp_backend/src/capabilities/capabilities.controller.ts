@@ -64,10 +64,35 @@ export class CapabilitiesController {
     return this.capabilitiesService.syncCapabilitiesFromGitLab();
   }
 
+  /**
+   * SuperApp Host Supported Capabilities Whitelist Keys
+   * Feeds directly into Jenkins build validation parameters and runtime capability gatekeeper.
+   */
+  @Get('allowed-keys')
+  async getAllowedKeys() {
+    return {
+      allowedKeys: await this.capabilitiesService.getAllowedCapabilityKeys(),
+    };
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async findOne(@Param('id') id: string) {
     return this.capabilitiesService.findOne(id);
+  }
+
+  /**
+   * Super Admin Policy Decision:
+   * Explicitly allows or disallows a capability from being declared/bound by MiniApps.
+   */
+  @Patch(':id/toggle-allow')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('permission:manage')
+  async toggleAllow(
+    @Param('id') id: string,
+    @Body('isAllowed') isAllowed: boolean,
+  ) {
+    return this.capabilitiesService.toggleAllowed(id, isAllowed);
   }
 
   @Patch(':id')

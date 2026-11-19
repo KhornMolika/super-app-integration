@@ -8,6 +8,7 @@ import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal from '@/components/ui/SubmissionModal';
 import BuildProgressModal from '@/components/ui/BuildProgressModal';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
+import StructuredReviewDecisionModal from '@/components/ui/StructuredReviewDecisionModal';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import { IntegrationMethod } from '@/types/miniapp.types';
 
@@ -15,6 +16,8 @@ import {
   MiniAppTabType,
   MiniAppDetailHeader,
   MiniAppLifecycleBanners,
+  ChangesRequestedBanner,
+  MiniAppDetailTabs,
   MiniAppSectionContent,
   MiniAppDetailBottomBar,
   MiniAppNotFound,
@@ -149,6 +152,8 @@ function ManageMiniAppContent() {
   const {
     lifecycleReasonModal,
     setLifecycleReasonModal,
+    structuredReviewModalState,
+    setStructuredReviewModalState,
     handleLifecycleAction,
     handleDelete,
     handleDeletePermanently,
@@ -170,7 +175,7 @@ function ManageMiniAppContent() {
     access: toAccessLevel((formData as any).myAccess),
   });
 
-  if (isLoading || fetchError || !formData.id) {
+  if (!formData.id && (isLoading || fetchError)) {
     return (
       <MiniAppNotFound
         id={id}
@@ -223,6 +228,20 @@ function ManageMiniAppContent() {
           isSubmitting={isSubmitting}
         />
 
+        {/* Structured Remediation Banner for Changes Requested or Rejected */}
+        {(formData.status === 'CHANGES_REQUESTED' || formData.status === 'REJECTED') && (
+          <ChangesRequestedBanner
+            status={formData.status}
+            structuredFeedback={(formData as any).structuredFeedback}
+            legacyReason={(formData as any).rejectionReason || (formData as any).changesRequestedReason}
+            isOwnerOrMaintainer={actions.isOwner || actions.submit}
+            isSubmitting={isSubmitting}
+            onResubmit={async (resolutions) => {
+              await handleLifecycleAction('submit', undefined, { checklistResolutions: resolutions });
+            }}
+          />
+        )}
+
         {/* Lifecycle Status Banners */}
         <MiniAppLifecycleBanners
           status={formData.status || 'DRAFT'}
@@ -259,12 +278,23 @@ function ManageMiniAppContent() {
           }
         />
 
-        {/* Flutter package: MinIO -> security scan -> Nexus (approval needs the last step) */}
-        <PackagePublishPanel
-          miniAppId={id}
-          formData={formData}
-          canPublish={can('miniapp:approve')}
-          onRefresh={() => fetchApp(false, true)}
+        {/* Flutter package: MinIO -> security scan -> Nexus (approval needs the last step; hidden on report tab to avoid card duplication) */}
+        {activeTab !== 'report' && (
+          <PackagePublishPanel
+            miniAppId={id}
+            formData={formData}
+            canPublish={can('miniapp:approve')}
+            onRefresh={() => fetchApp(false, true)}
+          />
+        )}
+
+        {/* 9-Tab Navigation (First Image v.2: Inverted-Radius File-Folder Tabs) */}
+        <MiniAppDetailTabs
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          allErrors={allErrors}
+          validationStatus={formData.validationStatus}
+          currentReleaseVersion={formData.currentReleaseVersion}
         />
 
         {/* Section Contents Router with Smooth Enter Animation */}
@@ -411,6 +441,23 @@ function ManageMiniAppContent() {
               reason,
               action === 'suspend' && checked ? { requestArchive: true } : undefined,
             );
+          }}
+        />
+      )}
+
+      {/* Structured Review Decision Modal (Request Changes / Reject) */}
+      {structuredReviewModalState?.isOpen && (
+        <StructuredReviewDecisionModal
+          isOpen={structuredReviewModalState.isOpen}
+          mode={structuredReviewModalState.mode}
+          appName={formData.name || formData.appId || 'MiniApp'}
+          appId={formData.appId || formData.id || id}
+          isLoading={isSubmitting}
+          onClose={() => setStructuredReviewModalState(null)}
+          onSubmit={async (decisionPayload) => {
+            const mode = structuredReviewModalState.mode;
+            setStructuredReviewModalState(null);
+            await handleLifecycleAction(mode, decisionPayload as any);
           }}
         />
       )}

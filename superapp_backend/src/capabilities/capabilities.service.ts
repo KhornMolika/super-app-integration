@@ -29,6 +29,15 @@ export class CapabilitiesService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
+    // Ensure isAllowed column exists in database table
+    try {
+      await this.capabilityDefinitionRepository.query(
+        'ALTER TABLE "capability_definitions" ADD COLUMN IF NOT EXISTS "isAllowed" boolean NOT NULL DEFAULT true;',
+      );
+    } catch (e: any) {
+      this.logger.debug(`Column check: ${e.message}`);
+    }
+
     // Synchronize host shell capabilities directly from GitLab repository (branch: main)
     this.syncCapabilitiesFromGitLab().catch((err) => {
       this.logger.warn(
@@ -126,6 +135,49 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const perm = await this.findOne(id);
     const merged = this.capabilityDefinitionRepository.merge(perm, data);
     return this.capabilityDefinitionRepository.save(merged);
+  }
+
+  /**
+   * SuperApp Host Supported Capabilities Whitelist:
+   * Dynamically retrieves all active and host-allowed capability keys decided by Super Admin.
+   * Feeds directly into Jenkins build validation parameters and runtime capability gatekeeper.
+   */
+  async getAllowedCapabilityKeys(): Promise<string[]> {
+    try {
+      const rows = await this.capabilityDefinitionRepository
+        .createQueryBuilder('cap')
+        .select(['cap.key', 'cap.name'])
+        .where('cap.isActive = :isActive', { isActive: true })
+        .andWhere('cap.isAllowed = :isAllowed', { isAllowed: true })
+        .getMany();
+
+      const keys = rows
+        .map((r) => r.key?.toLowerCase()?.trim())
+        .filter(Boolean);
+
+      if (keys.length > 0) {
+        return keys;
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not query allowed capability keys: ${err.message}`);
+    }
+
+    // Default safe baseline whitelist if database catalog has not been synchronized yet
+    return ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
+  }
+
+  /**
+   * Super Admin Policy Decision:
+   * Explicitly allows or disallows a capability from being declared/bound by MiniApps.
+   */
+  async toggleAllowed(id: string, isAllowed: boolean): Promise<CapabilityDefinition> {
+    const perm = await this.findOne(id);
+    perm.isAllowed = Boolean(isAllowed);
+    const saved = await this.capabilityDefinitionRepository.save(perm);
+    this.logger.log(
+      `Capability '${perm.name}' (#${perm.key}) host allowlist status changed to: ${isAllowed ? 'ALLOWED' : 'DISALLOWED'}`,
+    );
+    return saved;
   }
 
   /**
@@ -379,6 +431,7 @@ export class CapabilitiesService implements OnApplicationBootstrap {
         providerPackage: meta.providerPackage || perm.key,
         jsBridgeMethod: meta.jsBridgeMethod || `FSASuperApp.${perm.key}()`,
         status: perm.isActive ? 'Active' : 'Deprecated',
+        isAllowed: perm.isAllowed !== false,
         source: meta.source || 'database-registry (synced from gitlab:main)',
         minSuperAppVersion: perm.minSuperAppVersion || '1.0.0',
         lastSyncedAt: meta.lastSyncedAt,

@@ -33,10 +33,14 @@ export function useMiniAppLifecycle({
   const router = useRouter();
   const confirm = useConfirm();
   const [lifecycleReasonModal, setLifecycleReasonModal] = useState<LifecycleReasonModalState | null>(null);
+  const [structuredReviewModalState, setStructuredReviewModalState] = useState<{
+    isOpen: boolean;
+    mode: 'request-changes' | 'reject';
+  } | null>(null);
 
   const handleLifecycleAction = async (
     action: LifecycleActionType,
-    explicitReason?: string,
+    explicitReason?: string | Record<string, unknown>,
     extra?: Record<string, unknown>
   ) => {
     const isLiveWithRevision = formData.status === 'ACTIVE' && Boolean(formData.pendingRevision);
@@ -151,77 +155,17 @@ export function useMiniAppLifecycle({
     }
 
     if (action === 'reject' && explicitReason === undefined) {
-      if (isLiveWithRevision) {
-        setLifecycleReasonModal({
-          isOpen: true,
-          action: 'discard-revision',
-          title: 'Reject & Discard Staged Revision',
-          description: 'Are you sure you want to reject this staged revision? All proposed changes will be discarded while the live version remains active in the SuperApp.',
-          confirmText: 'Reject Revision',
-          confirmVariant: 'danger',
-          placeholder: 'Explain why this revision is being rejected...',
-          quickSuggestions: [
-            'Violates SuperApp platform capability and security policies',
-            'High-risk capabilities requested without required partner certification',
-            'Duplicate or conflicting capability with existing SuperApp core features',
-            'Security baseline checks failed on proposed endpoint or artifact',
-          ],
-        });
-        return;
-      }
-
-      setLifecycleReasonModal({
+      setStructuredReviewModalState({
         isOpen: true,
-        action: 'reject',
-        title: 'Reject MiniApp Submission',
-        description: 'Specify the reason for rejecting this MiniApp. The developer will receive this feedback to remediate issues.',
-        confirmText: 'Reject MiniApp',
-        confirmVariant: 'danger',
-        placeholder: 'Explain why this MiniApp is being rejected...',
-        quickSuggestions: [
-          'App description or assets violate SuperApp content guidelines',
-          'Integration endpoint is unreachable or returning invalid responses',
-          'High-risk capabilities requested without acceptable justification',
-          'Security or domain verification requirements failed baseline',
-        ],
+        mode: 'reject',
       });
       return;
     }
 
     if (action === 'request-changes' && explicitReason === undefined) {
-      if (isLiveWithRevision) {
-        setLifecycleReasonModal({
-          isOpen: true,
-          action: 'request-changes',
-          title: 'Request Changes on Staged Revision',
-          description: 'Specify the required fixes. The staged revision will remain in draft for the developer while the live version remains active.',
-          confirmText: 'Send Request',
-          confirmVariant: 'warning',
-          placeholder: 'Specify what updates are needed in this revision...',
-          quickSuggestions: [
-            'Capability purpose is too vague; provide explicit business context',
-            'Domain whitelist includes unverified external domains',
-            'Terms of Service / Privacy Policy URL is inaccessible or invalid',
-            'Security scan flagged potential SSRF risk on target endpoint',
-          ],
-        });
-        return;
-      }
-
-      setLifecycleReasonModal({
+      setStructuredReviewModalState({
         isOpen: true,
-        action: 'request-changes',
-        title: 'Request Changes from Developer',
-        description: 'Provide details on what needs to be updated before this MiniApp can proceed through the approval pipeline.',
-        confirmText: 'Send Request',
-        confirmVariant: 'warning',
-        placeholder: 'Specify what updates are needed...',
-        quickSuggestions: [
-          'Please clarify and provide detailed purpose for requested capabilities',
-          'Domain verification TXT / association record is missing or expired',
-          'Update Terms of Service and Privacy Policy URLs to valid live documents',
-          'Resolve reported security scan vulnerabilities before resubmission',
-        ],
+        mode: 'request-changes',
       });
       return;
     }
@@ -435,6 +379,8 @@ export function useMiniAppLifecycle({
   return {
     lifecycleReasonModal,
     setLifecycleReasonModal,
+    structuredReviewModalState,
+    setStructuredReviewModalState,
     handleLifecycleAction,
     handleDelete,
     handleDeletePermanently,
