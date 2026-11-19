@@ -21,8 +21,17 @@ export interface NotificationItem {
 }
 
 export const notificationsApi = {
-  getAll: () =>
-    apiClient<any>('/api/mini-apps/notifications').then((res) => unwrapData<NotificationItem>(res)),
+  getAll: (params?: { page?: number; limit?: number; search?: string; isRead?: boolean; type?: string }) => {
+    const query = new URLSearchParams();
+    query.set('limit', String(params?.limit ?? 100));
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.search) query.set('search', params.search);
+    if (params?.isRead !== undefined) query.set('isRead', String(params.isRead));
+    if (params?.type) query.set('type', params.type);
+    return apiClient<any>(`/api/mini-apps/notifications?${query.toString()}`).then((res) =>
+      unwrapData<NotificationItem>(res)
+    );
+  },
 
   getById: (id: string) => {
     if (!id || id === 'undefined' || id === 'null') {

@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { notificationsApi, NotificationItem } from '@/api';
-import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { NotificationItem } from '@/api';
+import { useNotifications } from '@/context/NotificationContext';
 import { toast } from '@/components/ui/Toast';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   getNotificationTarget,
   getNotificationTypeStyle,
@@ -26,51 +27,35 @@ import {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    notifications,
+    unreadCount,
+    readCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refreshNotifications,
+  } = useNotifications();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<NotificationFiltersState>(DEFAULT_FILTERS);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const data = await notificationsApi.getAll();
-      const rawList = Array.isArray(data) ? data : (data as any)?.data || [];
-      const list = rawList.filter((n: any) => n && typeof n.id === 'string' && n.id !== 'undefined');
-      setNotifications(list);
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  const handleNewNotification = useCallback((raw: any) => {
-    if (!raw) return;
-    const newNotif = raw?.data?.id ? raw.data : raw;
-    if (!newNotif?.id || newNotif.id === 'undefined') return;
-    setNotifications((prev) => {
-      if (prev.some((n) => n.id === newNotif.id)) {
-        return prev.map((n) => (n.id === newNotif.id ? newNotif : n));
-      }
-      return [newNotif, ...prev];
-    });
-  }, []);
-
-  useNotificationSocket(handleNewNotification);
-
+  // Reset page to 1 whenever filters or search query changes
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    setCurrentPage(1);
+  }, [filters, searchQuery]);
 
   const handleMarkAsRead = async (id: string) => {
     if (!id || id === 'undefined' || id === 'null') return;
     try {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
-      await notificationsApi.markAsRead(id);
+      await markAsRead(id);
     } catch (err) {
       console.error('Failed to mark notification read:', err);
     }
@@ -80,8 +65,7 @@ export default function NotificationsPage() {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      await notificationsApi.markAllAsRead();
+      await markAllAsRead();
       toast.success('All notifications marked as read.', 'Notifications');
     } catch (err) {
       console.error('Failed to mark all read:', err);
@@ -94,8 +78,7 @@ export default function NotificationsPage() {
   const handleDelete = async (id: string) => {
     if (!id || id === 'undefined' || id === 'null') return;
     try {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      await notificationsApi.delete(id);
+      await deleteNotification(id);
       toast.info('Notification dismissed.', 'Removed');
     } catch (err) {
       console.error('Failed to delete notification:', err);
@@ -124,9 +107,13 @@ export default function NotificationsPage() {
     return notifications.filter((n) => matchNotification(n, activeFiltersWithSearch));
   }, [notifications, filters, searchQuery]);
 
-  // Status counts
-  const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
-  const readCount = useMemo(() => notifications.filter((n) => n.isRead).length, [notifications]);
+  // Paginated notifications slice
+  const totalItems = filteredNotifications.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedNotifications = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredNotifications.slice(start, start + pageSize);
+  }, [filteredNotifications, currentPage, pageSize]);
 
   // Active filters count for deep filter button badge
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
@@ -190,7 +177,7 @@ export default function NotificationsPage() {
             </button>
           )}
           <button
-            onClick={fetchNotifications}
+            onClick={refreshNotifications}
             className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer"
             title="Refresh notifications"
           >
@@ -417,8 +404,9 @@ export default function NotificationsPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/40">
-          {filteredNotifications.map((item, idx) => {
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/40">
+          {paginatedNotifications.map((item, idx) => {
             const style = getNotificationTypeStyle(item.type, item.title);
             const itemKey = item.id || `notif-page-${idx}-${item.createdAt || ''}`;
 
@@ -509,7 +497,28 @@ export default function NotificationsPage() {
             );
           })}
         </div>
-      )}
-    </div>
-  );
+
+        {/* Pagination Bar */}
+        {filteredNotifications.length > 0 && (
+          <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 px-4 py-3 shadow-xs">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              showPageSizeSelector
+              showTotal
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
 }
