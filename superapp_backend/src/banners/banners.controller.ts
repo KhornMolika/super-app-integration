@@ -89,9 +89,10 @@ export class BannersController {
   }
 
   /**
-   * Admin: Update an existing banner
+   * Admin: Update an existing banner (supports PUT or PATCH)
    */
   @Put(':id')
+  @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('image', {

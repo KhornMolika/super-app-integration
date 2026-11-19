@@ -1562,4 +1562,40 @@ export class MiniappsService implements OnApplicationBootstrap {
       reason,
     );
   }
+
+  async notifyDeveloper(
+    id: string,
+    body: {
+      subject?: string;
+      message: string;
+      priority?: 'NORMAL' | 'HIGH' | 'CRITICAL';
+    },
+    actor?: any,
+  ) {
+    const miniApp = await this.findOne(id);
+    if (!miniApp) throw new NotFoundException('MiniApp not found');
+
+    const targetUserId = miniApp.ownerId || '';
+    const subject = body.subject || `Admin Notice: ${miniApp.name}`;
+    const priority = body.priority || 'NORMAL';
+
+    await this.notificationsService?.createNotification(
+      targetUserId,
+      subject,
+      body.message,
+      'DEVELOPER_ALERT',
+      miniApp.id,
+      {
+        priority,
+        miniAppName: miniApp.name,
+        appId: miniApp.appId,
+        sentBy: actor?.name || actor?.email || 'Super Admin',
+      },
+    );
+
+    return {
+      success: true,
+      message: `Notification successfully dispatched to developer of "${miniApp.name}".`,
+    };
+  }
 }

@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Delete,
+  Body,
   Param,
   Query,
   Req,
@@ -57,6 +58,12 @@ export class NotificationsController {
   @RequirePermissions('miniapp:read')
   readAllNotifications() {
     return this.notificationsService.markAllAsRead();
+  }
+
+  @Delete('bulk')
+  @RequirePermissions('miniapp:read')
+  deleteBulkNotifications(@Body() body: { ids: string[] }) {
+    return this.notificationsService.deleteBulk(body?.ids || []);
   }
 
   @Delete(':id')
