@@ -45,8 +45,13 @@ export function writtenLifecycle(app: object | null | undefined): string | undef
   return app ? writtenStatus.get(app)?.lifecycle : undefined;
 }
 
+export { AppStatus, VersionStage } from '../status/app-status';
+
 /**
- * Application-Level Lifecycle & Governance Status Taxonomy (MiniApp Entity)
+ * @deprecated Legacy monolithic status taxonomy (Phase 1-5).
+ * - For application catalog presence (live on phones), use `AppStatus` (stored in mini_apps.status).
+ * - For version review & governance stages, use `VersionStage` (stored in mini_app_versions.status).
+ * - For transient CI/CD execution, inspect `MiniAppBuild.status` (in mini_app_builds).
  */
 export enum MiniAppLifecycleStatus {
   /** Under active development. Partner/creator is editing metadata, assets, and permissions. Physical deletion permitted for SuperAdmin or owner. */
@@ -95,6 +100,9 @@ export enum MiniAppLifecycleStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+/**
+ * @deprecated Legacy availability taxonomy. Use `AppStatus` (mini_apps.status).
+ */
 export enum MiniAppAvailabilityStatus {
   TESTING = 'TESTING',
   PRODUCTION = 'PRODUCTION',

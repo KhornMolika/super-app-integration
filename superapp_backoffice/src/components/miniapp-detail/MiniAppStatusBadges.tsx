@@ -38,6 +38,8 @@ export interface StatusSubject {
   lifecycleStatus?: string;
   availabilityStatus?: string;
   buildStatus?: string;
+  currentReleaseVersion?: string;
+  version?: string;
 }
 
 const up = (v: unknown) => String(v || '').toUpperCase();
@@ -103,7 +105,16 @@ export function versionStageOf(app: StatusSubject): string | null {
 
 export function versionStageInfo(app: StatusSubject): { label: string; tone: Tone; pulse?: boolean } | null {
   const stage = versionStageOf(app);
-  if (!stage) return null;
+  if (!stage) {
+    if (appStatusOf(app) === 'LIVE') {
+      const ver = app.currentReleaseVersion || app.version;
+      return {
+        label: ver ? `Live (${ver})` : 'Released',
+        tone: 'success',
+      };
+    }
+    return null;
+  }
   // An approved version's test build: the latest build run
   if (stage === 'APPROVED') {
     const build = up(app.buildStatus);
@@ -157,7 +168,7 @@ export function AppStatusBadge({ app, size }: { app: StatusSubject; size?: 'sm' 
 
 /**
  * Where the version being worked on is (review, approval, test build).
- * `empty` is shown when nothing is in progress (a live app with no new
+ * `empty` is shown when nothing is in progress (a non-live app with no new
  * version); omit it to render nothing.
  */
 export function VersionStageBadge({
@@ -172,15 +183,22 @@ export function VersionStageBadge({
   const info = versionStageInfo(app);
   if (!info) return <>{empty ?? null}</>;
   const live = appStatusOf(app) !== 'DRAFT';
+  const hasNext = live && versionStageOf(app) !== null;
   return (
     <Chip
       tone={info.tone}
       pulse={info.pulse}
       size={size}
-      title={live ? 'Next version: where it is in review, approval and testing' : 'Version: where it is in review, approval and testing'}
+      title={
+        hasNext
+          ? 'Next version: where it is in review, approval and testing'
+          : live
+          ? 'Current active release version'
+          : 'Version: where it is in review, approval and testing'
+      }
     >
-      <span className="sr-only">{live ? 'Next version: ' : 'Version: '}</span>
-      {live && <span className="font-normal text-slate-500 dark:text-slate-400">Next:</span>}
+      <span className="sr-only">{hasNext ? 'Next version: ' : 'Version: '}</span>
+      {hasNext && <span className="font-normal text-slate-500 dark:text-slate-400">Next: </span>}
       {info.label}
     </Chip>
   );

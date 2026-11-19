@@ -261,4 +261,34 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
       '/job/miniapp-validation/buildWithParameters',
     );
   });
+
+  describe('triggerSuperAppBuild Job Routing', () => {
+    it('routes release build (miniAppSet=release) to superapp-release-build', async () => {
+      const svc = make();
+      jest.spyOn(svc as any, 'getCrumb').mockResolvedValue(null);
+      await svc.triggerSuperAppBuild({
+        releaseVersion: 'v1.0.0',
+        buildType: 'release',
+        miniAppSet: 'release',
+      });
+      const call = fetchSpy.mock.calls.find((c) =>
+        String(c[0]).includes('buildWithParameters'),
+      );
+      expect(String(call![0])).toContain('/job/superapp-release-build/buildWithParameters');
+    });
+
+    it('routes test build (miniAppSet=test) to superapp-test-build', async () => {
+      const svc = make();
+      jest.spyOn(svc as any, 'getCrumb').mockResolvedValue(null);
+      await svc.triggerSuperAppBuild({
+        releaseVersion: 'v0.2.1',
+        buildType: 'debug',
+        miniAppSet: 'test',
+      });
+      const call = fetchSpy.mock.calls.find((c) =>
+        String(c[0]).includes('buildWithParameters'),
+      );
+      expect(String(call![0])).toContain('/job/superapp-test-build/buildWithParameters');
+    });
+  });
 });
