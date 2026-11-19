@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { RolesTab, RoleModal } from '@/components/users';
 
-export default function RolesPage() {
+function RolesPageContent() {
   const { toast } = useToast();
   const confirm = useConfirm();
   const { can } = useAuth();
@@ -152,5 +152,19 @@ export default function RolesPage() {
         />
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function RolesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-64 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <RolesPageContent />
+    </Suspense>
   );
 }

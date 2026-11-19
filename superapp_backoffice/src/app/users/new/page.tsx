@@ -107,6 +107,8 @@ function Section({ title, text, children }: { title: string; text: string; child
   );
 }
 
+const NEW_USER_DRAFT_KEY = 'fsa_new_user_draft';
+
 export default function NewUserPage() {
   const router = useRouter();
   const { user: me, hasRole, can } = useAuth();
@@ -125,6 +127,9 @@ export default function NewUserPage() {
   const [accountType, setAccountType] = useState<'STAFF' | 'CONSUMER'>('STAFF');
   const isConsumer = accountType === 'CONSUMER';
 
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+
   const [form, setForm] = useState<FormState>({
     name: '',
     email: '',
@@ -136,6 +141,80 @@ export default function NewUserPage() {
     position: '',
     phoneNumber: '',
   });
+
+  // Restore draft from localStorage on initial mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(NEW_USER_DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.data === 'object') {
+          setForm((prev) => ({
+            ...prev,
+            name: parsed.data.name || prev.name,
+            email: parsed.data.email || prev.email,
+            organizationId: parsed.data.organizationId || prev.organizationId,
+            role: parsed.data.role || prev.role,
+            staffId: parsed.data.staffId || prev.staffId,
+            position: parsed.data.position || prev.position,
+            phoneNumber: parsed.data.phoneNumber || prev.phoneNumber,
+          }));
+          if (parsed.accountType) setAccountType(parsed.accountType);
+          if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
+          setHasRestoredDraft(true);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Auto-save form draft to localStorage (debounced 600ms)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!form.name && !form.email && !form.staffId && !form.phoneNumber) return;
+    const timer = setTimeout(() => {
+      try {
+        const toSave = {
+          data: {
+            name: form.name,
+            email: form.email,
+            organizationId: form.organizationId,
+            role: form.role,
+            staffId: form.staffId,
+            position: form.position,
+            phoneNumber: form.phoneNumber,
+          },
+          accountType,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(NEW_USER_DRAFT_KEY, JSON.stringify(toSave));
+        setDraftSavedAt(toSave.savedAt);
+      } catch (_) {}
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [form.name, form.email, form.organizationId, form.role, form.staffId, form.position, form.phoneNumber, accountType]);
+
+  const discardDraft = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(NEW_USER_DRAFT_KEY);
+      }
+    } catch (_) {}
+    setForm({
+      name: '',
+      email: '',
+      setPassword: true,
+      password: '',
+      organizationId: myOrgId,
+      role: 'MA_DEVELOPER',
+      staffId: '',
+      position: '',
+      phoneNumber: '',
+    });
+    setHasRestoredDraft(false);
+    setDraftSavedAt(null);
+    toast.info('Draft discarded. Form reset.');
+  };
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
   const touch = (key: keyof FormState) => setTouched((t) => ({ ...t, [key]: true }));
@@ -267,6 +346,13 @@ export default function NewUserPage() {
             }) as any,
       );
       const created = res?.data ?? res;
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(NEW_USER_DRAFT_KEY);
+        }
+      } catch (_) {}
+      setHasRestoredDraft(false);
+      setDraftSavedAt(null);
       toast.success(`${form.name.trim()} was added.`, 'User created');
       router.push(created?.id ? `/users/${created.id}` : '/users');
     } catch (e: any) {
@@ -286,6 +372,25 @@ export default function NewUserPage() {
 
   return (
     <form onSubmit={submit} noValidate className="w-full min-w-0 space-y-5 pb-28 sm:pb-8">
+      {hasRestoredDraft && (
+        <div className="rounded-xl border border-sky-200 dark:border-sky-800/60 bg-sky-50 dark:bg-sky-950/30 px-4 py-2.5 flex items-center justify-between text-xs text-sky-800 dark:text-sky-300">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+            <span>
+              Auto-restored your in-progress user draft
+              {draftSavedAt ? ` (saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={discardDraft}
+            className="font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer ml-3"
+          >
+            Discard draft & start fresh
+          </button>
+        </div>
+      )}
+
       <div>
         <Link href="/users" className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
           Users

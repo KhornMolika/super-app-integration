@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
 import { ExternalLink, User, Users, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck, ListChecks, Info, PlusCircle } from 'lucide-react';
@@ -133,14 +134,85 @@ export function ProposalsTab({
 }: ProposalsTabProps) {
   const isDecider = audience === 'decider';
   const isRequester = audience === 'requester';
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mineOnly, setMineOnly] = useState(false);
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const validFilters: FilterKey[] = ['ALL', 'pending', 'accepted', 'code_ready', 'needs_work', 'code_failed', 'rejected'];
+  const initialSearch = searchParams?.get('q') || '';
+  const initialMine = searchParams?.get('mine') === 'true';
+  const initialFilterFromUrl = searchParams?.get('filter') as FilterKey;
+  const resolvedFilter: FilterKey = validFilters.includes(initialFilterFromUrl)
+    ? initialFilterFromUrl
+    : isDecider && proposalSubFilter === 'PENDING' ? 'pending' : 'ALL';
+  const initialPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
+  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '10', 10));
+
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [mineOnly, setMineOnly] = useState(initialMine);
   // Deciders start on the waiting list; others see all their requests
-  const [filter, setFilter] = useState<FilterKey>(
-    isDecider && proposalSubFilter === 'PENDING' ? 'pending' : 'ALL',
-  );
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [filter, setFilter] = useState<FilterKey>(resolvedFilter);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialLimit);
+
+  // 300ms debounced search input -> searchQuery
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput, searchQuery]);
+
+  // Synchronize state with browser URL search params when active tab is proposals
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') !== 'proposals') return;
+
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    else params.delete('q');
+
+    if (filter !== 'ALL') params.set('filter', filter);
+    else params.delete('filter');
+
+    if (mineOnly) params.set('mine', 'true');
+    else params.delete('mine');
+
+    if (currentPage > 1) params.set('page', String(currentPage));
+    else params.delete('page');
+
+    if (pageSize !== 10) params.set('limit', String(pageSize));
+    else params.delete('limit');
+
+    const qs = params.toString();
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    if (window.location.pathname + window.location.search !== target && window.history?.replaceState) {
+      window.history.replaceState(null, '', target);
+    }
+  }, [searchQuery, filter, mineOnly, currentPage, pageSize, pathname]);
+
+  // Handle popstate on browser Back/Forward
+  useEffect(() => {
+    const onPop = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') !== 'proposals') return;
+      const q = params.get('q') || '';
+      setSearchInput(q);
+      setSearchQuery(q);
+      setMineOnly(params.get('mine') === 'true');
+      const f = params.get('filter') as FilterKey;
+      if (validFilters.includes(f)) setFilter(f);
+      setCurrentPage(Math.max(1, parseInt(params.get('page') || '1', 10)));
+      setPageSize(Math.max(5, parseInt(params.get('limit') || '10', 10)));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const safeProposals = useMemo(() => {
     const list = Array.isArray(proposals) ? proposals : [];
@@ -259,19 +331,17 @@ export function ProposalsTab({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder={isRequester ? 'Search your requests...' : 'Search by capability, mini app or requester...'}
             aria-label="Search proposals"
             className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
           />
-          {searchQuery && (
+          {searchInput && (
             <button
               type="button"
               onClick={() => {
+                setSearchInput('');
                 setSearchQuery('');
                 setCurrentPage(1);
               }}

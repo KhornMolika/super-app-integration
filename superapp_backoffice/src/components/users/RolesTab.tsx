@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button, Input } from '@/components/ui/inputs';
 import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
@@ -31,12 +32,71 @@ export function RolesTab({
   onDuplicateRole,
   onDeleteRole,
 }: RolesTabProps) {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const initialSearch = searchParams?.get('q') || '';
+  const initialRole = searchParams?.get('role') || 'ALL';
+  const initialCategory = searchParams?.get('category') || 'ALL';
+  const initialSensitivity = searchParams?.get('sensitivity') || 'ALL';
+
   // Focus state: 'ALL' for matrix comparison, or specific role ID for isolated view
-  const [selectedRoleId, setSelectedRoleId] = useState<string>('ALL');
-  const [roleSearch, setRoleSearch] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [sensitivityFilter, setSensitivityFilter] = useState<string>('ALL');
+  const [selectedRoleId, setSelectedRoleId] = useState<string>(initialRole);
+  const [searchInput, setSearchInput] = useState<string>(initialSearch);
+  const [roleSearch, setRoleSearch] = useState<string>(initialSearch);
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialCategory);
+  const [sensitivityFilter, setSensitivityFilter] = useState<string>(initialSensitivity);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+
+  // 300ms debounced search input -> roleSearch
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchInput !== roleSearch) {
+        setRoleSearch(searchInput);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput, roleSearch]);
+
+  // Synchronize state with browser URL search params
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+
+    if (roleSearch.trim()) params.set('q', roleSearch.trim());
+    else params.delete('q');
+
+    if (selectedRoleId !== 'ALL') params.set('role', selectedRoleId);
+    else params.delete('role');
+
+    if (categoryFilter !== 'ALL') params.set('category', categoryFilter);
+    else params.delete('category');
+
+    if (sensitivityFilter !== 'ALL') params.set('sensitivity', sensitivityFilter);
+    else params.delete('sensitivity');
+
+    const qs = params.toString();
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    if (window.location.pathname + window.location.search !== target && window.history?.replaceState) {
+      window.history.replaceState(null, '', target);
+    }
+  }, [roleSearch, selectedRoleId, categoryFilter, sensitivityFilter, pathname]);
+
+  // Handle popstate on browser Back/Forward
+  useEffect(() => {
+    const onPop = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q') || '';
+      setSearchInput(q);
+      setRoleSearch(q);
+      setSelectedRoleId(params.get('role') || 'ALL');
+      setCategoryFilter(params.get('category') || 'ALL');
+      setSensitivityFilter(params.get('sensitivity') || 'ALL');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Category filter dropdown options
   const categoryDropdownOptions: CleanDropdownOption[] = useMemo(
@@ -313,14 +373,17 @@ export function RolesTab({
             </svg>
             <Input
               placeholder="Search scope, key, or description..."
-              value={roleSearch}
-              onChange={(e) => setRoleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-9 pr-8 h-9 text-xs w-full"
             />
-            {roleSearch && (
+            {searchInput && (
               <button
                 type="button"
-                onClick={() => setRoleSearch('')}
+                onClick={() => {
+                  setSearchInput('');
+                  setRoleSearch('');
+                }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
               >
                 ✕
