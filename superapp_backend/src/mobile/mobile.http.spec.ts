@@ -24,6 +24,7 @@ import { MobileAuthService } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileProfileService } from './mobile-profile.service';
 import { MobileRegulatorsService } from './mobile-regulators.service';
+import { BannersService } from '../banners/banners.service';
 import {
   Organization,
   OrganizationStatus,
@@ -105,6 +106,10 @@ describe('Mobile HTTP (in-process)', () => {
         MobileAvatarService,
         MobileAccountService,
         MobileRegulatorsService,
+        {
+          provide: BannersService,
+          useValue: { findActiveForMobile: jest.fn().mockResolvedValue([]) },
+        },
         { provide: StorageService, useValue: fakeStorage() },
         {
           provide: SettingsService,

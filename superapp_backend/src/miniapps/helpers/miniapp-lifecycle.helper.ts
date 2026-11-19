@@ -1322,6 +1322,13 @@ export class MiniappLifecycleHelper {
     await this.assertPackageInMinio(app, 'start the test build', true);
     await this.assertPackageInNexus(app, 'start the test build', true);
 
+    const method = String(
+      (app.pendingRevision?.integrationConfig && app.pendingRevision?.integrationMethod) ||
+      app.integrationMethod ||
+      ''
+    ).toUpperCase();
+    const isDynamic = method === 'WEBVIEW' || method === 'DEEP_LINK';
+
     if (
       (currentStatus === 'ACTIVE' ||
         app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION) &&
@@ -1337,6 +1344,32 @@ export class MiniappLifecycleHelper {
       };
       await this.miniappRepository.save(app);
       await persistAppVersions(this.miniappRepository, app);
+
+      if (isDynamic) {
+        if (app.ownerId) {
+          await this.notificationsService.createNotification(
+            app.ownerId,
+            'Staged Revision Ready for Testing',
+            `Staged revision of dynamic MiniApp "${app.name}" is now ready for testing (${releaseVersion}). Native compilation bypassed.`,
+            'BUILD_PASSED',
+            app.id,
+            { releaseVersion, version: releaseVersion },
+          );
+        }
+
+        await logActivityFn(
+          id,
+          actorId,
+          'STATUS_CHANGE',
+          'Staged Revision Ready for Testing (Dynamic Bypass)',
+          `Dynamic integration (${method}) bypassed Jenkins compilation. Staged revision is available for testing immediately.`,
+          'START_TESTING',
+          null,
+          app,
+        );
+
+        return app;
+      }
 
       const testBuildType =
         testApkBuildMode();
@@ -1404,6 +1437,77 @@ export class MiniappLifecycleHelper {
       );
     }
     return app;
+    }
+
+    if (isDynamic) {
+      app.lifecycleStatus = MiniAppLifecycleStatus.TESTING;
+      (app as any).status = MiniAppLifecycleStatus.TESTING;
+      app.availabilityStatus = MiniAppAvailabilityStatus.TESTING;
+      app.buildStatus = 'SUCCESS';
+      app.buildError = null as any;
+      app.buildStages = {
+        preflight: {
+          id: 'preflight',
+          name: '1. Pre-Flight Check',
+          status: 'SUCCESS',
+          details: 'Dynamic integration: manifest and container verified.',
+          updatedAt: new Date().toISOString(),
+        },
+        compile: {
+          id: 'compile',
+          name: '2. Native Compilation',
+          status: 'SUCCESS',
+          details: 'Native compilation bypassed for dynamic MiniApp (WebView / Deep Link).',
+          updatedAt: new Date().toISOString(),
+        },
+        publish: {
+          id: 'publish',
+          name: '3. Test Verification',
+          status: 'SUCCESS',
+          details: 'Dynamic MiniApp ready for instant testing on sandbox and mobile QA devices.',
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      const releaseVersion =
+        await this.superAppService.getAndRegisterNextVersion();
+      app.activeTestVersion = releaseVersion;
+      app.integrationConfig = {
+        ...(app.integrationConfig || {}),
+        superAppTestVersion: releaseVersion,
+      };
+
+      await applyLifecycle(this.miniappRepository, app.id, 'TESTING', MiniAppAvailabilityStatus.TESTING);
+      await this.miniappRepository.save(app);
+      await persistAppVersions(this.miniappRepository, app);
+      await this.runs?.syncBuildFromApp(app, { buildType: 'debug' }, actorId);
+
+      if (app.ownerId) {
+        await this.notificationsService.createNotification(
+          app.ownerId,
+          'MiniApp Ready for Testing',
+          `MiniApp "${app.name}" is ready for testing (${releaseVersion}). Native compilation bypassed for dynamic integration.`,
+          'BUILD_PASSED',
+          app.id,
+          {
+            releaseVersion,
+            version: releaseVersion,
+          },
+        );
+      }
+
+      await logActivityFn(
+        id,
+        actorId,
+        'STATUS_CHANGE',
+        'MiniApp Ready for Testing (Dynamic Bypass)',
+        `Dynamic integration (${method}) bypassed Jenkins compilation. MiniApp transitioned directly to TESTING for instant QA.`,
+        'START_TESTING',
+        null,
+        app,
+      );
+
+      return app;
     }
 
     // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED

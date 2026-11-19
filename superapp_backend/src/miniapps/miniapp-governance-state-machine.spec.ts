@@ -280,6 +280,7 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
         id: 'app-tested-passed',
         name: 'App A (Test Passed)',
         ownerId: 'partner-usr-passed',
+        integrationMethod: 'FLUTTER_PACKAGE',
         lifecycleStatus: 'TEST_PASSED',
         availabilityStatus: MiniAppAvailabilityStatus.TESTING,
       } as any;

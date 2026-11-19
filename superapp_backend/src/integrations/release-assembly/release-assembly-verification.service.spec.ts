@@ -290,6 +290,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         'TEST_BUILD_READY',
         'app-1',
         expect.objectContaining({ releaseVersion: 'v1.0.0' }),
+        expect.anything(),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
         expect.objectContaining({

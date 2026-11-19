@@ -27,12 +27,14 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { MobileController } from './mobile.controller';
 import { MiniAppVersionsModule } from '../miniapps/versions/miniapp-versions.module';
 import { PasswordService } from './password.service';
+import { BannersModule } from '../banners/banners.module';
 
 // MailService comes from the @Global NotificationsModule.
 @Module({
   imports: [
     AuthModule,
     forwardRef(() => StorageModule),
+    forwardRef(() => BannersModule),
     CapabilitiesModule,
     MiniAppVersionsModule,
     TypeOrmModule.forFeature([

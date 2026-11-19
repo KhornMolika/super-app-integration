@@ -246,4 +246,79 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       );
     });
   });
+
+  describe('5. Dynamic Apps Testing Pipeline (startTesting)', () => {
+    it('should bypass Jenkins compilation for WEBVIEW mini-app and transition directly to TESTING', async () => {
+      const app: MiniApp = {
+        id: 'app-webview-1',
+        appId: 'com.test.webview',
+        name: 'Web MiniApp',
+        lifecycleStatus: 'APPROVED',
+        status: 'APPROVED',
+        integrationMethod: 'WEBVIEW',
+        validationStatus: 'PASSED',
+        ownerId: 'user-1',
+      } as any;
+
+      const result = await helper.startTesting(app, 'admin-1', mockLogActivityFn);
+
+      expect(result.lifecycleStatus).toBe('TESTING');
+      expect(result.availabilityStatus).toBe('TESTING');
+      expect(result.buildStatus).toBe('SUCCESS');
+      expect(result.activeTestVersion).toBe('v1.1.1');
+      expect(mockJenkinsService.triggerSuperAppBuild).not.toHaveBeenCalled();
+      expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
+        'user-1',
+        'MiniApp Ready for Testing',
+        expect.stringContaining('Native compilation bypassed'),
+        'BUILD_PASSED',
+        'app-webview-1',
+        expect.objectContaining({ releaseVersion: 'v1.1.1' }),
+      );
+      expect(mockLogActivityFn).toHaveBeenCalledWith(
+        'app-webview-1',
+        'admin-1',
+        'STATUS_CHANGE',
+        'MiniApp Ready for Testing (Dynamic Bypass)',
+        expect.stringContaining('bypassed Jenkins compilation'),
+        'START_TESTING',
+        null,
+        expect.anything(),
+      );
+    });
+
+    it('should bypass Jenkins compilation for DEEP_LINK staged revision and set revisionStatus to TESTING', async () => {
+      const app: MiniApp = {
+        id: 'app-deeplink-1',
+        appId: 'com.test.deeplink',
+        name: 'DeepLink Live App',
+        lifecycleStatus: 'ACTIVE',
+        status: 'ACTIVE',
+        integrationMethod: 'DEEP_LINK',
+        currentReleaseVersion: '1.0.0',
+        ownerId: 'user-1',
+        pendingRevision: {
+          name: 'DeepLink Updated',
+          revisionStatus: 'IN_REVIEW',
+          validationStatus: 'PASSED',
+          integrationMethod: 'DEEP_LINK',
+        },
+      } as any;
+
+      const result = await helper.startTesting(app, 'admin-1', mockLogActivityFn);
+
+      expect(result.lifecycleStatus).toBe('ACTIVE');
+      expect(result.pendingRevision?.revisionStatus).toBe('TESTING');
+      expect(result.pendingRevision?.testVersion).toBe('v1.1.1');
+      expect(mockJenkinsService.triggerSuperAppBuild).not.toHaveBeenCalled();
+      expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
+        'user-1',
+        'Staged Revision Ready for Testing',
+        expect.stringContaining('Native compilation bypassed'),
+        'BUILD_PASSED',
+        'app-deeplink-1',
+        expect.objectContaining({ releaseVersion: 'v1.1.1' }),
+      );
+    });
+  });
 });

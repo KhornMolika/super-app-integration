@@ -19,6 +19,7 @@ import { SdkArtifactsModule } from './sdk-artifacts/sdk-artifacts.module';
 import { SuperAppWebModule } from './superapp-web/superapp-web.module';
 import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.module';
 import { HealthModule } from './health/health.module';
+import { BannersModule } from './banners/banners.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -68,6 +69,7 @@ import { AppService } from './app.service';
     SuperAppWebModule,
     NativeSdkCodegenModule,
     HealthModule,
+    BannersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

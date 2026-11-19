@@ -35,6 +35,8 @@ import { MobileAuthService, isTokenResponse } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileProfileService, toProfile } from './mobile-profile.service';
 import { MobileRegulatorsService } from './mobile-regulators.service';
+import { BannersService } from '../banners/banners.service';
+import { BannerAudience } from '../banners/entities/banner.entity';
 import {
   LoginDto,
   LogoutDto,
@@ -65,6 +67,7 @@ export class MobileController {
     private readonly avatars: MobileAvatarService,
     private readonly account: MobileAccountService,
     private readonly regulators: MobileRegulatorsService,
+    private readonly bannersService: BannersService,
   ) { }
 
   @Post('auth/register')
@@ -222,6 +225,17 @@ export class MobileController {
   @Get('regulators')
   regulatorList() {
     return this.regulators.list();
+  }
+
+  @Get('banners')
+  @UseGuards(OptionalEndUserAuthGuard)
+  async banners(@Req() req: Request) {
+    const endUser = (req as any).endUser;
+    const audiences = [BannerAudience.PUBLIC];
+    if (endUser?.isStaff) {
+      audiences.push(BannerAudience.ALL_FSA_STAFF);
+    }
+    return this.bannersService.findActiveForMobile(audiences);
   }
 
   @Get('mini-apps')

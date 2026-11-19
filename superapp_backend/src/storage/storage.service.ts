@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Client as MinioClient } from 'minio';
 import { randomUUID } from 'crypto';
 import { detectImageFileType } from '../common/utils/image-type.util';
+import { signAssetLink } from './asset-url-signer';
 import {
   ArchiveSanitizerHelper,
   BucketLifecycleHelper,
@@ -396,6 +397,58 @@ export class StorageService implements OnModuleInit {
     const url = `/api/storage/asset?key=${encodeURIComponent(key)}`;
     this.logger.log(`Uploaded organization logo for org ${orgId}: ${key}`);
     return { url, key };
+  }
+
+  /**
+   * Upload a SuperApp promotion banner image to platform/banners/{uuid}.{ext}
+   */
+  async uploadBannerImage(
+    file: Express.Multer.File,
+  ): Promise<{ url: string; key: string }> {
+    if (!file || !file.buffer) {
+      throw new BadRequestException('Choose an image to upload');
+    }
+    const ext = file.originalname?.split('.').pop()?.toLowerCase() || 'png';
+    const key = `platform/banners/${randomUUID()}.${ext}`;
+    const bucket = this.assetsBucket || 'superapp-storage';
+
+    await this.minioClient.putObject(bucket, key, file.buffer, file.size, {
+      'Content-Type': file.mimetype || 'image/png',
+    });
+
+    const rawUrl = `/api/storage/asset?key=${encodeURIComponent(key)}`;
+    const url = signAssetLink(rawUrl);
+    this.logger.log(`Uploaded banner image: ${key}`);
+    return { url, key };
+  }
+
+  /**
+   * Delete a banner image from the platform/banners/ prefix
+   */
+  async deleteBannerImage(imageUrlOrKey?: string | null): Promise<void> {
+    if (!imageUrlOrKey) return;
+    const bucket = this.assetsBucket || 'superapp-storage';
+    let key = imageUrlOrKey;
+    if (imageUrlOrKey.includes('key=')) {
+      const match = imageUrlOrKey.match(/[?&]key=([^&]+)/);
+      if (match && match[1]) {
+        key = decodeURIComponent(match[1]);
+      }
+    } else {
+      key = imageUrlOrKey.split('?')[0];
+    }
+    key = decodeURIComponent(key)
+      .replace(/^https?:\/\/[^\/]+\//, '')
+      .replace(/^\/+/, '')
+      .replace(/^(?:api\/)?(?:storage\/asset\?key=|superapp-storage\/)/, '')
+      .replace(/^\/+/, '');
+
+    try {
+      await this.minioClient.removeObject(bucket, key);
+      this.logger.log(`Deleted banner image: ${key}`);
+    } catch (err: any) {
+      this.logger.warn(`Could not delete banner image ${key}: ${err?.message}`);
+    }
   }
 
   /**
