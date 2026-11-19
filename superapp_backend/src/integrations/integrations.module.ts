@@ -23,6 +23,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { StorageModule } from '../storage/storage.module';
+import { SuperAppWebModule } from '../superapp-web/superapp-web.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { ScanSourceController } from './validation/scan-source.controller';
@@ -54,6 +55,7 @@ import { MiniAppVersionsModule } from '../miniapps/versions/miniapp-versions.mod
     MiniAppRunsModule,
     MiniAppVersionsModule,
     SuperAppModule,
+    forwardRef(() => SuperAppWebModule),
   ],
   controllers: [
     GitIntegrationController,

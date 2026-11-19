@@ -328,6 +328,14 @@ export class NotificationsService {
   emitBuildCompleted(data: any) {
     this.notificationGateway.emitBuildCompleted(data);
   }
+
+  emitSandboxBuildUpdated(data: any) {
+    this.notificationGateway.emitSandboxBuildUpdated(data);
+  }
+
+  emitSuperAppWebUpdated(data: any) {
+    this.notificationGateway.emitSuperAppWebUpdated(data);
+  }
 }
 
 /**

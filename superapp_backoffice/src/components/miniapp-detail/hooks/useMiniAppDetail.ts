@@ -336,7 +336,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           });
         }
       } catch (_) {}
-    }, 2500);
+    }, 20000); // 20s watchdog fallback; real-time updates arrive instantly via WebSocket
 
     return () => clearInterval(pollInterval);
   }, [formData.status, formData.buildStatus, buildModalState.isOpen, isSubmitting, id]);
@@ -374,6 +374,21 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
                 : prev.errorMessage,
             };
           });
+
+          setFormData((prev: any) => {
+            const currentStages = {
+              ...(prev.buildStages || {}),
+              [data.stage.id]: data.stage,
+            };
+            return {
+              ...prev,
+              buildStages: currentStages,
+              buildStatus: isStageFailed ? 'FAILED' : prev.buildStatus,
+              buildError: isStageFailed
+                ? data.stage.details || prev.buildError
+                : prev.buildError,
+            };
+          });
         }
       }
     });
@@ -381,14 +396,26 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     socket.on('miniapp.build_completed', (data: any) => {
       if (data && (data.miniAppId === id || data.appId === id)) {
         const isFailed = data.status === 'FAILED' || Boolean(data.error);
+        const errorMsg =
+          data.error ||
+          data.errorMessage ||
+          (isFailed ? 'SuperApp compilation failed.' : undefined);
+
         setBuildModalState((prev) => ({
           ...prev,
           status: isFailed ? 'error' : 'success',
-          errorMessage: isFailed
-            ? data.error || data.errorMessage || 'SuperApp compilation failed.'
-            : undefined,
+          errorMessage: errorMsg,
           releaseVersion: data.releaseVersion || prev.releaseVersion,
         }));
+
+        setFormData((prev: any) => ({
+          ...prev,
+          status: isFailed ? prev.status : 'TESTING',
+          buildStatus: isFailed ? 'FAILED' : 'SUCCESS',
+          buildError: isFailed ? errorMsg : null,
+          activeTestVersion: data.releaseVersion || prev.activeTestVersion,
+        }));
+
         fetchApp(false);
       }
     });

@@ -51,4 +51,16 @@ export class NotificationGateway
       this.server.emit('miniapp.build_completed', data);
     }
   }
+
+  emitSandboxBuildUpdated(data: any) {
+    if (this.server) {
+      this.server.emit('superapp.sandbox_build_updated', data);
+    }
+  }
+
+  emitSuperAppWebUpdated(data: any) {
+    if (this.server) {
+      this.server.emit('superapp.web_updated', data);
+    }
+  }
 }

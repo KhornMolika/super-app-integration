@@ -2,7 +2,7 @@ import {
   LOCAL_BUILDS_DISABLED_MESSAGE,
   localBuildsEnabled,
 } from '../../common/utils/local-workspace.util';
-﻿import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -13,6 +13,7 @@ import * as child_process from 'child_process';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-credential.helper';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 export type BuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
@@ -58,7 +59,18 @@ export class SandboxBuildManagerService {
     private readonly jenkinsService: JenkinsService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
+    @Optional()
+    private readonly notificationsService?: NotificationsService,
   ) {}
+
+  /**
+   * Broadcasts the latest sandbox build status over WebSocket to all connected clients.
+   */
+  private notifyStatus() {
+    try {
+      this.notificationsService?.emitSandboxBuildUpdated(this.getStatus());
+    } catch (_) {}
+  }
 
   /**
    * Appends a log line to the cyclic in-memory buffer (max 200 lines).
@@ -70,6 +82,7 @@ export class SandboxBuildManagerService {
     if (this.logBuffer.length > 200) {
       this.logBuffer.shift();
     }
+    this.notifyStatus();
   }
 
   /**

@@ -24,6 +24,7 @@ import {
   BuildCallbackDto,
 } from './dto/release-assembly-verification.dto';
 import { applyLifecycle } from '../../miniapps/versions/miniapp-versions.service';
+import { SuperAppWebService } from '../../superapp-web/superapp-web.service';
 
 interface VerifiedAppRecord {
   id: string;
@@ -55,6 +56,8 @@ export class ReleaseAssemblyVerificationService {
     private readonly versionRepository?: Repository<SuperAppCapability>,
     @Optional()
     private readonly runs?: MiniAppRunsService,
+    @Optional()
+    private readonly superAppWebService?: SuperAppWebService,
   ) {}
 
   /**
@@ -513,15 +516,23 @@ export class ReleaseAssemblyVerificationService {
       `Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`,
     );
 
+    const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
+
     // The Backoffice web sandbox is not a mini app build: never move apps for it
-    if (body.appName === 'superapp-sandbox') {
-      this.logger.log(`Ignoring build callback for the web sandbox (${body.status})`);
+    if (
+      body.appName === 'superapp-sandbox' ||
+      body.appName === 'superapp-web' ||
+      body.targetPlatform === 'web'
+    ) {
+      this.logger.log(`Received build callback for the web sandbox (${body.status})`);
+      if (isSuccess) {
+        await this.superAppWebService?.refreshNow(true);
+      }
       return { success: true, ignored: true };
     }
 
-    const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
-
     if (isSuccess) {
+      await this.superAppWebService?.refreshNow(true);
       await this.markVersionPublished(body.releaseVersion);
       const buildingApps = await this.resolveBuildingApps(body);
 

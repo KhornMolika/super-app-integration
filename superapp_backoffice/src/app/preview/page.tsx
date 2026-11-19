@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { io } from 'socket.io-client';
 import {
   DevicePhoneIcon,
   RefreshIcon,
@@ -79,6 +80,29 @@ export default function MobilePreviewPage() {
     updateTime();
     const timer = setInterval(updateTime, 10000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Live auto-reload preview iframe when new SuperApp Web builds are published
+  useEffect(() => {
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000');
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('superapp.web_updated', () => {
+      setReloadKey((k) => k + 1);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   // Compute responsive auto-scale to ensure the entire phone fits nicely on any desktop/tablet screen

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { io } from 'socket.io-client';
 import { Button } from './inputs';
 import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
@@ -83,6 +84,31 @@ export default function PreviewModal({
       setCurrentScreen(isDirectWebUrl ? 'miniapp' : 'sandbox');
     }
   }, [isOpen, isDirectWebUrl]);
+
+  // Live reload preview iframe when new SuperApp Web builds are published
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000');
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('superapp.web_updated', () => {
+      setReloadKey((k) => k + 1);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isOpen]);
 
   const getMethodBadge = () => {
     switch (methodUpper) {
