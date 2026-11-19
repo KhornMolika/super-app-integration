@@ -26,8 +26,10 @@ export default function DeepLinkIntegrationForm({
   // Backend validation errors
   const schemeBackendError = allErrors['integrationConfigDeepLink.urlScheme'];
   const packageBackendError = allErrors['integrationConfigDeepLink.packageName'];
+  const bundleBackendError = allErrors['integrationConfigDeepLink.bundleId'] || allErrors['integrationConfigDeepLink.iosBundleId'];
   const appStoreBackendError = allErrors['integrationConfigDeepLink.appStoreUrl'];
   const playStoreBackendError = allErrors['integrationConfigDeepLink.playStoreUrl'];
+  const webFallbackBackendError = allErrors['integrationConfigDeepLink.webFallbackUrl'] || allErrors['integrationConfigDeepLink.fallbackUrl'];
 
   // Real-time scheme validation
   const scheme = (config.urlScheme || '').trim();
@@ -78,9 +80,20 @@ export default function DeepLinkIntegrationForm({
     return { valid: true, error: null };
   }, [appStoreUrl]);
 
+  // Real-time Web Fallback validation
+  const webFallbackUrl = (config.webFallbackUrl || config.fallbackUrl || '').trim();
+  const webFallbackFeedback = React.useMemo(() => {
+    if (!webFallbackUrl) return { valid: true, error: null };
+    if (!webFallbackUrl.startsWith('https://')) {
+      return { valid: false, error: 'Web fallback link must enforce secure HTTPS transport (https://).' };
+    }
+    return { valid: true, error: null };
+  }, [webFallbackUrl]);
+
   const effectiveSchemeError = schemeBackendError || (scheme ? schemeFeedback.error : null);
   const effectivePlayStoreError = playStoreBackendError || playStoreFeedback.error;
   const effectiveAppStoreError = appStoreBackendError || appStoreFeedback.error;
+  const effectiveWebFallbackError = webFallbackBackendError || webFallbackFeedback.error;
 
   return (
     <div className="space-y-6">
@@ -261,6 +274,26 @@ export default function DeepLinkIntegrationForm({
               </div>
 
               <div>
+                <Label htmlFor="dl-bundleid" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  iOS Bundle ID <span className="text-xs font-normal text-slate-400">Optional</span>
+                </Label>
+                <Input
+                  id="dl-bundleid"
+                  name="bundleId"
+                  disabled={!isEditable}
+                  value={config.bundleId || config.iosBundleId || ''}
+                  onChange={handleDeepLinkChange}
+                  placeholder="kh.gov.tax.etax"
+                  className={bundleBackendError ? 'border-rose-500 ring-1 ring-rose-500' : ''}
+                />
+                {bundleBackendError ? (
+                  <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{bundleBackendError}</p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">iOS Bundle Identifier (CFBundleIdentifier) used on Apple platforms.</p>
+                )}
+              </div>
+
+              <div>
                 <Label htmlFor="dl-appstore" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Apple App Store Link <span className="text-xs font-normal text-slate-400">Optional</span>
                 </Label>
@@ -294,6 +327,37 @@ export default function DeepLinkIntegrationForm({
                 </div>
               )}
             </div>
+          )}
+        </div>
+
+        {/* Universal Web Fallback */}
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
+          <div className="flex items-center gap-2">
+            <ExternalLink className="w-4 h-4 text-slate-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              Universal Web URL Fallback
+            </span>
+            <span className="text-xs font-normal text-slate-400">Optional</span>
+          </div>
+          <Input
+            id="dl-webfallback"
+            name="webFallbackUrl"
+            disabled={!isEditable}
+            value={config.webFallbackUrl || config.fallbackUrl || ''}
+            onChange={handleDeepLinkChange}
+            type="url"
+            placeholder="https://tax.gov.kh/app"
+            className={effectiveWebFallbackError ? 'border-rose-500 ring-1 ring-rose-500' : ''}
+          />
+          {effectiveWebFallbackError ? (
+            <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {effectiveWebFallbackError}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Web application destination opened when the user is on a desktop/web browser, or if the external native app is not installed.
+            </p>
           )}
         </div>
       </div>

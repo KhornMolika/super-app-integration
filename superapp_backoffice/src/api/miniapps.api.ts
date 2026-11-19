@@ -178,12 +178,16 @@ export const miniappsApi = {
     ),
 
   /** Security scan runs, newest first (paged envelope: { data, meta }). */
-  getScans: (id: string, params?: { page?: number; limit?: number }) =>
+  getScans: (id: string, params?: { page?: number; limit?: number; version?: string; scope?: string }) =>
     apiClient<any>(`/api/mini-apps/${id}/scans`, { params }),
 
   /** Test and release build runs, newest first (paged envelope: { data, meta }). */
-  getBuilds: (id: string, params?: { page?: number; limit?: number }) =>
+  getBuilds: (id: string, params?: { page?: number; limit?: number; version?: string }) =>
     apiClient<any>(`/api/mini-apps/${id}/builds`, { params }),
+
+  /** Authoritative security report, SBOM, and build status for a specific version. */
+  getVersionReport: (id: string, version: string) =>
+    apiClient<any>(`/api/mini-apps/${id}/versions/${encodeURIComponent(version)}/report`),
 
   rollback: (id: string, targetVersion: string, reason?: string) =>
     apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/rollback`, {

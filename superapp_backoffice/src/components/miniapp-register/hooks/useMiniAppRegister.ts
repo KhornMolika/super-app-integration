@@ -255,7 +255,10 @@ export function useMiniAppRegister() {
           formData.integrationConfigNativeSdk?.iosModuleName
         )?.trim() || '';
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
-      const pkg = formData.integrationConfigDeepLink?.packageName?.trim();
+      const pkg =
+        formData.integrationConfigDeepLink?.packageName?.trim() ||
+        formData.integrationConfigDeepLink?.bundleId?.trim() ||
+        formData.integrationConfigDeepLink?.iosBundleId?.trim();
       if (pkg) {
         detectedId = pkg;
       } else if (formData.slug) {
@@ -283,6 +286,8 @@ export function useMiniAppRegister() {
     formData.integrationConfigNativeSdk?.androidPackageName,
     formData.integrationConfigNativeSdk?.iosModuleName,
     formData.integrationConfigDeepLink?.packageName,
+    formData.integrationConfigDeepLink?.bundleId,
+    formData.integrationConfigDeepLink?.iosBundleId,
     formData.integrationConfigDeepLink?.urlScheme,
     formData.slug,
   ]);

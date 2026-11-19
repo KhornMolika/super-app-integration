@@ -58,11 +58,27 @@ export class DeepLinkConfigDto {
 
   @IsString()
   @IsOptional()
+  bundleId?: string;
+
+  @IsString()
+  @IsOptional()
+  iosBundleId?: string;
+
+  @IsString()
+  @IsOptional()
   appStoreUrl?: string;
 
   @IsString()
   @IsOptional()
   playStoreUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  webFallbackUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  fallbackUrl?: string;
 }
 
 export class WebViewConfigDto {

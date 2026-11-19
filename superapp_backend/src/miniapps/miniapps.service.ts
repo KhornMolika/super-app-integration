@@ -1347,6 +1347,133 @@ export class MiniappsService implements OnApplicationBootstrap {
     };
   }
 
+  /**
+   * Returns authoritative security audit, SBOM, and build status for a specific version.
+   */
+  async getVersionReport(id: string, version: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new NotFoundException('MiniApp not found');
+
+    const normTarget = (version || '').trim();
+    const vPrefixed = normTarget.startsWith('v') ? normTarget : `v${normTarget}`;
+    const unPrefixed = normTarget.startsWith('v') ? normTarget.slice(1) : normTarget;
+    const candidates = [normTarget, vPrefixed, unPrefixed].filter(Boolean);
+
+    // 1. Locate matching version entity
+    const matchingVersion = (app.versions || []).find((v: any) =>
+      candidates.includes(v.version),
+    );
+
+    const isLive =
+      candidates.includes(app.currentReleaseVersion || '') ||
+      matchingVersion?.status === 'ACTIVE';
+    const isTesting =
+      candidates.includes(app.activeTestVersion || '') ||
+      matchingVersion?.status === 'TESTING';
+    const isRevision =
+      Boolean(app.pendingRevision?.version &&
+        candidates.includes(app.pendingRevision.version)) ||
+      matchingVersion?.status === 'IN_REVIEW' ||
+      matchingVersion?.status === 'SUBMITTED';
+
+    // 2. Fetch specific scan run from mini_app_scans
+    const scanScope = isRevision ? 'REVISION' : 'APP';
+    const scan = this.runs
+      ? await this.runs.scanForVersion(app.id, normTarget, scanScope as any)
+      : null;
+
+    // 3. Fetch specific build run from mini_app_builds
+    const build = this.runs
+      ? await this.runs.buildForVersion(app.id, normTarget)
+      : null;
+
+    // 4. Resolve integration config & method for this version
+    const effectiveMethod =
+      matchingVersion?.integrationMethod ||
+      (isRevision && app.pendingRevision?.integrationMethod) ||
+      app.integrationMethod;
+    const effectiveConfig =
+      matchingVersion?.integrationConfig ||
+      (isRevision && app.pendingRevision?.integrationConfig) ||
+      app.integrationConfig ||
+      {};
+
+    // 5. Resolve validation report data (prioritize scan run, then revision, then app)
+    const report =
+      scan?.report ||
+      (isRevision ? app.pendingRevision?.validationReport : null) ||
+      (isLive || isTesting ? app.validationReport : null) ||
+      app.validationReport ||
+      null;
+
+    const stages =
+      scan?.stages ||
+      (isRevision ? app.pendingRevision?.validationStages : null) ||
+      (isLive || isTesting ? app.validationStages : null) ||
+      app.validationStages ||
+      {};
+
+    const status =
+      scan?.status ||
+      (isRevision ? app.pendingRevision?.validationStatus : null) ||
+      (isLive || isTesting ? app.validationStatus : null) ||
+      app.validationStatus ||
+      'PENDING';
+
+    const errors =
+      scan?.errors ||
+      (isRevision ? app.pendingRevision?.validationErrors : null) ||
+      app.validationErrors ||
+      null;
+
+    const checks =
+      scan?.checks ||
+      app.securityChecks ||
+      [];
+
+    const buildStatus = build?.buildStatus || app.buildStatus || 'IDLE';
+    const buildStages = build?.buildStages || app.buildStages || {};
+    const buildError = build?.buildError || app.buildError || null;
+    const buildType = build?.buildType || (isLive ? 'release' : 'debug');
+
+    const downloadApkUrl =
+      buildStatus === 'COMPLETED'
+        ? `/api/download-apk?type=test&version=${encodeURIComponent(normTarget)}&appName=superapp`
+        : null;
+
+    return {
+      miniAppId: app.id,
+      appName: app.name,
+      appId: app.appId,
+      version: normTarget,
+      versionStatus:
+        matchingVersion?.status ||
+        (isLive ? 'ACTIVE' : isTesting ? 'TESTING' : isRevision ? 'IN_REVIEW' : 'DRAFT'),
+      isLive,
+      isTesting,
+      isRevision,
+      integrationMethod: effectiveMethod,
+      integrationConfig: effectiveConfig,
+      validationStatus: status,
+      validationScore:
+        report?.score ??
+        (status === 'PASSED' ? 100 : status === 'FAILED' ? 45 : null),
+      validationReport: report,
+      validationStages: stages,
+      validationErrors: errors,
+      securityChecks: checks,
+      buildStatus,
+      buildStages,
+      buildError,
+      buildType,
+      apkUrl: downloadApkUrl,
+      scanRunId: scan?.id,
+      buildRunId: build?.id,
+      createdAt: scan?.createdAt || matchingVersion?.createdAt || app.createdAt,
+      completedAt: scan?.completedAt || build?.completedAt,
+    };
+  }
+
   generateInviteToken(appId: string, user: any, expiresIn: string = '7d') {
     return this.artifactDistributionHelper.generateInviteToken(
       appId,

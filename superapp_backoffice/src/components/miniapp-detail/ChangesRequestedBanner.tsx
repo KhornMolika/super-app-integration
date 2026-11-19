@@ -90,6 +90,7 @@ export default function ChangesRequestedBanner({
   onResubmit,
 }: ChangesRequestedBannerProps) {
   const isRejected = status === 'REJECTED';
+  const isReviewOrHistory = status !== 'CHANGES_REQUESTED' && status !== 'REJECTED';
   const rawList = structuredFeedback?.checklist || [];
 
   const [checklistState, setChecklistState] = useState<StructuredChecklistItem[]>([]);
@@ -159,6 +160,8 @@ export default function ChangesRequestedBanner({
       className={`mb-6 rounded-3xl border shadow-md transition-all overflow-hidden ${
         isRejected
           ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60'
+          : isReviewOrHistory
+          ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
           : 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/60'
       }`}
     >
@@ -169,10 +172,18 @@ export default function ChangesRequestedBanner({
             className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-xs ${
               isRejected
                 ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                : isReviewOrHistory
+                ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
                 : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
             }`}
           >
-            {isRejected ? <ShieldAlert className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+            {isRejected ? (
+              <ShieldAlert className="w-6 h-6" />
+            ) : isReviewOrHistory ? (
+              <CheckCircle2 className="w-6 h-6" />
+            ) : (
+              <AlertTriangle className="w-6 h-6" />
+            )}
           </div>
 
           <div className="space-y-1.5 flex-1 min-w-0">
@@ -181,19 +192,28 @@ export default function ChangesRequestedBanner({
                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${categoryInfo.tone}`}
               >
                 <CategoryIcon className="w-3.5 h-3.5" />
-                <span>{structuredFeedback?.category ? categoryInfo.label : isRejected ? 'Rejected' : 'Changes Requested'}</span>
+                <span>{structuredFeedback?.category ? categoryInfo.label : isRejected ? 'Rejected' : isReviewOrHistory ? 'Remediation Review' : 'Changes Requested'}</span>
               </span>
 
               {structuredFeedback?.createdAt && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                   <Clock className="w-3 h-3" />
-                  <span>{new Date(structuredFeedback.createdAt).toLocaleDateString()}</span>
+                  <span>Requested: {new Date(structuredFeedback.createdAt).toLocaleDateString()}</span>
+                </span>
+              )}
+              {isReviewOrHistory && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                  Remediated by Developer
                 </span>
               )}
             </div>
 
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              {isRejected ? 'Submission Rejected by SuperApp Reviewer' : 'Changes Requested Before Approval'}
+              {isRejected
+                ? 'Submission Rejected by SuperApp Reviewer'
+                : isReviewOrHistory
+                ? 'Remediation Checklist & Review History'
+                : 'Changes Requested Before Approval'}
             </h3>
 
             <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed max-w-3xl whitespace-pre-line font-sans">
@@ -333,8 +353,18 @@ export default function ChangesRequestedBanner({
             })}
           </div>
 
-          {/* Gated Resubmission Footer */}
-          {isOwnerOrMaintainer && (
+          {/* Gated Resubmission Footer / Verification Footer */}
+          {isReviewOrHistory ? (
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>All {totalCount} requested modifications were addressed by the developer.</span>
+              </span>
+              <span className="text-[11px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-mono">
+                SuperAdmin Verification Required
+              </span>
+            </div>
+          ) : isOwnerOrMaintainer ? (
             <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-800">
               <div className="text-xs text-slate-600 dark:text-slate-400">
                 {!allAddressed ? (
@@ -375,7 +405,7 @@ export default function ChangesRequestedBanner({
                 )}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
