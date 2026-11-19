@@ -448,7 +448,14 @@ export class JenkinsService {
      */
     miniAppSet?: 'test' | 'release';
   }): Promise<{ success: boolean; message: string; queueId?: number }> {
-    const jobName = 'superapp-test-build';
+    const isRelease = options.miniAppSet === 'release';
+    const jobName = isRelease
+      ? (this.configService.get<string>('JENKINS_RELEASE_BUILD_JOB') ||
+         process.env.JENKINS_RELEASE_BUILD_JOB ||
+         'superapp-release-build')
+      : (this.configService.get<string>('JENKINS_TEST_BUILD_JOB') ||
+         process.env.JENKINS_TEST_BUILD_JOB ||
+         'superapp-test-build');
     const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
     const buildType = options.buildType || 'release';
     const appName = options.appName || 'superapp';

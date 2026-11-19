@@ -1626,19 +1626,26 @@ export class MiniappLifecycleHelper {
     await this.miniappRepository.save(app);
     await persistAppVersions(this.miniappRepository, app);
 
-    try {
+    const isCompiled = app.integrationMethod === 'FLUTTER_PACKAGE' || app.integrationMethod === 'NATIVE_SDK';
+    if (isCompiled) {
+      try {
+        this.logger.log(
+          `Triggering Jenkins Production Release build for MiniApp ${app.name} (${app.id}) with version ${releaseVersion} (miniAppSet=release)...`,
+        );
+        await this.jenkinsService.triggerSuperAppBuild({
+          releaseVersion,
+          appName: 'superapp',
+          buildType: 'release',
+          miniAppSet: 'release',
+        });
+      } catch (err: any) {
+        this.logger.error(
+          `Error triggering Jenkins production release build: ${err.message}`,
+        );
+      }
+    } else {
       this.logger.log(
-        `Triggering Jenkins Production Release build for MiniApp ${app.name} (${app.id}) with version ${releaseVersion}...`,
-      );
-      await this.jenkinsService.triggerSuperAppBuild({
-        releaseVersion,
-        appName: 'superapp',
-        buildType: 'release',
-        miniAppSet: 'release',
-      });
-    } catch (err: any) {
-      this.logger.error(
-        `Error triggering Jenkins production release build: ${err.message}`,
+        `MiniApp ${app.name} (${app.id}) uses dynamic integration (${app.integrationMethod || 'WEBVIEW'}). SuperApp APK recompilation skipped; active in catalog immediately.`,
       );
     }
 

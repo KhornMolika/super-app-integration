@@ -15,24 +15,26 @@ import { MiniAppVersionCapability } from './miniapp-version-capability.entity';
 import type { MiniAppCapabilityDeclaration } from './miniapp.entity';
 import type { IntegrationConfig } from '../integration-config';
 
+import { VersionStage } from '../status/app-status';
+
+export { VersionStage };
+
 /**
  * Version-Level Lifecycle Status Taxonomy (MiniAppVersion Entity)
+ * Combines working stages (VersionStage) with released version states (ACTIVE, PREVIOUS, DEPRECATED).
  */
 export enum MiniAppVersionStatus {
-  /*
-   * Stages of the version being worked on (see status/app-status.ts,
-   * VersionStage): an unreleased app's row, or a live app's revision row.
-   */
+  // Working stages:
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
   IN_REVIEW = 'IN_REVIEW',
   CHANGES_REQUESTED = 'CHANGES_REQUESTED',
   REJECTED = 'REJECTED',
   APPROVED = 'APPROVED',
-  /** In the Super App test build, with testers. */
   TESTING = 'TESTING',
   TEST_PASSED = 'TEST_PASSED',
 
+  // Released version statuses:
   /** Current live production version published to end users in the SuperApp catalog. */
   ACTIVE = 'ACTIVE',
 
