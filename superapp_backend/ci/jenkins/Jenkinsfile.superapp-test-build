@@ -281,7 +281,29 @@ def runStage(String stageId, String stageName, String startDetails, String doneD
         body()
         postStage(stageId, stageName, 'COMPLETED', doneDetails)
     } catch (e) {
-        env.FAILURE_REASON = "${stageName}: ${e.message ?: e.toString()}".take(500)
+        def realError = e.message ?: e.toString()
+        if (realError.contains('script returned exit code') || realError.contains('exit code 1')) {
+            def candidateFiles = ["stage-error-${stageId}.log", "${stageId}-error.log", "stage-error-compile.log", "compile-error.log"]
+            for (f in candidateFiles) {
+                if (fileExists(f)) {
+                    try {
+                        def lines = readFile(f).split('\n').collect { it.trim() }.findAll { it }
+                        if (lines) {
+                            def errorMatches = lines.findAll { l ->
+                                l =~ /(?i)(HTTP\s*(429|401|403|404|500|502|503)|Too many failed login|flutter:\s*Error|Dart\s*Error|Compilation error|Failure|Exception|Cannot find|pub get failed|OutOfMemoryError|BUILD FAILED|Could not download)/
+                            }
+                            if (errorMatches) {
+                                realError = errorMatches.takeRight(2).join(' | ')
+                            } else {
+                                realError = lines.takeRight(3).join(' | ')
+                            }
+                            break
+                        }
+                    } catch (ignored) {}
+                }
+            }
+        }
+        env.FAILURE_REASON = "${stageName}: ${realError}".take(500)
         postStage(stageId, stageName, 'FAILED', env.FAILURE_REASON)
         throw e
     }
@@ -439,7 +461,11 @@ pipeline {
                                             fi
                                             echo "Gradle 9.1.0 distribution ready in cache."
                                         fi
-                                        flutter build apk --$BUILD_TYPE --target-platform android-arm,android-arm64,android-x64 $DEFINES
+                                        if ! flutter build apk --$BUILD_TYPE --target-platform android-arm,android-arm64,android-x64 $DEFINES 2>&1 | tee /tmp/flutter-apk.log; then
+                                            tail -n 25 /tmp/flutter-apk.log > "$MOBILE_DIR/stage-error-compile.log" 2>/dev/null || true
+                                            cp -f "$MOBILE_DIR/stage-error-compile.log" ./stage-error-compile.log 2>/dev/null || true
+                                            exit 1
+                                        fi
                                         # Same source as arm64 only (~30 MB instead of ~75 MB): the copy sent to Telegram,
                                         # whose bot upload limit is 50 MB. The universal APK above stays the download.
                                         # Optional: without it Telegram gets the download link instead.

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api/miniapps.api';
 import { isFlutterArtifact } from '@/lib/miniapp-form.validator';
+import { classifyDiagnosticError } from '@/lib/diagnostic-classifier';
 import { useAuth } from '@/lib/auth';
 
 type StepState = 'done' | 'running' | 'failed' | 'waiting';
@@ -153,7 +154,15 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
           conf.nexusPublishedAt ? (isSuperAdmin ? `Published ${formatWhen(conf.nexusPublishedAt)}` : `Released ${formatWhen(conf.nexusPublishedAt)}`) : '',
         ].filter(Boolean)
       : publishError
-      ? [isSuperAdmin ? publishError : 'Distribution blocked. Contact Super Admin for clearance.']
+      ? (() => {
+          const diag = classifyDiagnosticError(publishError);
+          return [
+            isSuperAdmin
+              ? `[${diag.accountabilityRole}] ${diag.category}: ${publishError}`
+              : 'Distribution blocked. Contact Super Admin for clearance.',
+            ...(isSuperAdmin && diag.remedy ? [`Action: ${diag.remedy}`] : []),
+          ];
+        })()
       : scanState === 'done'
       ? [isSuperAdmin ? 'Not published yet. Will publish to Nexus during build.' : 'Ready for SuperApp distribution during build.']
       : ['Awaiting security clearance approval.'],
@@ -193,7 +202,13 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
         'Package in Nexus',
       );
     } catch (err: any) {
-      toast.error(err?.message || 'The package could not be published to Nexus.', 'Publish Failed');
+      const diag = classifyDiagnosticError(err?.message);
+      toast.error(
+        diag.isInfrastructure
+          ? `[${diag.accountabilityLabel}] ${diag.category}: ${diag.remedy}`
+          : err?.message || 'The package could not be published to Nexus.',
+        diag.category || 'Publish Failed',
+      );
     } finally {
       setBusy(false);
       onRefresh();

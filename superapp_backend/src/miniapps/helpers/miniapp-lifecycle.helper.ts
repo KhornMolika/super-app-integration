@@ -2122,20 +2122,40 @@ export class MiniappLifecycleHelper {
         if (jStatus.available && jStatus.state === 'finished') {
           clearInterval(interval);
           if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
+            const candidateLines = (jStatus.consoleText || '')
+              .split('\n')
+              .map((l) => l.trim())
+              .filter(Boolean);
+
+            // Prioritize high-signal error lines (HTTP 429, 401, Dart compiler errors, Gradle failures) over generic exit codes
+            const specificErrorLines = candidateLines.filter(
+              (l) =>
+                !l.includes('script returned exit code') &&
+                !l.startsWith('+') &&
+                (l.includes('HTTP 429') ||
+                  l.includes('HTTP 401') ||
+                  l.includes('Too many failed login') ||
+                  l.includes('Could not download') ||
+                  l.includes('Target flutter_build failed') ||
+                  l.includes('Error: Undefined name') ||
+                  l.includes('pub get failed') ||
+                  l.includes('OutOfMemoryError') ||
+                  l.includes('BUILD FAILED') ||
+                  l.includes('FAILURE: Build failed')),
+            );
+
+            const fallbackErrorLines = candidateLines.filter(
+              (l) =>
+                !l.startsWith('+') &&
+                (l.includes('FAILURE') ||
+                  l.includes('ERROR') ||
+                  l.includes('Exception') ||
+                  l.includes('failed')),
+            );
+
+            const chosen = specificErrorLines.length > 0 ? specificErrorLines : fallbackErrorLines;
             const errorLine =
-              jStatus.consoleText
-                ?.split('\n')
-                .map((l) => l.trim())
-                .filter(
-                  (l) =>
-                    l.includes('FAILURE') ||
-                    l.includes('ERROR') ||
-                    l.includes('Exception') ||
-                    l.includes('failed') ||
-                    l.includes('unexpected char'),
-                )
-                .slice(-3)
-                .join(' | ') ||
+              chosen.slice(-2).join(' | ') ||
               `Jenkins pipeline build ended with ${jStatus.result || 'FAILURE'}.`;
 
             this.logger.warn(
