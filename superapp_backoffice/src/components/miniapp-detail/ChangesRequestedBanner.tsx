@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   ShieldAlert,
   KeyRound,
@@ -17,6 +18,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/inputs';
 
@@ -37,12 +39,15 @@ export interface StructuredFeedbackData {
 }
 
 export interface ChangesRequestedBannerProps {
+  miniAppId?: string;
   status: string;
   structuredFeedback?: StructuredFeedbackData | null;
   legacyReason?: string;
   isOwnerOrMaintainer: boolean;
   isSubmitting: boolean;
   onResubmit: (resolutions: Array<{ id: string; resolved: boolean; resolutionNote?: string }>) => Promise<void> | void;
+  compact?: boolean;
+  isStandalonePage?: boolean;
 }
 
 const CATEGORY_META: Record<
@@ -82,19 +87,22 @@ const CATEGORY_META: Record<
 };
 
 export default function ChangesRequestedBanner({
+  miniAppId,
   status,
   structuredFeedback,
   legacyReason,
   isOwnerOrMaintainer,
   isSubmitting,
   onResubmit,
+  compact = false,
+  isStandalonePage = false,
 }: ChangesRequestedBannerProps) {
   const isRejected = status === 'REJECTED';
   const isReviewOrHistory = status !== 'CHANGES_REQUESTED' && status !== 'REJECTED';
   const rawList = structuredFeedback?.checklist || [];
 
   const [checklistState, setChecklistState] = useState<StructuredChecklistItem[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!compact || isStandalonePage);
 
   useEffect(() => {
     if (rawList.length > 0) {
@@ -154,6 +162,91 @@ export default function ChangesRequestedBanner({
       }))
     );
   };
+
+  if (compact && !isExpanded) {
+    return (
+      <div
+        className={`mb-6 px-4 py-3 rounded-2xl border shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
+          isRejected
+            ? 'bg-rose-50/50 dark:bg-rose-950/25 border-rose-200/80 dark:border-rose-900/60'
+            : isReviewOrHistory
+            ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+            : 'bg-amber-50/50 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-900/60'
+        }`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+              isRejected
+                ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                : isReviewOrHistory
+                ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+            }`}
+          >
+            {isRejected ? (
+              <ShieldAlert className="w-4 h-4" />
+            ) : isReviewOrHistory ? (
+              <CheckCircle2 className="w-4 h-4" />
+            ) : (
+              <AlertTriangle className="w-4 h-4" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                {isRejected
+                  ? 'Submission Rejected'
+                  : isReviewOrHistory
+                  ? 'Remediation Review'
+                  : 'Changes Requested Before Approval'}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${categoryInfo.tone}`}
+              >
+                {categoryInfo.label}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                ({addressedCount}/{totalCount} items addressed)
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-xl">
+              {structuredFeedback?.notes || legacyReason || 'Review the requested modifications before resubmission.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          {miniAppId && (
+            <Link
+              href={`/miniapps/${miniAppId}/remediation`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-colors ${
+                isRejected
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                  : isReviewOrHistory
+                  ? 'bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900'
+                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+              }`}
+            >
+              <span>Open Remediation Workspace</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 transition-colors"
+            title="Expand checklist on this page"
+          >
+            <span>Details</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -238,15 +331,28 @@ export default function ChangesRequestedBanner({
           </div>
         </div>
 
-        {/* Top Right Accordion Toggle */}
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="self-start text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
-        >
-          <span>{isExpanded ? 'Collapse Checklist' : `Show Checklist (${addressedCount}/${totalCount})`}</span>
-          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        </button>
+        {/* Top Right Accordion & Full Workspace Actions */}
+        <div className="flex items-center gap-2 self-start shrink-0">
+          {miniAppId && !isStandalonePage && (
+            <Link
+              href={`/miniapps/${miniAppId}/remediation`}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Open full dedicated remediation workspace"
+            >
+              <span>Full Workspace</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors shadow-2xs"
+          >
+            <span>{isExpanded ? 'Collapse Checklist' : `Show Checklist (${addressedCount}/${totalCount})`}</span>
+            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
 
       {/* Accordion Body: Checklist & Remediation Input */}

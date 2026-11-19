@@ -27,7 +27,6 @@ import {
 } from '@/components/miniapp-detail';
 import { getAllowedActions } from '@/components/miniapp-detail/miniappActions';
 import { toAccessLevel } from '@/lib/miniappAccess';
-import { PackagePublishPanel } from '@/components/miniapp-detail/PackagePublishPanel';
 
 const TAB_TITLES: Record<MiniAppTabType, string> = {
   overview: 'General Information',
@@ -234,11 +233,13 @@ function ManageMiniAppContent() {
           ((formData.status === 'IN_REVIEW' || formData.status === 'SUBMITTED' || formData.status === 'APPROVED') &&
             Boolean((formData as any).structuredFeedback?.checklist?.length))) && (
           <ChangesRequestedBanner
+            miniAppId={id}
             status={formData.status}
             structuredFeedback={(formData as any).structuredFeedback}
             legacyReason={(formData as any).rejectionReason || (formData as any).changesRequestedReason}
             isOwnerOrMaintainer={actions.isOwner || actions.submit}
             isSubmitting={isSubmitting}
+            compact={true}
             onResubmit={async (resolutions) => {
               await handleLifecycleAction('submit', undefined, { checklistResolutions: resolutions });
             }}
@@ -281,16 +282,6 @@ function ManageMiniAppContent() {
           }
         />
 
-        {/* Flutter package: MinIO -> security scan -> Nexus (approval needs the last step; hidden on report tab to avoid card duplication) */}
-        {activeTab !== 'report' && (
-          <PackagePublishPanel
-            miniAppId={id}
-            formData={formData}
-            canPublish={can('miniapp:approve')}
-            onRefresh={() => fetchApp(false, true)}
-          />
-        )}
-
         {/* 9-Tab Navigation (First Image v.2: Inverted-Radius File-Folder Tabs) */}
         <MiniAppDetailTabs
           activeTab={activeTab}
@@ -311,6 +302,7 @@ function ManageMiniAppContent() {
           allErrors={allErrors}
           isEditable={isEditable}
           canEdit={actions.edit}
+          canPublish={can('miniapp:approve')}
           onStartEdit={() => setIsEditingUnlocked(true)}
           handleWebViewChange={handleWebViewChange}
           handleFlutterChange={handleFlutterChange}
