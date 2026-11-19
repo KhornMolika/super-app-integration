@@ -7,6 +7,7 @@ import { NotificationGateway } from './notification.gateway';
 import { NotificationsService } from './notifications.service';
 import { TelegramService } from './channels/telegram.service';
 import { NotificationsController } from './notifications.controller';
+import { AnnouncementsController } from './announcements.controller';
 import { TelegramController } from './channels/telegram.controller';
 import { MailService } from './channels/mail.service';
 import { MailController } from './channels/mail.controller';
@@ -19,7 +20,12 @@ import { AuthModule } from '../auth/auth.module';
     TypeOrmModule.forFeature([Notification, Identity, MiniApp]),
     forwardRef(() => AuthModule),
   ],
-  controllers: [NotificationsController, TelegramController, MailController],
+  controllers: [
+    NotificationsController,
+    AnnouncementsController,
+    TelegramController,
+    MailController,
+  ],
   providers: [
     NotificationGateway,
     NotificationsService,

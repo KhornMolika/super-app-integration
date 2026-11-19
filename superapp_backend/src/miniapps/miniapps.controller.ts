@@ -907,6 +907,24 @@ export class MiniappsController {
     );
   }
 
+  @Post(':id/notify-developer')
+  @RequirePermissions('miniapp:approve')
+  async notifyDeveloper(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body()
+    body: {
+      subject?: string;
+      message: string;
+      priority?: 'NORMAL' | 'HIGH' | 'CRITICAL';
+    },
+    @Req() req: any,
+  ) {
+    if (!body?.message || body.message.trim().length === 0) {
+      throw new BadRequestException('Notification message is required.');
+    }
+    return this.miniappService.notifyDeveloper(id, body, req.user);
+  }
+
   @Post(':id/invite-token')
   @RequirePermissions('miniapp:read')
   async createInviteToken(

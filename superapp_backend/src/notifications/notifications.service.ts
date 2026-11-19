@@ -317,6 +317,42 @@ export class NotificationsService {
     return { success: true };
   }
 
+  async deleteBulk(
+    ids: string[],
+  ): Promise<{ success: boolean; deletedCount: number }> {
+    if (!ids || ids.length === 0) {
+      return { success: true, deletedCount: 0 };
+    }
+    const result = await this.notificationRepository.delete(ids);
+    return { success: true, deletedCount: result.affected || 0 };
+  }
+
+  async findAnnouncements(): Promise<Notification[]> {
+    return this.notificationRepository.find({
+      where: [
+        { type: 'ANNOUNCEMENT' },
+        { type: 'PLATFORM_ANNOUNCEMENT' },
+        { type: 'SYSTEM_UPDATE' },
+      ],
+      order: { createdAt: 'DESC' },
+      take: 20,
+    });
+  }
+
+  async findUnreadAnnouncements(
+    _userId: string,
+  ): Promise<{ count: number; items: Notification[] }> {
+    const items = await this.notificationRepository.find({
+      where: [
+        { type: 'ANNOUNCEMENT', isRead: false },
+        { type: 'PLATFORM_ANNOUNCEMENT', isRead: false },
+      ],
+      order: { createdAt: 'DESC' },
+      take: 10,
+    });
+    return { count: items.length, items };
+  }
+
   emitStageUpdate(data: any) {
     this.notificationGateway.emitStageUpdate(data);
   }
