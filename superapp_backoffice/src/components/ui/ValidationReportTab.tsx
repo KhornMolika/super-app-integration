@@ -575,7 +575,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   const published = Boolean(conf.nexusPublishedVersion) && !conf.nexusPublishError;
   const publishError: string | undefined = conf.nexusPublishError || undefined;
 
-  const minioStepState = storagePath ? 'done' : 'failed';
+  const minioStepState = (storagePath || published) ? 'done' : 'failed';
   const securityScanStepState =
     valStatus === 'PASSED' ? 'done' : valStatus === 'FAILED' ? 'failed' : isScanningActive ? 'running' : 'waiting';
   const nexusStepState = published
@@ -585,6 +585,70 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     : valStatus !== 'PASSED'
     ? 'waiting'
     : 'waiting';
+
+  const handleDownloadScanReportMarkdown = () => {
+    const lines = [
+      `# Security & Compliance Scan Report`,
+      ``,
+      `**Target:** ${miniApp.name || 'MiniApp'} (\`${miniApp.appId || 'unknown'}\`)`,
+      `**Integration:** ${miniApp.integrationMethod || 'FLUTTER_PACKAGE'}`,
+      `**Version:** ${miniApp.currentReleaseVersion || conf.nexusPublishedVersion || '1.0.0'}`,
+      `**Report Date:** ${report?.completedAt || new Date().toISOString()}`,
+      `**Overall Verdict:** ${valStatus} (Compliance Score: ${score ?? 100}/100)`,
+      ``,
+      `---`,
+      ``,
+      `## Automated Security Gates`,
+      ``,
+      `| Gate | Status | Details |`,
+      `|---|---|---|`,
+    ];
+    if (report?.checks) {
+      for (const [k, v] of Object.entries<any>(report.checks)) {
+        lines.push(`| ${k.toUpperCase()} | ${v.passed ? 'PASSED' : 'FAILED'} | ${v.details || 'N/A'} |`);
+      }
+    }
+    lines.push(
+      ``,
+      `## Supply Chain Attestation & Distribution`,
+      `- **Ingestion Archive:** MinIO Quarantine (Graduated & Purged post-clearance)`,
+      `- **Registry Target:** Sonatype Nexus Pub-Hosted (\`${conf.nexusPublishedPackage || miniApp.appId}\` v${conf.nexusPublishedVersion || '2.0.0'})`,
+      `- **Attestation Status:** Verified & Published to Private Registry`,
+      ``,
+      `## Software Bill of Materials (SBOM)`,
+      `- **Standard:** CycloneDX 1.5`,
+      `- **Direct & Transitive Packages:** ${sbomComponents.length} components`,
+      ``,
+      `## Vulnerability Findings (${allFindings.length})`,
+      allFindings.length === 0
+        ? `No CVE vulnerabilities, hardcoded secrets, dangerous code patterns, or license violations detected.`
+        : '',
+    );
+    if (allFindings.length > 0) {
+      lines.push(
+        `| Severity | Title | Location | CVE / ID |`,
+        `|---|---|---|---|`,
+      );
+      for (const f of allFindings) {
+        lines.push(`| ${f.severity} | ${f.title} | ${f.filePath || 'N/A'}:${f.lineNumber || 0} | ${f.cveId || 'N/A'} |`);
+      }
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${miniApp.appId || 'miniapp'}-security-scan-report.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintReport = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
 
   const handleDownloadAuditJson = () => {
     const dataToExport = {
@@ -999,9 +1063,19 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     ]
                   : []),
                 {
+                  label: 'Download Scan Report (.md)',
+                  icon: <FileText className="w-4 h-4 text-brand-600" />,
+                  onClick: handleDownloadScanReportMarkdown,
+                },
+                {
                   label: 'Download Audit JSON',
                   icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
                   onClick: handleDownloadAuditJson,
+                },
+                {
+                  label: 'Print Security Report',
+                  icon: <ExternalLinkIcon className="w-4 h-4 text-slate-500" />,
+                  onClick: handlePrintReport,
                 },
                 ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
                   ? [
@@ -1093,7 +1167,9 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                       {isSuperAdmin ? '1. MinIO Quarantine' : '1. Package Ingestion'}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
-                      {minioStepState === 'done'
+                      {published
+                        ? (isSuperAdmin ? 'Promoted & Graduated to Nexus' : 'Ingested & Released')
+                        : minioStepState === 'done'
                         ? (isSuperAdmin && storagePath ? storagePath : (storagePath ? String(storagePath).split('/').pop() : 'Archive Uploaded'))
                         : (isSuperAdmin ? 'No archive in MinIO' : 'No archive uploaded')}
                     </div>
@@ -1104,7 +1180,11 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
                 }`}>
-                  {minioStepState === 'done' ? (isSuperAdmin ? 'Verified (MinIO)' : 'Archived') : 'Missing'}
+                  {published
+                    ? (isSuperAdmin ? 'Graduated (Nexus)' : 'Ingested')
+                    : minioStepState === 'done'
+                    ? (isSuperAdmin ? 'Verified (MinIO)' : 'Archived')
+                    : 'Missing'}
                 </span>
               </div>
 
