@@ -83,6 +83,21 @@ describe('SuperAppWebService', () => {
     mockNexus({ build: 1, archive: '../../secret' }, null);
     expect(await new SuperAppWebService(config as any).getBuild()).toBeNull();
   });
+
+  it('backs off and does not repeatedly poll Nexus when receiving 429 or 401', async () => {
+    let callCount = 0;
+    global.fetch = jest.fn(async () => {
+      callCount++;
+      return new Response('Too many failed login attempts', { status: 429 });
+    }) as any;
+    const svc = new SuperAppWebService(config as any);
+    expect(await svc.getBuild()).toBeNull();
+    expect(callCount).toBe(1);
+    // Immediate subsequent calls within backoff window must NOT hit Nexus again
+    expect(await svc.getBuild()).toBeNull();
+    expect(await svc.getBuild()).toBeNull();
+    expect(callCount).toBe(1);
+  });
 });
 
 describe('SuperAppWebController', () => {
