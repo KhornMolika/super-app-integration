@@ -310,6 +310,8 @@ function ManageMiniAppContent() {
           handleChange={handleChange}
           allErrors={allErrors}
           isEditable={isEditable}
+          canEdit={actions.edit}
+          onStartEdit={() => setIsEditingUnlocked(true)}
           handleWebViewChange={handleWebViewChange}
           handleFlutterChange={handleFlutterChange}
           onUpdateFlutterConfig={handleUpdateFlutterConfig}
