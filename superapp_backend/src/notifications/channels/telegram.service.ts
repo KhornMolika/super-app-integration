@@ -75,6 +75,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     void this.fetchBotProfile();
   }
 
+  // Deduplication caches: prevent duplicate APK uploads and duplicate build cards
+  private static readonly dispatchedBuildApkCache = new Map<string, number>();
+  private static readonly dispatchedBuildCardCache = new Map<string, number>();
+
   async onModuleInit() {
     await this.fetchBotProfile();
     this.startBackgroundPoller();
@@ -497,6 +501,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         .filter(Boolean);
       for (const chatId of splitChatIds) {
         if (chatId && !dispatched.has(chatId)) {
+          // Debounce duplicate TEST_BUILD_READY cards per chat within 5 minutes
+          if (type === 'TEST_BUILD_READY') {
+            const rawVer = String(metadata?.version || metadata?.releaseVersion || 'latest');
+            const cardKey = `${chatId}:${rawVer}`;
+            const lastSent = TelegramService.dispatchedBuildCardCache.get(cardKey);
+            if (lastSent && Date.now() - lastSent < 300_000) {
+              this.logger.debug(
+                `Skipping duplicate TEST_BUILD_READY card to chat ${chatId} for version ${rawVer}`,
+              );
+              continue;
+            }
+            TelegramService.dispatchedBuildCardCache.set(cardKey, Date.now());
+          }
+
           dispatched.add(chatId);
           dispatchedChats.push(chatId);
           await this.sendMessage(text, chatId, 'HTML', finalButtons);
@@ -516,12 +534,24 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         `${backofficeBase}/api/download-apk/superapp-test-${version}.apk`;
       const resolvedName = miniAppName || 'SuperApp';
       for (const chatId of dispatchedChats) {
+        // Enforce single APK document upload per chat per version (10 minute debounce)
+        const apkKey = `${chatId}:${version}`;
+        const lastSent = TelegramService.dispatchedBuildApkCache.get(apkKey);
+        if (lastSent && Date.now() - lastSent < 600_000) {
+          this.logger.log(
+            `Skipping duplicate APK delivery to chat ${chatId} for ${version} (already dispatched within 10 min)`,
+          );
+          continue;
+        }
+        TelegramService.dispatchedBuildApkCache.set(apkKey, Date.now());
+
         void this.sendApkDocument(
           chatId,
           rawApkUrl,
           version,
           resolvedName,
         ).catch((err: unknown) => {
+          TelegramService.dispatchedBuildApkCache.delete(apkKey);
           const errMsg = err instanceof Error ? err.message : String(err);
           this.logger.debug(
             `Could not attach APK document to chat ${chatId}: ${errMsg}`,

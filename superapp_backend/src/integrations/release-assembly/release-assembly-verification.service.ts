@@ -548,12 +548,18 @@ export class ReleaseAssemblyVerificationService {
         body.filename ||
         (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
 
+      const appOwnerMap = new Map<string, MiniApp[]>();
+      let sharedFinalApkUrl = '';
+      let sharedNexusUrl = '';
+      let sharedEffectiveVersion = body.releaseVersion || 'v0.2.1';
+
       for (const app of buildingApps) {
         const effectiveVersion =
           body.releaseVersion ||
           app.activeTestVersion ||
           app.integrationConfig?.superAppTestVersion ||
           'v0.2.1';
+        sharedEffectiveVersion = effectiveVersion;
         const normVersion = effectiveVersion.startsWith('v')
           ? effectiveVersion
           : `v${effectiveVersion}`;
@@ -577,9 +583,11 @@ export class ReleaseAssemblyVerificationService {
         } else {
           sanitizedNexusUrl = `${nexusBase}/repository/${repoName}/superapp/${effectiveVersion}/${filename}`;
         }
+        sharedNexusUrl = sanitizedNexusUrl;
 
         // Standardized Backoffice download proxy URL: enforces standardized filename across all channels
         const finalApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
+        sharedFinalApkUrl = finalApkUrl;
 
         const currentStages = app.buildStages || {};
         const allCompletedStages: Record<string, any> = {
@@ -631,7 +639,7 @@ export class ReleaseAssemblyVerificationService {
           status: 'TESTING',
         });
 
-        // Resolve App Owner and notify
+        // Resolve App Owner and collect for deduplicated in-app notification
         let targetOwnerId = app.ownerId || app.owner?.id;
         let targetEmail =
           app.supportEmail || app.owner?.email || (app as any).ownerEmail;
@@ -647,24 +655,9 @@ export class ReleaseAssemblyVerificationService {
         }
 
         if (targetOwnerId) {
-          await this.notificationsService.createNotification(
-            targetOwnerId,
-            'SuperApp Test Build Ready',
-            `SuperApp test build (${effectiveVersion}) is ready! Download the test APK (superapp-test-${normVersion}.apk) or launch the Web Sandbox to verify "${app.name}".`,
-            'TEST_BUILD_READY',
-            app.id,
-            {
-              appName: app.name || body.appName || 'superapp',
-              miniAppId: app.id,
-              releaseVersion: effectiveVersion,
-              version: effectiveVersion,
-              apkUrl: finalApkUrl,
-              nexusApkUrl: sanitizedNexusUrl,
-              buildType: body.buildType || 'debug',
-              teamTelegramChatId:
-                app.alertTelegramChatId || (app as any).teamTelegramChatId,
-            },
-          );
+          const list = appOwnerMap.get(targetOwnerId) || [];
+          list.push(app);
+          appOwnerMap.set(targetOwnerId, list);
         }
 
         if (targetEmail) {
@@ -683,7 +676,64 @@ export class ReleaseAssemblyVerificationService {
         }
       }
 
-      if (buildingApps.length === 0) {
+      // Deliver single in-app notification per owner (skipTelegram = true so Telegram is not spammed)
+      for (const [ownerId, appsForOwner] of appOwnerMap.entries()) {
+        const primaryApp = appsForOwner[0];
+        const normVer = sharedEffectiveVersion.startsWith('v') ? sharedEffectiveVersion : `v${sharedEffectiveVersion}`;
+        const appNames = appsForOwner.map((a) => a.name).filter(Boolean).join(', ');
+        const ownerMsg = appsForOwner.length > 1
+          ? `SuperApp test build (${sharedEffectiveVersion}) is ready! Download the test APK (superapp-test-${normVer}.apk) or launch the Web Sandbox to verify ${appsForOwner.length} apps: ${appNames}.`
+          : `SuperApp test build (${sharedEffectiveVersion}) is ready! Download the test APK (superapp-test-${normVer}.apk) or launch the Web Sandbox to verify "${primaryApp.name}".`;
+
+        await this.notificationsService.createNotification(
+          ownerId,
+          'SuperApp Test Build Ready',
+          ownerMsg,
+          'TEST_BUILD_READY',
+          primaryApp.id,
+          {
+            appName: primaryApp.name || body.appName || 'superapp',
+            miniAppId: primaryApp.id,
+            releaseVersion: sharedEffectiveVersion,
+            version: sharedEffectiveVersion,
+            apkUrl: sharedFinalApkUrl,
+            nexusApkUrl: sharedNexusUrl,
+            buildType: body.buildType || 'debug',
+            teamTelegramChatId:
+              primaryApp.alertTelegramChatId || (primaryApp as any).teamTelegramChatId,
+          },
+          true, // skipTelegram = true: platform Telegram broadcast dispatched below once
+        );
+      }
+
+      // Broadcast single platform-level Telegram card & APK binary
+      if (buildingApps.length > 0) {
+        const primaryApp = buildingApps[0];
+        const aggregatedNames = buildingApps.map((a) => a.name).filter(Boolean).join(', ');
+        const broadcastTitle = `🚀 SuperApp Test Build Ready (${sharedEffectiveVersion})`;
+        const broadcastMsg = buildingApps.length > 1
+          ? `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for testing (${buildingApps.length} apps: ${aggregatedNames}).`
+          : `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for download.`;
+
+        await this.notificationsService.notifyAdmins(
+          broadcastTitle,
+          broadcastMsg,
+          'TEST_BUILD_READY',
+          primaryApp?.id,
+          {
+            appName: primaryApp?.name || body.appName || 'superapp',
+            miniAppId: primaryApp?.id,
+            releaseVersion: sharedEffectiveVersion,
+            version: sharedEffectiveVersion,
+            apkUrl: sharedFinalApkUrl,
+            nexusApkUrl: sharedNexusUrl,
+            buildType: body.buildType || 'release',
+            teamTelegramChatId:
+              primaryApp?.alertTelegramChatId ||
+              (primaryApp as any)?.teamTelegramChatId,
+          },
+        );
+      } else {
         const effectiveVersion = body.releaseVersion || 'v0.2.1';
         const normVersion = effectiveVersion.startsWith('v')
           ? effectiveVersion

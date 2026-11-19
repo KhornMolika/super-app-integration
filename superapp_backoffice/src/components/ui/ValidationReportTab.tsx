@@ -1290,7 +1290,9 @@ export default function ValidationReportTab({ miniApp, onRefresh, defaultSubTab 
                             : 'Approved & Available for SuperApp Build')
                         : nexusStepState === 'failed'
                         ? (isSuperAdmin ? (publishError || 'Publish error') : 'Distribution blocked')
-                        : (isSuperAdmin ? 'Awaiting security scan approval' : 'Awaiting security clearance')}
+                        : securityScanStepState === 'done'
+                        ? (isSuperAdmin ? 'Awaiting package publication to Nexus' : 'Awaiting release publication')
+                        : (isSuperAdmin ? 'Awaiting security scan clearance' : 'Awaiting security clearance')}
                     </div>
                   </div>
                 </div>
