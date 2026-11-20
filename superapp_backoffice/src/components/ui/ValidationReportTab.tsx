@@ -375,6 +375,13 @@ export default function ValidationReportTab({
   const [showRawSbomJson, setShowRawSbomJson] = useState(false);
   const [sbomCopied, setSbomCopied] = useState(false);
 
+  // Security Report Inspector Modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showRawReportJson, setShowRawReportJson] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
+  const [reportSearchQuery, setReportSearchQuery] = useState('');
+  const [reportSeverityFilter, setReportSeverityFilter] = useState('ALL');
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -825,6 +832,58 @@ export default function ValidationReportTab({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const fullAuditReportData = useMemo(() => {
+    return {
+      exportedAt: report?.completedAt || new Date().toISOString(),
+      miniApp: {
+        id: miniApp.id,
+        appId: miniApp.appId,
+        name: miniApp.name,
+        integrationMethod: miniApp.integrationMethod,
+        version: selectedVersion || miniApp.currentReleaseVersion || '1.0.0',
+        validationStatus: valStatus,
+        validationScore: score,
+      },
+      summary: {
+        score: score ?? 100,
+        status: valStatus,
+        totalFindings: allFindings.length,
+        critical: allFindings.filter((f) => f.severity === 'CRITICAL').length,
+        high: allFindings.filter((f) => f.severity === 'HIGH').length,
+        medium: allFindings.filter((f) => f.severity === 'MEDIUM').length,
+        low: allFindings.filter((f) => f.severity === 'LOW').length,
+      },
+      gates: report?.checks || {},
+      stages: stages || {},
+      findings: allFindings,
+      report,
+    };
+  }, [miniApp, selectedVersion, valStatus, score, allFindings, report, stages]);
+
+  const handleCopyReportJson = () => {
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(JSON.stringify(fullAuditReportData, null, 2));
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2000);
+    }
+  };
+
+  const filteredModalFindings = useMemo(() => {
+    return allFindings.filter((f) => {
+      const matchesSeverity = reportSeverityFilter === 'ALL' || f.severity === reportSeverityFilter;
+      const q = reportSearchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        (f.title && f.title.toLowerCase().includes(q)) ||
+        (f.description && f.description.toLowerCase().includes(q)) ||
+        (f.cveId && f.cveId.toLowerCase().includes(q)) ||
+        (f.filePath && f.filePath.toLowerCase().includes(q)) ||
+        (f.id && f.id.toLowerCase().includes(q)) ||
+        (f.engineId && f.engineId.toLowerCase().includes(q));
+      return matchesSeverity && matchesSearch;
+    });
+  }, [allFindings, reportSeverityFilter, reportSearchQuery]);
 
   const handleDownloadSbom = () => {
     if (!sbom) return;
@@ -1335,6 +1394,11 @@ export default function ValidationReportTab({
                 </div>
               }
               items={[
+                {
+                  label: `Inspect Security Report (${allFindings.length})`,
+                  icon: <ShieldCheckIcon className="w-4 h-4 text-brand-600" />,
+                  onClick: () => setShowReportModal(true),
+                },
                 ...(sbom
                   ? [
                       {
@@ -1345,12 +1409,12 @@ export default function ValidationReportTab({
                     ]
                   : []),
                 {
-                  label: 'Download Scan Report (.md)',
+                  label: 'Download Security Report (.md)',
                   icon: <FileText className="w-4 h-4 text-brand-600" />,
                   onClick: handleDownloadScanReportMarkdown,
                 },
                 {
-                  label: 'Download Audit JSON',
+                  label: 'Download Security Report (.json)',
                   icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
                   onClick: handleDownloadAuditJson,
                 },
@@ -2311,6 +2375,347 @@ export default function ValidationReportTab({
       {/* Tab 4: Scans & Builds History */}
       {activeViewTab === 'runs' && (
         <RunHistoryTab miniAppId={miniApp.id} versionFilter={selectedVersion} />
+      )}
+
+      {/* Security Report Inspector Modal (Table & Raw JSON Views) */}
+      {mounted && showReportModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-center items-start pt-6 sm:pt-10 md:pt-12 pb-8 p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowReportModal(false)}
+          />
+
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-5xl w-full max-h-[88vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg border ${
+                  valStatus === 'PASSED'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
+                    : valStatus === 'FAILED'
+                    ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-800/50'
+                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800/50'
+                }`}>
+                  {valStatus === 'PASSED' ? (
+                    <ShieldCheckIcon className="w-5 h-5" />
+                  ) : valStatus === 'FAILED' ? (
+                    <AlertTriangleIcon className="w-5 h-5" />
+                  ) : (
+                    <ShieldIcon className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Security & Compliance Attestation Report</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                      valStatus === 'PASSED'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : valStatus === 'FAILED'
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                    }`}>
+                      {valStatus || 'PENDING'}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold">
+                      {score ?? '--'}/100 Score
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    Target: {miniApp.appId || miniApp.id} v{selectedVersion || miniApp.currentReleaseVersion || '1.0.0'} • Generated: {report?.completedAt ? new Date(report.completedAt).toLocaleString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowRawReportJson(!showRawReportJson)}
+                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
+                >
+                  <CodeIcon className="w-3.5 h-3.5" />
+                  <span>{showRawReportJson ? 'View Table' : 'Raw JSON'}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadAuditJson}
+                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
+                >
+                  <DownloadIcon className="w-3.5 h-3.5" />
+                  <span>Download JSON</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadScanReportMarkdown}
+                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Download (.md)</span>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {showRawReportJson ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-semibold text-slate-500">Security Audit Full Attestation JSON Manifest</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyReportJson}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 font-semibold transition-colors"
+                    >
+                      <CopyIcon className="w-3.5 h-3.5" />
+                      <span>{reportCopied ? 'Copied!' : 'Copy JSON'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-4 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto max-h-[60vh] border border-slate-800 leading-relaxed">
+                    {JSON.stringify(fullAuditReportData, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Compliance Score</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-1">
+                        <span>{score ?? '--'}</span>
+                        <span className="text-xs text-slate-400 font-normal">/ 100</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Audit Verdict</div>
+                      <div className={`mt-1 text-base font-bold uppercase truncate ${
+                        valStatus === 'PASSED' ? 'text-emerald-600 dark:text-emerald-400' : valStatus === 'FAILED' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {valStatus || 'PENDING'}
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active Findings</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                        {allFindings.length}
+                        <span className="ml-1.5 text-xs text-slate-400 font-normal font-mono">
+                          ({allFindings.filter((f) => f.severity === 'CRITICAL' || f.severity === 'HIGH').length} High/Crit)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Automated Gates</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                        {activeStages.filter((s: any) => s.recorded?.status === 'COMPLETED' || s.recorded?.status === 'PASSED' || (valStatus === 'PASSED' && s.findings.length === 0)).length}
+                        <span className="text-xs text-slate-400 font-normal font-mono"> / {activeStages.length} Passed</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Findings Section */}
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Identified Security Findings</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                          {filteredModalFindings.length} of {allFindings.length}
+                        </span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="relative flex-1 min-w-[200px]">
+                          <SearchIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={reportSearchQuery}
+                            onChange={(e) => setReportSearchQuery(e.target.value)}
+                            placeholder="Filter findings..."
+                            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          />
+                        </div>
+                        <select
+                          value={reportSeverityFilter}
+                          onChange={(e) => setReportSeverityFilter(e.target.value)}
+                          className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          aria-label="Filter report findings by severity"
+                        >
+                          <option value="ALL">All Severities ({allFindings.length})</option>
+                          <option value="CRITICAL">Critical ({allFindings.filter((f) => f.severity === 'CRITICAL').length})</option>
+                          <option value="HIGH">High ({allFindings.filter((f) => f.severity === 'HIGH').length})</option>
+                          <option value="MEDIUM">Medium ({allFindings.filter((f) => f.severity === 'MEDIUM').length})</option>
+                          <option value="LOW">Low ({allFindings.filter((f) => f.severity === 'LOW').length})</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {filteredModalFindings.length === 0 ? (
+                      <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 text-sm">
+                        {allFindings.length === 0
+                          ? 'Zero vulnerabilities identified! All configured security checks passed cleanly.'
+                          : 'No findings match your current search query or severity filter.'}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-bold uppercase text-slate-700 dark:text-slate-300">
+                            <tr>
+                              <th className="px-3.5 py-2.5 w-[12%]">Severity</th>
+                              <th className="px-3.5 py-2.5 w-[22%]">Vulnerability / ID</th>
+                              <th className="px-3.5 py-2.5 w-[14%]">Tool / Engine</th>
+                              <th className="px-3.5 py-2.5 w-[28%]">Description & Location</th>
+                              <th className="px-3.5 py-2.5 w-[24%]">Remediation</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                            {filteredModalFindings.map((f, i) => (
+                              <tr key={f.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-3.5 py-3 align-top">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                                    f.severity === 'CRITICAL'
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                      : f.severity === 'HIGH'
+                                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300'
+                                      : f.severity === 'MEDIUM'
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  }`}>
+                                    {f.severity}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3 align-top font-semibold text-slate-900 dark:text-white">
+                                  <div>{f.title || f.id}</div>
+                                  {f.cveId && (
+                                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">{f.cveId}</div>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-600 dark:text-slate-400">
+                                  <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                                    {f.engineId || 'gatekeeper'}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-700 dark:text-slate-300">
+                                  <div>{f.description}</div>
+                                  {f.filePath && (
+                                    <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
+                                      <CodeIcon className="w-3 h-3 text-slate-400 shrink-0" />
+                                      <span className="truncate">{f.filePath}{f.lineNumber ? `:${f.lineNumber}` : ''}</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-600 dark:text-slate-400">
+                                  <div className="flex items-start gap-1">
+                                    <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500 shrink-0 mt-0.5" />
+                                    <span>{f.recommendation || 'Follow SuperApp integration security checklist.'}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Automated Security Gates Table */}
+                  <div className="space-y-3 pt-2">
+                    <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldIcon className="w-4 h-4 text-brand-500" />
+                        <span>Security Engines & Gate Verification Pipeline ({activeStages.length})</span>
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Configured validation checks for {miniApp.integrationMethod}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-bold uppercase text-slate-700 dark:text-slate-300">
+                          <tr>
+                            <th className="px-3.5 py-2.5 w-[35%]">Engine / Audit Gate</th>
+                            <th className="px-3.5 py-2.5 w-[20%]">Tooling</th>
+                            <th className="px-3.5 py-2.5 w-[20%]">Status</th>
+                            <th className="px-3.5 py-2.5 w-[25%]">Issues Detected</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                          {activeStages.map((stage: any, idx: number) => {
+                            const isPass = stage.recorded?.status === 'COMPLETED' || stage.recorded?.status === 'PASSED' || (valStatus === 'PASSED' && stage.findings.length === 0);
+                            const isFail = stage.recorded?.status === 'FAILED' || stage.findings.length > 0;
+                            const stStatus = isFail ? 'FAILED' : isPass ? 'PASSED' : (stage.recorded?.status || 'PENDING');
+                            return (
+                              <tr key={stage.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-3.5 py-3 font-semibold text-slate-900 dark:text-white">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                                      {idx + 1}
+                                    </span>
+                                    <span>{stage.title || stage.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3.5 py-3 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                                  {stage.tool}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                                    stStatus === 'PASSED'
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                      : stStatus === 'FAILED'
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  }`}>
+                                    {stStatus}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {stage.findings && stage.findings.length > 0 ? (
+                                    <span className="text-rose-600 dark:text-rose-400 font-bold">
+                                      {stage.findings.length} {stage.findings.length === 1 ? 'issue' : 'issues'} detected
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                      Clean (0 issues)
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono truncate max-w-md">
+                <span>Target: {scannedTargetLabel || 'Package Archive'}</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowReportModal(false)}
+                className="text-sm px-4"
+              >
+                Close Inspector
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* CycloneDX 1.5 SBOM Inspector Modal */}
