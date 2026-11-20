@@ -3,6 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { DeveloperMiniAppsTableProps } from './types';
+import {
+  AppStatusBadge,
+  VersionStageBadge,
+  versionStageOf,
+} from '@/components/miniapp-detail/MiniAppStatusBadges';
 
 export default function DeveloperMiniAppsTable({ miniAppsList }: DeveloperMiniAppsTableProps) {
   return (
@@ -79,19 +84,12 @@ export default function DeveloperMiniAppsTable({ miniAppsList }: DeveloperMiniAp
                     {app.version || 'v1.0.0'}
                   </td>
                   <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full font-semibold text-[10px] ${
-                        app.status === 'APPROVED' || app.status === 'ACTIVE'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : app.status === 'IN_REVIEW' || app.status === 'SUBMITTED'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                          : app.status === 'REJECTED'
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                      }`}
-                    >
-                      {app.status || 'DRAFT'}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <AppStatusBadge app={app} />
+                      {versionStageOf(app) && versionStageOf(app) !== 'DRAFT' && (
+                        <VersionStageBadge app={app} />
+                      )}
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <Link

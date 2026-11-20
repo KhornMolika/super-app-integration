@@ -10,9 +10,7 @@ import IntegrationForm from '@/components/forms/IntegrationForm';
 import CapabilitiesForm from '@/components/forms/CapabilitiesForm';
 import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
 import { PackagePublishPanel } from '@/components/miniapp-detail/PackagePublishPanel';
-import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import ActivityTab from '@/components/ui/ActivityTab';
-import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import type { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 import { MiniAppDetailFormData } from './types';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
@@ -196,16 +194,11 @@ export function MiniAppSectionContent({
             currentStatus={formData.status}
             teamTelegramChatId={formData.teamTelegramChatId}
             pendingRevision={formData.pendingRevision}
+            ownerName={formData.ownerName || (formData as any)?.owner?.name || (formData as any)?.owner?.fullName}
+            ownerEmail={formData.ownerEmail || (formData as any)?.owner?.email}
+            teamName={formData.teamName}
           />
         </div>
-      )}
-
-      {activeTab === 'report' && (
-        <ValidationReportTab miniApp={formData} onRefresh={onRefreshApp} />
-      )}
-
-      {activeTab === 'runs' && (
-        <ValidationReportTab miniApp={formData} onRefresh={onRefreshApp} defaultSubTab="runs" />
       )}
 
       {activeTab === 'activity' && (

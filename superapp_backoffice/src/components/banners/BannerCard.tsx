@@ -20,6 +20,7 @@ interface BannerCardProps {
   banner: SuperAppBanner;
   isFirst: boolean;
   isLast: boolean;
+  onPreview: (banner: SuperAppBanner) => void;
   onEdit: (banner: SuperAppBanner) => void;
   onDelete: (banner: SuperAppBanner) => void;
   onToggleActive: (banner: SuperAppBanner) => void;
@@ -31,6 +32,7 @@ export function BannerCard({
   banner,
   isFirst,
   isLast,
+  onPreview,
   onEdit,
   onDelete,
   onToggleActive,
@@ -93,44 +95,54 @@ export function BannerCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs overflow-hidden hover:shadow-md transition-all flex flex-col">
       {/* Banner Preview Image */}
-      <div className="relative aspect-[21/9] sm:aspect-[2.5/1] w-full bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      <div
+        onClick={() => onPreview(banner)}
+        className="relative aspect-[21/9] sm:aspect-[2.4/1] w-full bg-slate-100 dark:bg-slate-900 overflow-hidden cursor-pointer group/image"
+        title="Click to preview banner"
+      >
         {banner.imageUrl ? (
           <img
             src={banner.imageUrl}
             alt={banner.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
             No Image Provided
           </div>
         )}
 
+        {/* Hover Eye Overlay */}
+        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-2xs">
+          <Eye className="w-4 h-4" />
+          <span>Preview Banner</span>
+        </div>
+
         {/* Display Order Pin */}
-        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2 py-0.5 rounded-md">
+        <div className="absolute top-2 left-2 bg-slate-900/70 backdrop-blur-md text-white text-xs font-bold px-2 py-0.5 rounded-md z-10">
           #{banner.displayOrder + 1}
         </div>
 
         {/* Status Pills Over Image */}
-        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
           {isExpired && (
-            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-600 text-white shadow">
+            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-600 text-white shadow-xs">
               Expired
             </span>
           )}
           {isPending && (
-            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-500 text-white shadow">
+            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-500 text-white shadow-xs">
               Scheduled
             </span>
           )}
           <span
-            className={`px-2 py-0.5 rounded-md text-xs font-semibold shadow ${
+            className={`px-2 py-0.5 rounded-md text-xs font-semibold shadow-xs ${
               banner.isActive
                 ? 'bg-emerald-600 text-white'
-                : 'bg-gray-500 text-white'
+                : 'bg-slate-500 text-white'
             }`}
           >
             {banner.isActive ? 'Active' : 'Inactive'}
@@ -139,97 +151,108 @@ export function BannerCard({
       </div>
 
       {/* Card Content */}
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
+      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+        <div className="space-y-2">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white truncate">
               {banner.title}
             </h3>
             {banner.description && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
                 {banner.description}
               </p>
             )}
           </div>
+
+          {/* Metadata Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {renderActionBadge()}
+            {renderAudienceBadge()}
+          </div>
         </div>
 
-        {/* Metadata Badges */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {renderActionBadge()}
-          {renderAudienceBadge()}
-        </div>
+        <div className="space-y-2 pt-2">
+          {/* Schedule window if configured */}
+          {(banner.startDate || banner.endDate) && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">
+                {banner.startDate
+                  ? new Date(banner.startDate).toLocaleDateString()
+                  : 'Now'}{' '}
+                -{' '}
+                {banner.endDate
+                  ? new Date(banner.endDate).toLocaleDateString()
+                  : 'Indefinite'}
+              </span>
+            </div>
+          )}
 
-        {/* Schedule window if configured */}
-        {(banner.startDate || banner.endDate) && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-            <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">
-              {banner.startDate
-                ? new Date(banner.startDate).toLocaleDateString()
-                : 'Now'}{' '}
-              -{' '}
-              {banner.endDate
-                ? new Date(banner.endDate).toLocaleDateString()
-                : 'Indefinite'}
-            </span>
-          </div>
-        )}
+          {/* Actions Bar */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+            {/* Order Shift Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={isFirst}
+                onClick={() => onMoveUp(banner)}
+                title="Move Up"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={isLast}
+                onClick={() => onMoveDown(banner)}
+                title="Move Down"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
 
-        {/* Actions Bar */}
-        <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
-          {/* Order Shift Buttons */}
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={isFirst}
-              onClick={() => onMoveUp(banner)}
-              title="Move Up"
-              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              disabled={isLast}
-              onClick={() => onMoveDown(banner)}
-              title="Move Down"
-              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          </div>
+            {/* Quick Active Toggle & CRUD */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onToggleActive(banner)}
+                className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  banner.isActive
+                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-300'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-300'
+                }`}
+              >
+                {banner.isActive ? 'Deactivate' : 'Activate'}
+              </button>
 
-          {/* Quick Active Toggle & CRUD */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onToggleActive(banner)}
-              className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
-                banner.isActive
-                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-300'
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-300'
-              }`}
-            >
-              {banner.isActive ? 'Deactivate' : 'Activate'}
-            </button>
+              <button
+                type="button"
+                onClick={() => onPreview(banner)}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-brand-600 hover:bg-brand-50 dark:text-slate-400 dark:hover:text-brand-400 dark:hover:bg-brand-900/30 transition-colors cursor-pointer"
+                title="Preview Banner"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onEdit(banner)}
-              className="p-1.5 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
-              title="Edit Banner"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
+              <button
+                type="button"
+                onClick={() => onEdit(banner)}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-brand-600 hover:bg-brand-50 dark:text-slate-400 dark:hover:text-brand-400 dark:hover:bg-brand-900/30 transition-colors cursor-pointer"
+                title="Edit Banner"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onDelete(banner)}
-              className="p-1.5 rounded-lg text-gray-600 hover:text-rose-600 hover:bg-rose-50 dark:text-gray-400 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors"
-              title="Delete Banner"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <button
+                type="button"
+                onClick={() => onDelete(banner)}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-900/30 transition-colors cursor-pointer"
+                title="Delete Banner"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

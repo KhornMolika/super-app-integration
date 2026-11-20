@@ -176,7 +176,7 @@ export function RevisionReviewModal({
                 <span>Comparing:</span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                   <DotBadge color="emerald" />
-                  <span>Live MA: {diffData?.baseVersion?.version || '1.0.0'}</span>
+                  <span>Active: {diffData?.baseVersion?.version || '1.0.0'}</span>
                 </span>
                 <span className="font-extrabold text-slate-400 uppercase text-xs">vs</span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">

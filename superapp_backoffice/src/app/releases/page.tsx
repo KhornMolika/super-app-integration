@@ -8,6 +8,12 @@ import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppRelea
 import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
 import { useAuth } from '@/lib/auth';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
+import {
+  AppStatusBadge,
+  VersionStageBadge,
+  appStatusOf,
+  versionStageOf,
+} from '@/components/miniapp-detail/MiniAppStatusBadges';
 
 export default function ReleasesPage() {
   // Rebuilding the Super App is super_app:manage: Super Admin only
@@ -38,8 +44,13 @@ export default function ReleasesPage() {
     miniappsApi.getAll()
       .then(data => {
         if (Array.isArray(data)) {
-          // Filter to show Approved, Published, or Active apps
-          setApps(data.filter(app => ['APPROVED', 'PUBLISHED', 'ACTIVE', 'Approved', 'Published'].includes(app.status || '')));
+          // Filter to show Live apps or candidates in Approved/Testing stages
+          setApps(data.filter(app => {
+            const status = appStatusOf(app);
+            if (status === 'LIVE') return true;
+            const stage = versionStageOf(app);
+            return stage === 'APPROVED' || stage === 'TESTING' || stage === 'TEST_PASSED';
+          }));
         }
         setIsLoading(false);
       })
@@ -93,11 +104,11 @@ export default function ReleasesPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">SuperApp Release Pipeline</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
-              Security Gate 2
+              Release Verification
             </span>
           </div>
           <p className="text-slate-500 mt-1 text-sm">
-            Execute Security Gate 2 checksum verification, compare releases, and assemble official SuperApp releases.
+            Verify mini-app packages, validate security checksums, and assemble official SuperApp releases.
           </p>
         </div>
 
@@ -115,7 +126,7 @@ export default function ReleasesPage() {
           </button>
 
           <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-xs text-slate-500 font-medium">Next Release:</span>
+            <span className="text-xs text-slate-500 font-medium">Candidate Version:</span>
             <input
               type="text"
               value={releaseVersion}
@@ -128,18 +139,19 @@ export default function ReleasesPage() {
             onClick={handleRunGate2}
             disabled={isAssembling}
             className="bg-accent-500 hover:bg-accent-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center space-x-2"
+            title="Runs Gate 2 verification and triggers Jenkins superapp-test-build to assemble candidate staging APK"
           >
             {isAssembling ? (
               <>
                 <svg className="animate-spin w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                <span>Assembling Gate 2...</span>
+                <span>Running Gate 2 & Assembling...</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Run Gate 2 & Assemble SuperApp</span>
+                <span>Run Gate 2 & Assemble Test Build</span>
               </>
             )}
           </Button>
@@ -155,24 +167,24 @@ export default function ReleasesPage() {
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
               <DotBadge color="bg-emerald-500 animate-pulse" />
-              <span>LIVE SA VERSION</span>
+              <span>OFFICIAL PRODUCTION RELEASE</span>
             </span>
-            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">Official Production</span>
+            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">superapp-release-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
               {officialVer}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Active master build serving end users with approved MiniApps and verified security baseline.
+              Active master build serving end users with approved ACTIVE MiniApps. Compiled via production pipeline.
             </p>
           </div>
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Status: <strong className="text-emerald-700 dark:text-emerald-400">Deployed</strong></span>
+            <span className="text-slate-500">Status: <strong className="text-emerald-700 dark:text-emerald-400">Live in Production</strong></span>
             <button
               type="button"
               onClick={() => setCompareModalOpen(true)}
-              className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View Bundle</span>
               <ArrowRightIcon className="w-3 h-3" />
@@ -185,20 +197,20 @@ export default function ReleasesPage() {
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-accent-100 text-accent-800 dark:bg-accent-900/60 dark:text-accent-300">
               <DotBadge color="bg-accent-500" />
-              <span>SA NEW UPDATE BUILD</span>
+              <span>CANDIDATE STAGING ASSEMBLY</span>
             </span>
-            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">Candidate / Test</span>
+            <span className="text-[11px] font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
               {releaseVersion}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              New release compilation queued to package {apps.length} approved MiniApp updates and new bridge capabilities.
+              Staging release assembled via Gate 2 to package {apps.length} approved MiniApp updates for sandbox pre-testing.
             </p>
           </div>
           <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Queue: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Eligible</strong></span>
+            <span className="text-slate-500">Staging: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Staged</strong></span>
             <button
               type="button"
               onClick={() => setCompareModalOpen(true)}
@@ -250,11 +262,16 @@ export default function ReleasesPage() {
                 <ShieldIcon className="w-5 h-5 text-accent-500" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100">
-                  Security Gate 2: Release Verification Result
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100">
+                    Candidate Staging Assembly & Gate 2 Verification
+                  </h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
+                    superapp-test-build
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500">
-                  Target: {gate2Result.releaseVersion} • Timestamp: {gate2Result.timestamp}
+                  Target Candidate: {gate2Result.releaseVersion} • Pipeline: Candidate Staging Test Build • Timestamp: {gate2Result.timestamp}
                 </p>
               </div>
             </div>
@@ -297,32 +314,32 @@ export default function ReleasesPage() {
             </div>
           </div>
 
-          {/* APK Build Status & Download Button */}
+          {/* Candidate APK Build Status & Download Button */}
           {gate2Result.apkUrl && (
-            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-accent-500/10 via-brand-500/10 to-emerald-500/10 border border-accent-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-sm">
-                  <DevicePhoneIcon className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-full bg-accent-500 text-slate-950 flex items-center justify-center font-bold text-xl shadow-sm">
+                  <DevicePhoneIcon className="w-5 h-5 text-slate-950" />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    SuperApp Android APK Ready
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
-                      {releaseVersion} • Sonatype Nexus Trusted Registry
+                    SuperApp Candidate Test APK Ready
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
+                      {releaseVersion} (Staging Candidate) • superapp-test-build
                     </span>
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Compiled with approved MiniApps and native bridges. Ready for MA Manager & SA Admin dual testing.
+                    Compiled via <strong>superapp-test-build</strong> pipeline with approved candidate MiniApps and native bridges. Ready for MA Manager & SA Admin dual staging testing.
                   </p>
                 </div>
               </div>
               <a
                 href={gate2Result.apkUrl}
-                download="superapp-debug.apk"
-                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                download={`superapp-${releaseVersion}-arm64.apk`}
+                className="w-full sm:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                <span>Download Test APK (92.8 MB)</span>
+                <span>Download Candidate Test APK (~28 MB ARM64)</span>
               </a>
             </div>
           )}
@@ -408,9 +425,10 @@ export default function ReleasesPage() {
                         {app.integrationMethod}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          {app.status}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <AppStatusBadge app={app} />
+                          {versionStageOf(app) && <VersionStageBadge app={app} />}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link

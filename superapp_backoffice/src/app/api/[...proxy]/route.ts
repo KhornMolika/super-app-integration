@@ -8,6 +8,9 @@ const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_U
 const ALLOWED_ROUTES = [
   'mini-apps',
   'miniapps',
+  'banners',
+  'announcements',
+  'superapp-web',
   'sdk-artifacts',
   'capabilities',
   'permissions',

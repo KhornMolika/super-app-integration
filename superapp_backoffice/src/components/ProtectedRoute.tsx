@@ -3,6 +3,7 @@
 import React, { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { AccessDeniedState } from '@/components/ui/AccessDeniedState';
 
 interface ProtectedRouteProps {
   permission?: string;
@@ -40,6 +41,15 @@ export function ProtectedRoute({
 
   if (!isAllowed) {
     if (fallback) return <>{fallback}</>;
+    if (!redirectOnForbidden) {
+      return (
+        <AccessDeniedState
+          requiredPermission={perm}
+          requiredRole={requiredRole}
+          userRole={role}
+        />
+      );
+    }
     // Omit the UI completely (render nothing) while routing away to Dashboard
     return null;
   }

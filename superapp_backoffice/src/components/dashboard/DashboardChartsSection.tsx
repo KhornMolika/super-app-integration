@@ -34,7 +34,7 @@ export default function DashboardChartsSection({
           description={
             isManager
               ? 'Lifecycle status and integration methods of your registered packages.'
-              : 'Live breakdown of MiniApp statuses, user permissions, and architecture types.'
+              : 'Breakdown of MiniApp lifecycle statuses, user roles, and architecture types.'
           }
           tabs={donutTabs}
         />

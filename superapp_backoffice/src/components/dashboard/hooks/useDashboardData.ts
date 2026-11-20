@@ -22,6 +22,7 @@ import {
   generateOrgStats,
   calculateUserCounts,
 } from '../utils/analytics.utils';
+import { versionStageOf } from '@/components/miniapp-detail/MiniAppStatusBadges';
 
 export function useDashboardData() {
   const { can, role, user } = useAuth();
@@ -123,10 +124,11 @@ export function useDashboardData() {
       const rawOrgs = unwrapData<Organization>(orgsRes);
       setOrganizationsList(rawOrgs);
 
-      // Pending MiniApps needing review
-      const pendingApps = rawApps.filter(
-        (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED',
-      );
+      // Pending MiniApps needing review (working stages)
+      const pendingApps = rawApps.filter((a: any) => {
+        const stage = versionStageOf(a);
+        return stage === 'IN_REVIEW' || stage === 'SUBMITTED';
+      });
 
       // Pending Permission Proposals needing review
       const rawProposals = unwrapData<any>(proposalsRes);
@@ -190,11 +192,23 @@ export function useDashboardData() {
 
   // MA Developer specific counts
   const myPendingAppsCount = useMemo(() => {
-    return miniAppsList.filter((a: any) => ['IN_REVIEW', 'SUBMITTED'].includes(a.status)).length;
+    return miniAppsList.filter((a: any) => {
+      const s = (a.status || '').toUpperCase();
+      const vs = (a.versionStage || '').toUpperCase();
+      return (
+        ['IN_REVIEW', 'SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED', 'TESTING', 'TEST_PASSED', 'BUILDING'].includes(s) ||
+        ['IN_REVIEW', 'SUBMITTED', 'CHANGES_REQUESTED'].includes(vs)
+      );
+    }).length;
   }, [miniAppsList]);
 
   const myPublishedAppsCount = useMemo(() => {
-    return miniAppsList.filter((a: any) => ['APPROVED', 'PUBLISHED', 'ACTIVE'].includes(a.status)).length;
+    return miniAppsList.filter((a: any) => {
+      const appStatus = (a.appStatus || '').toUpperCase();
+      const status = (a.status || '').toUpperCase();
+      const availability = (a.availabilityStatus || '').toUpperCase();
+      return appStatus === 'LIVE' || status === 'LIVE' || status === 'ACTIVE' || availability === 'PRODUCTION';
+    }).length;
   }, [miniAppsList]);
 
   // Analytics datasets

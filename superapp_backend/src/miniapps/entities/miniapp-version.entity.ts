@@ -35,7 +35,7 @@ export enum MiniAppVersionStatus {
   TEST_PASSED = 'TEST_PASSED',
 
   // Released version statuses:
-  /** Current live production version published to end users in the SuperApp catalog. */
+  /** Current active production version published to end users in the SuperApp catalog. Designated as 'Active' to prevent confusion with App-level status 'Live'. */
   ACTIVE = 'ACTIVE',
 
   /** Prior live production release displaced by a newly published active version. Preserved for instant rollback capability. */

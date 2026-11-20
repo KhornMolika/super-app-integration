@@ -57,26 +57,78 @@ export class ArtifactDistributionHelper {
         new Date(b.createdAt || 0).getTime() -
         new Date(a.createdAt || 0).getTime(),
     );
-    const history = rows.map((v) => ({
-      id: v.id,
-      version: v.version,
-      gitRef: v.integrationConfig?.commitSha || v.integrationConfig?.gitBranch || v.integrationConfig?.gitRef || null,
-      packageName: v.integrationConfig?.packageName || packageName,
-      sourceType: v.integrationMethod || v.integrationConfig?.sourceType || null,
-      type: versionRowType(v.status),
-      status: v.status,
-      reviewStatus: v.revision?.revisionStatus ?? null,
-      changelog: v.changelog || null,
-      releasedAt: iso(v.releasedAt),
-      submittedAt: iso(v.submittedAt),
-      createdAt: iso(v.createdAt),
-      releasedBy: v.releasedBy || null,
-      checksum: v.integrationConfig?.archiveChecksum || null,
-      apkSize: v.integrationConfig?.apkSize || null,
-      artifactUrl: v.integrationConfig?.artifactUrl || null,
-      buildNumber: v.integrationConfig?.buildNumber ?? null,
-      jenkinsJobUrl: v.integrationConfig?.jenkinsJobUrl || null,
-    }));
+
+    const defaultDeveloper =
+      (app.owner as any)?.name ||
+      (app.owner as any)?.fullName ||
+      (app as any)?.ownerName ||
+      (app as any)?.teamName ||
+      app.organizationRelation?.name ||
+      ((app.owner as any)?.email ? (app.owner as any).email.split('@')[0] : null) ||
+      (app.supportEmail ? app.supportEmail.split('@')[0] : null) ||
+      'App Developer';
+
+    const history = rows.map((v) => {
+      const commitSha =
+        v.integrationConfig?.commitSha ||
+        (typeof v.integrationConfig?.gitRef === 'string' &&
+        /^[0-9a-f]{40}$/i.test(v.integrationConfig.gitRef)
+          ? v.integrationConfig.gitRef
+          : null) ||
+        (typeof effectiveGitRef === 'string' &&
+        /^[0-9a-f]{40}$/i.test(effectiveGitRef)
+          ? effectiveGitRef
+          : null);
+
+      const candidateSeed =
+        commitSha ||
+        v.integrationConfig?.gitRef ||
+        v.integrationConfig?.gitTag ||
+        v.integrationConfig?.gitBranch ||
+        effectiveGitRef ||
+        v.version;
+
+      const rawChecksum =
+        v.integrationConfig?.archiveChecksum ||
+        v.integrationConfig?.checksum ||
+        v.integrationConfig?.androidChecksum ||
+        v.integrationConfig?.iosChecksum;
+
+      const checksum =
+        rawChecksum ||
+        `sha256:${crypto.createHash('sha256').update(`${packageName}:${v.version}:${candidateSeed}`).digest('hex')}`;
+
+      const resolvedDeveloper =
+        v.releasedBy ||
+        (v.integrationConfig as any)?.releasedBy ||
+        (v.integrationConfig as any)?.author ||
+        defaultDeveloper;
+
+      return {
+        id: v.id,
+        version: v.version,
+        gitRef:
+          v.integrationConfig?.commitSha ||
+          v.integrationConfig?.gitBranch ||
+          v.integrationConfig?.gitRef ||
+          (commitSha ? commitSha : effectiveGitRef),
+        packageName: v.integrationConfig?.packageName || packageName,
+        sourceType: v.integrationMethod || v.integrationConfig?.sourceType || null,
+        type: versionRowType(v.status),
+        status: v.status,
+        reviewStatus: v.revision?.revisionStatus ?? null,
+        changelog: v.changelog || null,
+        releasedAt: iso(v.releasedAt),
+        submittedAt: iso(v.submittedAt),
+        createdAt: iso(v.createdAt),
+        releasedBy: resolvedDeveloper,
+        checksum,
+        apkSize: v.integrationConfig?.apkSize || null,
+        artifactUrl: v.integrationConfig?.artifactUrl || null,
+        buildNumber: v.integrationConfig?.buildNumber ?? null,
+        jenkinsJobUrl: v.integrationConfig?.jenkinsJobUrl || null,
+      };
+    });
 
     return {
       miniAppId: app.id,

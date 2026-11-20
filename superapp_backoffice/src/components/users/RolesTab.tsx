@@ -11,6 +11,7 @@ import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
   getSensitivityBadge,
+  isSystemRole,
 } from './types';
 
 export interface RolesTabProps {
@@ -189,66 +190,57 @@ export function RolesTab({
         </div>
 
         {/* Roles Shelf Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
           {/* Card 0: "All Roles (Compare)" Master Selector */}
           <div
             role="button"
             tabIndex={0}
             onClick={() => setSelectedRoleId('ALL')}
             onKeyDown={(e) => e.key === 'Enter' && setSelectedRoleId('ALL')}
-            className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
+            className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
               selectedRoleId === 'ALL'
-                ? 'bg-brand-50/60 dark:bg-brand-950/20 border-brand-500 dark:border-brand-500 shadow-xs ring-1 ring-brand-500/30'
+                ? 'bg-brand-50/70 dark:bg-brand-950/30 border-brand-500 shadow-xs ring-1 ring-brand-500/30'
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
             }`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                    selectedRoleId === 'ALL'
-                      ? 'bg-brand-600 text-white shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M9 4v16m6-16v16" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                    All Roles
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                    {TOTAL_PERMISSIONS_COUNT} total scopes
-                  </p>
-                </div>
-              </div>
-
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                   selectedRoleId === 'ALL'
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                    ? 'bg-brand-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}
               >
-                {roles.length} Roles
-              </span>
-            </div>
-
-            <div className="mt-3">
-              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-brand-500 w-full" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M9 4v16m6-16v16" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                  All Roles
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                  {TOTAL_PERMISSIONS_COUNT} total scopes
+                </p>
               </div>
             </div>
+
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                selectedRoleId === 'ALL'
+                  ? 'bg-brand-600 text-white border-brand-600'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              {roles.length} Roles
+            </span>
           </div>
 
           {/* Cards for each defined role */}
           {roles.map((role) => {
-            const isSystemRole = ['SUPER_ADMIN', 'ADMIN'].includes(role.name);
+            const isSys = isSystemRole(role.name);
             const theme = getRoleTheme(role.name);
             const permCount = role.permissions?.length || 0;
-            const coveragePercent = Math.round((permCount / TOTAL_PERMISSIONS_COUNT) * 100);
             const isSelected = selectedRoleId === role.id;
 
             return (
@@ -258,97 +250,92 @@ export function RolesTab({
                 tabIndex={0}
                 onClick={() => setSelectedRoleId(isSelected ? 'ALL' : role.id)}
                 onKeyDown={(e) => e.key === 'Enter' && setSelectedRoleId(isSelected ? 'ALL' : role.id)}
-                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
+                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
                   isSelected
-                    ? 'bg-slate-50 dark:bg-slate-800/80 border-brand-500 dark:border-brand-400 shadow-xs ring-1 ring-brand-500/30'
+                    ? 'bg-slate-50 dark:bg-slate-800/80 border-brand-500 shadow-xs ring-1 ring-brand-500/30'
                     : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                {/* Top: Icon + Role Name + Core Actions */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${theme.iconBg} shadow-2xs`}>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
+                {/* Left: Icon + Role Name + Scopes */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${theme.iconBg} shadow-2xs`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
                       <h3 className="font-bold text-xs text-slate-900 dark:text-white truncate">
                         {role.name}
                       </h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        {permCount} / {TOTAL_PERMISSIONS_COUNT} ({coveragePercent}%)
-                      </p>
+                      {isSys && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+                          System
+                        </span>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Actions: Clean & Direct */}
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      title="Configure permissions"
-                      onClick={() => onOpenEditRole(role)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-
-                    <button
-                      type="button"
-                      title="Clone role"
-                      onClick={() => onDuplicateRole(role)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </button>
-
-                    {!isSystemRole && canManage && (
-                      <button
-                        type="button"
-                        title="Delete role"
-                        onClick={() => onDeleteRole(role)}
-                        className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    )}
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      {permCount} / {TOTAL_PERMISSIONS_COUNT} scopes
+                    </p>
                   </div>
                 </div>
 
-                {/* Bottom: Progress bar */}
-                <div className="mt-3">
-                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${theme.bar} transition-all duration-300`}
-                      style={{ width: `${coveragePercent}%` }}
-                    />
-                  </div>
+                {/* Right Actions: Edit, Duplicate, Delete */}
+                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    title="Configure permissions"
+                    onClick={() => onOpenEditRole(role)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    title="Clone role"
+                    onClick={() => onDuplicateRole(role)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+
+                  {!isSys && canManage && (
+                    <button
+                      type="button"
+                      title="Delete role"
+                      onClick={() => onDeleteRole(role)}
+                      className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             );

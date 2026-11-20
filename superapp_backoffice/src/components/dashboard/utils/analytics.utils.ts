@@ -1,6 +1,7 @@
 import { User } from '@/api/users.api';
 import { Organization } from '@/api/organizations.api';
 import { ActivityDataPoint, DonutTab, OrgStatItem } from '../types';
+import { appStatusOf, versionStageOf } from '@/components/miniapp-detail/MiniAppStatusBadges';
 
 /**
  * Generates 90-day activity trend telemetry aggregated by date.
@@ -23,7 +24,10 @@ export function generateActivityTrend(miniAppsList: any[]): ActivityDataPoint[] 
     }).length;
 
     const appRevs = miniAppsList.filter((app) => {
-      if (!['APPROVED', 'PUBLISHED', 'IN_REVIEW', 'ACTIVE'].includes(app.status)) return false;
+      const appStatus = appStatusOf(app);
+      const stage = versionStageOf(app);
+      const isLiveOrReview = appStatus === 'LIVE' || (stage !== null && stage !== 'DRAFT');
+      if (!isLiveOrReview) return false;
       const dStr = app.updatedAt || app.createdAt;
       return dStr ? dStr.startsWith(iso) : false;
     }).length;
@@ -40,6 +44,36 @@ export function generateActivityTrend(miniAppsList: any[]): ActivityDataPoint[] 
 }
 
 /**
+ * Classifies an application into canonical lifecycle groups aligned with appStatusOf and versionStageOf.
+ */
+function getAppLifecycleGroup(app: any): 'LIVE' | 'IN_REVIEW' | 'DRAFT' | 'REJECTED' {
+  const status = appStatusOf(app);
+
+  // 1. Live: officially published to production or active
+  if (status === 'LIVE') {
+    return 'LIVE';
+  }
+
+  // 2. Suspended / Archived
+  if (status === 'SUSPENDED' || status === 'ARCHIVED') {
+    return 'REJECTED';
+  }
+
+  // 3. Stage governance check
+  const stage = versionStageOf(app);
+  if (stage === 'REJECTED' || stage === 'CHANGES_REQUESTED') {
+    return 'REJECTED';
+  }
+
+  if (stage && stage !== 'DRAFT') {
+    return 'IN_REVIEW';
+  }
+
+  // 4. Default: Draft
+  return 'DRAFT';
+}
+
+/**
  * Builds donut chart tabs for lifecycle, integrations, and optionally user roles.
  */
 export function generateDonutTabs(
@@ -48,17 +82,26 @@ export function generateDonutTabs(
   canReadUsers: boolean,
 ): DonutTab[] {
   // 1. App lifecycle breakdown
-  const activeCount = miniAppsList.filter((a) => ['APPROVED', 'PUBLISHED', 'ACTIVE'].includes(a.status)).length;
-  const reviewCount = miniAppsList.filter((a) => ['IN_REVIEW', 'SUBMITTED'].includes(a.status)).length;
-  const draftCount = miniAppsList.filter((a) => a.status === 'DRAFT' || !a.status).length;
-  const rejectedCount = miniAppsList.filter((a) => ['REJECTED', 'SUSPENDED'].includes(a.status)).length;
+  let liveCount = 0;
+  let reviewCount = 0;
+  let draftCount = 0;
+  let rejectedCount = 0;
+
+  miniAppsList.forEach((app) => {
+    const group = getAppLifecycleGroup(app);
+    if (group === 'LIVE') liveCount++;
+    else if (group === 'IN_REVIEW') reviewCount++;
+    else if (group === 'REJECTED') rejectedCount++;
+    else draftCount++;
+  });
 
   const lifecycleTab: DonutTab = {
     id: 'lifecycle',
     label: 'Lifecycle',
     centerLabel: 'MiniApps',
+    footerLabel: 'Active Statuses',
     segments: [
-      { label: 'Published', value: activeCount, color: '#10b981' },
+      { label: 'Live', value: liveCount, color: '#10b981' },
       { label: 'In Review', value: reviewCount, color: '#f59e0b' },
       { label: 'Draft', value: draftCount, color: '#64748b' },
       { label: 'Rejected', value: rejectedCount, color: '#f43f5e' },
@@ -75,6 +118,7 @@ export function generateDonutTabs(
     id: 'integration',
     label: 'Integrations',
     centerLabel: 'Packages',
+    footerLabel: 'Active Architecture Types',
     segments: [
       { label: 'Flutter', value: flutterCount, color: '#06b6d4' },
       { label: 'WebView', value: webviewCount, color: '#3b82f6' },
@@ -100,6 +144,7 @@ export function generateDonutTabs(
       id: 'user_roles',
       label: 'Roles',
       centerLabel: 'Users',
+      footerLabel: 'Active Roles',
       segments: [
         { label: 'MA Developers', value: devs, color: '#6366f1' },
         { label: 'Regulators & Admins', value: admins, color: '#0ea5e9' },

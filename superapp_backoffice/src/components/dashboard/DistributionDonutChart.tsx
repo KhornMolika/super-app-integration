@@ -13,6 +13,7 @@ export interface DonutTab {
   id: string;
   label: string;
   centerLabel: string;
+  footerLabel?: string;
   segments: DonutSegment[];
 }
 
@@ -76,7 +77,7 @@ export default function DistributionDonutChart({
                 {title}
               </h3>
               {description && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-md">
                   {description}
                 </p>
               )}
@@ -240,7 +241,7 @@ export default function DistributionDonutChart({
 
       {/* Consistent Bottom Footer */}
       <div className="pt-4 mt-auto border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-        <span>Active Categories</span>
+        <span>{currentTab?.footerLabel || (currentTab?.label ? `Active ${currentTab.label}` : 'Active Statuses')}</span>
         <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
           {activeSegmentsCount} of {segments.length} reported

@@ -295,7 +295,7 @@ export function useMiniAppLifecycle({
       toast.success(msg, 'Lifecycle Updated');
       fetchApp();
       if ((action === 'approve' || action === 'submit') && setActiveTab) {
-        setActiveTab('report');
+        setActiveTab('versions');
       }
     } catch (err: any) {
       toast.error(err?.message || `Failed to execute ${action}.`, 'Action Failed');

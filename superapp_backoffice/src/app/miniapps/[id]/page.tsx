@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useMemo } from 'react';
+import React, { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -35,8 +35,6 @@ const TAB_TITLES: Record<MiniAppTabType, string> = {
   integration: 'Technical Integration',
   permissions: 'Capabilities',
   versions: 'Versions & Releases',
-  report: 'Security & Compliance',
-  runs: 'Scans & Builds',
   activity: 'Activity & Audit',
 };
 
@@ -61,30 +59,37 @@ function ManageMiniAppContent() {
       'integration',
       'permissions',
       'versions',
-      'report',
-      'runs',
       'activity',
     ],
     []
   );
 
-  const getValidTab = (tabStr: string | null | undefined): MiniAppTabType => {
+  const getValidTab = useCallback((tabStr: string | null | undefined): MiniAppTabType => {
     return tabStr && validTabs.includes(tabStr as MiniAppTabType)
       ? (tabStr as MiniAppTabType)
       : 'overview';
-  };
+  }, [validTabs]);
 
   // Local state for instantaneous 0ms tab transitions
-  const [activeTab, setActiveTabState] = useState<MiniAppTabType>(() =>
-    getValidTab(searchParams?.get('tab'))
-  );
+  const [activeTab, setActiveTabState] = useState<MiniAppTabType>(() => {
+    const rawTab = searchParams?.get('tab');
+    if (rawTab === 'report' || rawTab === 'runs') {
+      return 'overview';
+    }
+    return getValidTab(rawTab);
+  });
 
   useEffect(() => {
-    const fromUrl = getValidTab(searchParams?.get('tab'));
+    const rawTab = searchParams?.get('tab');
+    if (rawTab === 'report' || rawTab === 'runs') {
+      router.replace(`/miniapps/${id}/security`);
+      return;
+    }
+    const fromUrl = getValidTab(rawTab);
     if (fromUrl !== activeTab) {
       setActiveTabState(fromUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, id, router, getValidTab, activeTab]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -93,7 +98,7 @@ function ManageMiniAppContent() {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [getValidTab]);
 
   const setActiveTab = (tab: MiniAppTabType) => {
     if (tab === activeTab) return;
@@ -257,7 +262,7 @@ function ManageMiniAppContent() {
           suspension={formData.suspension}
           archiveRequest={formData.archiveRequest}
           onLifecycleAction={handleLifecycleAction}
-          onOpenReviewDiff={() => setIsReviewDiffOpen(true)}
+          onOpenReviewDiff={() => router.push(`/miniapps/${id}/review`)}
           pendingRevision={formData.pendingRevision}
           buildStages={formData.buildStages}
           buildStatus={formData.buildStatus}

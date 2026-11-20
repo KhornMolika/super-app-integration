@@ -7,6 +7,17 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
 import { ArrowRightIcon, DevicePhoneIcon, BugIcon } from '@/components/ui/Icons';
 import DownloadApkModal from '@/components/ui/DownloadApkModal';
+import PreviewModal from '@/components/ui/PreviewModal';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import {
+  Eye,
+  Smartphone,
+  Activity,
+  ShieldCheck,
+  Users,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import {
   miniappsApi,
@@ -270,7 +281,8 @@ function MiniAppsContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { role, hasRole } = useAuth();
+  const { role, hasRole, can } = useAuth();
+  const confirm = useConfirm();
 
   // Admins choose between every app in their reach and their own; everyone
   // else always sees the apps they own or collaborate on.
@@ -288,6 +300,7 @@ function MiniAppsContent() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([]);
   const [apkVersion, setApkVersion] = useState<string | null>(null);
+  const [previewApp, setPreviewApp] = useState<MiniApp | null>(null);
 
   // Any change other than paging returns to page 1
   const update = useCallback((patch: Partial<ListState>) => {
@@ -369,6 +382,99 @@ function MiniAppsContent() {
   useEffect(() => {
     fetchApps();
   }, [fetchApps, role]);
+
+  const handleDeleteMiniApp = useCallback(
+    async (app: MiniApp) => {
+      const confirmed = await confirm({
+        title: 'Delete MiniApp',
+        message: `Are you sure you want to permanently delete "${app.name}"? This action cannot be undone.`,
+        confirmText: 'Delete MiniApp',
+        cancelText: 'Cancel',
+        confirmVariant: 'danger',
+      });
+      if (!confirmed) return;
+
+      try {
+        await miniappsApi.delete(app.id);
+        toast.success(`MiniApp "${app.name}" deleted successfully`, 'Deleted');
+        fetchApps();
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to delete MiniApp', 'Delete Failed');
+      }
+    },
+    [confirm, fetchApps],
+  );
+
+  const getActionItems = useCallback(
+    (app: MiniApp) => {
+      const phase = getMiniAppPhase(app as any);
+      const isDeletable =
+        can('miniapp:delete') &&
+        (['draft', 'build-failed', 'rejected'].includes(phase) ||
+          ['DRAFT', 'REJECTED'].includes((app.status || '').toUpperCase()) ||
+          isPlatformAdmin);
+      const canUpdate = can('miniapp:update');
+
+      return [
+        {
+          label: 'View',
+          href: `/miniapps/${app.id}`,
+          icon: <Eye className="w-4 h-4 text-slate-400" />,
+        },
+        {
+          label: 'Sandbox Preview',
+          icon: <Smartphone className="w-4 h-4 text-slate-400" />,
+          onClick: () => setPreviewApp(app),
+        },
+        {
+          label: 'Pipeline & Scans',
+          href: `/miniapps/${app.id}?tab=runs`,
+          icon: <Activity className="w-4 h-4 text-slate-400" />,
+        },
+        {
+          label: 'Security Report',
+          href: `/miniapps/${app.id}?tab=report`,
+          icon: <ShieldCheck className="w-4 h-4 text-slate-400" />,
+        },
+        {
+          label: 'Team & Access',
+          href: `/miniapps/${app.id}?tab=team`,
+          icon: <Users className="w-4 h-4 text-slate-400" />,
+        },
+        {
+          label: 'Download test build',
+          hidden: !['testing', 'test-passed', 'live'].includes(phase),
+          icon: <DevicePhoneIcon className="w-4 h-4 text-slate-400" />,
+          onClick: () =>
+            setApkVersion(
+              (app as any).activeTestVersion ||
+                app.integrationConfig?.superAppTestVersion ||
+                'v0.2.0',
+            ),
+        },
+        {
+          label: 'Issues',
+          href: `/issues?appId=${app.id}`,
+          icon: <BugIcon className="w-4 h-4 text-slate-400" />,
+        },
+        {
+          label: 'Edit Configuration',
+          href: `/miniapps/${app.id}?edit=true`,
+          icon: <Pencil className="w-4 h-4 text-slate-400" />,
+          divider: true,
+          hidden: !canUpdate,
+        },
+        {
+          label: 'Delete MiniApp',
+          variant: 'danger' as const,
+          icon: <Trash2 className="w-4 h-4 text-rose-500" />,
+          hidden: !isDeletable,
+          onClick: () => handleDeleteMiniApp(app),
+        },
+      ];
+    },
+    [can, isPlatformAdmin, handleDeleteMiniApp],
+  );
 
   const columns: DataTableColumn<MiniApp>[] = useMemo(
     () => [
@@ -531,40 +637,17 @@ function MiniAppsContent() {
         width: 'w-[2%]',
         className: 'text-right',
         sortable: false,
-        cell: (app) => {
-          const phase = getMiniAppPhase(app as any);
-          return (
-            <div onClick={(e) => e.stopPropagation()} className="flex justify-end">
-              <ActionMenu
-                ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
-                items={[
-                  {
-                    label: 'Open',
-                    href: `/miniapps/${app.id}`,
-                    icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
-                  },
-                  {
-                    label: 'Download test build',
-                    hidden: !['testing', 'test-passed', 'live'].includes(phase),
-                    icon: <DevicePhoneIcon className="w-4 h-4 text-slate-400" />,
-                    onClick: () =>
-                      setApkVersion(
-                        (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.2.0',
-                      ),
-                  },
-                  {
-                    label: 'Issues',
-                    href: `/issues?appId=${app.id}`,
-                    icon: <BugIcon className="w-4 h-4 text-slate-400" />,
-                  },
-                ]}
-              />
-            </div>
-          );
-        },
+        cell: (app) => (
+          <div onClick={(e) => e.stopPropagation()} className="flex justify-end">
+            <ActionMenu
+              ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
+              items={getActionItems(app)}
+            />
+          </div>
+        ),
       },
     ],
-    [],
+    [getActionItems],
   );
 
   const filters = [
@@ -721,27 +804,7 @@ function MiniAppsContent() {
                   <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <ActionMenu
                       ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
-                      items={[
-                        {
-                          label: 'Open',
-                          href: `/miniapps/${app.id}`,
-                          icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
-                        },
-                        {
-                          label: 'Download test build',
-                          hidden: !['testing', 'test-passed', 'live'].includes(phase),
-                          icon: <DevicePhoneIcon className="w-4 h-4 text-slate-400" />,
-                          onClick: () =>
-                            setApkVersion(
-                              (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.2.0',
-                            ),
-                        },
-                        {
-                          label: 'Issues',
-                          href: `/issues?appId=${app.id}`,
-                          icon: <BugIcon className="w-4 h-4 text-slate-400" />,
-                        },
-                      ]}
+                      items={getActionItems(app)}
                     />
                   </div>
                 </div>
@@ -776,6 +839,44 @@ function MiniAppsContent() {
         onClose={() => setApkVersion(null)}
         defaultVersion={apkVersion || 'v0.2.0'}
       />
+
+      {previewApp && (
+        <PreviewModal
+          isOpen={!!previewApp}
+          onClose={() => setPreviewApp(null)}
+          url={
+            previewApp.integrationMethod === 'WEBVIEW'
+              ? (previewApp as any).integrationConfigWebView?.productionUrl ||
+                (previewApp as any).entryUrl ||
+                ''
+              : previewApp.integrationMethod === 'DEEP_LINK'
+              ? (previewApp as any).integrationConfigDeepLink?.urlScheme ||
+                (previewApp as any).integrationConfig?.urlScheme ||
+                'app://open'
+              : (previewApp as any).integrationConfigFlutter?.sourceType === 'GIT'
+              ? (previewApp as any).integrationConfigFlutter?.gitUrl || ''
+              : `${(process.env.NEXT_PUBLIC_NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group/api/packages/${(previewApp as any).integrationConfigFlutter?.packageName || previewApp.name}`
+          }
+          title={previewApp.name}
+          version={
+            (previewApp as any).activeTestVersion ||
+            previewApp.integrationConfig?.superAppTestVersion ||
+            (previewApp as any).integrationConfigFlutter?.packageVersion ||
+            (previewApp as any).integrationConfigFlutter?.versionConstraint ||
+            (previewApp as any).version ||
+            'v1.0.0'
+          }
+          apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent((previewApp as any).activeTestVersion || previewApp.integrationConfig?.superAppTestVersion || 'v0.0.1')}`}
+          appId={previewApp.appId || previewApp.id}
+          status={previewApp.status}
+          isFlutter={previewApp.integrationMethod === 'FLUTTER_PACKAGE'}
+          packageName={
+            (previewApp as any).integrationConfigFlutter?.packageName ||
+            (previewApp as any).integrationConfig?.packageName ||
+            previewApp.name
+          }
+        />
+      )}
     </div>
   );
 }

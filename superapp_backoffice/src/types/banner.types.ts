@@ -35,4 +35,4 @@ export interface CreateBannerPayload {
   targetAudience?: BannerAudience;
 }
 
-export interface UpdateBannerPayload extends Partial<CreateBannerPayload> {}
+export type UpdateBannerPayload = Partial<CreateBannerPayload>;

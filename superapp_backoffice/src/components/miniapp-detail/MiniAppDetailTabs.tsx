@@ -8,7 +8,6 @@ import {
   Code2,
   KeyRound,
   History,
-  ShieldCheck,
   Activity,
   AlertCircle,
 } from 'lucide-react';
@@ -20,8 +19,6 @@ export type MiniAppTabType =
   | 'integration'
   | 'permissions'
   | 'versions'
-  | 'report'
-  | 'runs'
   | 'activity';
 
 export interface MiniAppDetailTabsProps {
@@ -77,7 +74,6 @@ export default function MiniAppDetailTabs({
     { id: 'integration', label: 'Integration', icon: Code2 },
     { id: 'permissions', label: 'Capabilities', icon: KeyRound },
     { id: 'versions', label: 'Versions', icon: History },
-    { id: 'report', label: 'Security Scan', icon: ShieldCheck },
     { id: 'activity', label: 'Activity Log', icon: Activity },
   ];
 
@@ -123,23 +119,6 @@ export default function MiniAppDetailTabs({
                 <span className="flex items-center gap-0.5" title="Section contains validation errors">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                   <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                </span>
-              )}
-
-              {/* Security Scan Status Pill */}
-              {tab.id === 'report' && validationStatus && (
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 border ${
-                    validationStatus === 'PASSED'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                      : validationStatus === 'RUNNING'
-                      ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800 animate-pulse'
-                      : validationStatus === 'FAILED'
-                      ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                  }`}
-                >
-                  {validationStatus === 'RUNNING' ? 'SCANNING' : validationStatus}
                 </span>
               )}
             </button>

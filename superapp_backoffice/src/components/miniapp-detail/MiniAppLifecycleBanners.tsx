@@ -226,7 +226,7 @@ export default function MiniAppLifecycleBanners({
                   Pending Staged Revision
                 </h4>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                  Live Version Active in SuperApp
+                  Active Version Running in SuperApp
                 </span>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
                   Revision {pendingRevision.revisionStatus || 'IN_REVIEW'}
@@ -320,7 +320,7 @@ export default function MiniAppLifecycleBanners({
                 </h4>
                 {isUpdateProposal && currentReleaseVersion && (
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                    Live v{currentReleaseVersion} Active
+                    Active v{currentReleaseVersion}
                   </span>
                 )}
                 <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
@@ -337,7 +337,7 @@ export default function MiniAppLifecycleBanners({
                 {actions.scanFailed
                   ? 'The automated security scan FAILED, so this cannot be approved. Review the findings in the security report, then Request Changes so the developer can fix them, or Reject.'
                   : isUpdateProposal
-                    ? `Live version v${currentReleaseVersion || '1.0.0'} is currently active and unaffected. Review the configuration, permissions, and security report for candidate version ${draftVersion || 'update'} before approving.`
+                    ? `Active version v${currentReleaseVersion || '1.0.0'} is currently running and unaffected. Review the configuration, permissions, and security report for candidate version ${draftVersion || 'update'} before approving.`
                     : 'Automated security validation has PASSED. Review the initial configuration, permissions, and security report to approve for Sandbox Testing.'}
               </p>
             </div>

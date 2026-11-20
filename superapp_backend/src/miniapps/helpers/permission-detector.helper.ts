@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { GitIntegrationService } from '../../integrations/git/git-integration.service';
 import { GitLabProvider } from '../../integrations/git/providers/gitlab.provider';
 import * as YAML from 'yaml';
 
@@ -13,7 +14,10 @@ export interface DetectedPermissionResult {
 export class PermissionDetectorHelper {
   private readonly logger = new Logger(PermissionDetectorHelper.name);
 
-  constructor(@Optional() private readonly gitlabProvider?: GitLabProvider) {}
+  constructor(
+    @Optional() private readonly gitIntegrationService?: GitIntegrationService,
+    @Optional() private readonly gitlabProvider?: GitLabProvider,
+  ) {}
 
   /**
    * Automatically discovers required native permissions from MiniApp endpoint,
@@ -84,21 +88,31 @@ export class PermissionDetectorHelper {
       }
     };
 
-    // 0. Check Git repository if gitUrl is provided (fetches pubspec.yaml from GitLab branch main or specified branch)
-    if (body.gitUrl && body.gitUrl.trim() && this.gitlabProvider) {
+    // 0. Check Git repository if gitUrl is provided (fetches pubspec.yaml from Git repository)
+    if (
+      body.gitUrl &&
+      body.gitUrl.trim() &&
+      (this.gitIntegrationService || this.gitlabProvider)
+    ) {
       try {
         const branch = body.gitBranch?.trim() || 'main';
         const targetPath = body.gitPath?.trim()
           ? `${body.gitPath.trim().replace(/^\/+|\/+$/g, '')}/pubspec.yaml`
           : 'pubspec.yaml';
         this.logger.log(
-          `Auto-detecting permissions from GitLab repository '${body.gitUrl}' (branch: ${branch}, file: ${targetPath})`,
+          `Auto-detecting permissions from Git repository '${body.gitUrl}' (branch: ${branch}, file: ${targetPath})`,
         );
-        const pubspecRaw = await this.gitlabProvider.getFileContent(
-          body.gitUrl.trim(),
-          targetPath,
-          branch,
-        );
+        const pubspecRaw = this.gitIntegrationService
+          ? await this.gitIntegrationService.getFileContent(
+              body.gitUrl.trim(),
+              targetPath,
+              branch,
+            )
+          : await this.gitlabProvider!.getFileContent(
+              body.gitUrl.trim(),
+              targetPath,
+              branch,
+            );
         if (pubspecRaw) {
           const parsed = YAML.parse(pubspecRaw);
           const pkgDeps = parsed?.dependencies || {};
@@ -106,11 +120,14 @@ export class PermissionDetectorHelper {
             pkgDeps,
             body.name || parsed?.name,
           );
+          const providerLabel = body.gitUrl.toLowerCase().includes('github')
+            ? 'GitHub'
+            : 'GitLab';
           for (const item of detectedFromGit) {
             addPerm(
               item.type,
               item.purpose,
-              `GitLab (${branch}): ${item.source}`,
+              `${providerLabel} (${branch}): ${item.source}`,
               'HIGH',
             );
           }

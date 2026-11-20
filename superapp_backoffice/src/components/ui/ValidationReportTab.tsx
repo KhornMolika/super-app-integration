@@ -1019,7 +1019,7 @@ export default function ValidationReportTab({
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 print:border-none print:shadow-none print:p-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800 print:hidden">
             <Link
-              href={`/miniapps/${miniApp.id}?tab=report&version=${encodeURIComponent(selectedVersion || '')}`}
+              href={`/miniapps/${miniApp.id}`}
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -1145,11 +1145,10 @@ export default function ValidationReportTab({
             {!isStandalonePage && (
               <Link
                 href={`/miniapps/${miniApp.id}/security?version=${encodeURIComponent(selectedVersion || '')}`}
-                target="_blank"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors"
-                title="Open dedicated shareable and printable report page"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                title="Open dedicated security report page"
               >
-                <ExternalLinkIcon className="w-3.5 h-3.5 text-brand-500" />
+                <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
                 <span>Full Report Page</span>
               </Link>
             )}

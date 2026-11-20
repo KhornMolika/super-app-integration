@@ -81,6 +81,26 @@ export const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
 export const ALL_FLAT_PERMISSIONS = PERMISSION_GROUPS.flatMap((g) => g.permissions);
 export const TOTAL_PERMISSIONS_COUNT = ALL_FLAT_PERMISSIONS.length;
 
+export const SYSTEM_ROLE_NAMES = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'MA_DEVELOPER',
+  'STAFF',
+] as const;
+
+export const isSystemRole = (roleName?: string): boolean => {
+  if (!roleName) return false;
+  const upper = roleName.toUpperCase().trim();
+  return (
+    upper === 'SUPER_ADMIN' ||
+    upper === 'ADMIN' ||
+    upper === 'MA_DEVELOPER' ||
+    upper === 'MINI_APP_DEVELOPER' ||
+    upper === 'DEVELOPER' ||
+    upper === 'STAFF'
+  );
+};
+
 // Helper styling for roles - defined at module level
 export const getRoleTheme = (roleName: string) => {
   switch (roleName) {

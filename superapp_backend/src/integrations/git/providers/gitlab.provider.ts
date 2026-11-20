@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as YAML from 'yaml';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { execFileSync } from 'child_process';
 import {
   FlutterPackageValidation,
@@ -285,7 +288,20 @@ export class GitLabProvider implements GitProvider {
       }
     }
 
-    // 2. Fetch directly from the remote GitLab repository via Git transport
+    // 2. Direct public raw URL fetch for GitLab projects (works without git CLI)
+    try {
+      const rawUrl = `https://${parsed.host}/${parsed.fullName}/-/raw/${encodeURIComponent(targetRef)}/${filePath.replace(/^\//, '')}`;
+      const rawRes = await fetch(rawUrl, {
+        headers: effectiveToken ? { 'PRIVATE-TOKEN': effectiveToken } : {},
+      });
+      if (rawRes.ok) {
+        return await rawRes.text();
+      }
+    } catch {
+      // Fall through to Git transport
+    }
+
+    // 3. Fetch directly from the remote GitLab repository via Git transport
     // (strictly from the remote repository URL, no local directory fallback)
     return this.getFileContentViaGit(
       parsed.rawUrl || urlOrSlug,
@@ -303,13 +319,18 @@ export class GitLabProvider implements GitProvider {
     const targetRef = ref || 'main';
     const normalizedPath = filePath.replace(/^\//, '');
 
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitlab-fetch-'));
     try {
       this.logger.log(
         `Fetching '${normalizedPath}' directly from GitLab remote (${cleanRepoUrl}) on ref '${targetRef}'...`,
       );
 
+      // Initialize a temporary git repository to fetch into
+      execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'pipe' });
+
       // Perform a shallow fetch of the ref directly from the remote GitLab repository
       execFileSync('git', ['fetch', cleanRepoUrl, targetRef, '--depth=1'], {
+        cwd: tmpDir,
         encoding: 'utf8',
         stdio: 'pipe',
         timeout: 25000,
@@ -324,6 +345,7 @@ export class GitLabProvider implements GitProvider {
         'git',
         ['show', `FETCH_HEAD:${normalizedPath}`],
         {
+          cwd: tmpDir,
           encoding: 'utf8',
           stdio: 'pipe',
           timeout: 5000,
@@ -338,6 +360,10 @@ export class GitLabProvider implements GitProvider {
       throw new Error(
         `File '${normalizedPath}' not found in GitLab project '${cleanRepoUrl}' (ref: ${targetRef}): ${gitErr.message}`,
       );
+    } finally {
+      try {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      } catch {}
     }
   }
 

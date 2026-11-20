@@ -782,10 +782,10 @@ export class JenkinsService {
    * poll() answers pending (still queued / not found yet), building, or finished with the
    * result; the console log is read only once the run has finished.
    */
-  trackTestBuild(options: { queueId?: number; releaseVersion: string; triggeredAt?: number }): {
+  trackTestBuild(options: { queueId?: number; releaseVersion: string; triggeredAt?: number; jobName?: string }): {
     poll: () => Promise<TrackedBuildStatus>;
   } {
-    const job = 'superapp-test-build';
+    const job = options.jobName || 'superapp-test-build';
     const since = (options.triggeredAt ?? Date.now()) - 2 * 60_000; // allows for clock skew with Jenkins
     let buildNumber: number | undefined;
     let queueGone = !options.queueId;

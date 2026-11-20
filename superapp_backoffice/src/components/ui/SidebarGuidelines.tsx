@@ -14,6 +14,7 @@ export function SidebarGuidelines() {
     <div className={`${isCollapsed ? 'p-2' : 'p-3.5'} mt-auto transition-all duration-300 border-t border-brand-900/60 dark:border-slate-900`}>
       <Link
         href="/guidelines"
+        prefetch={false}
         title={isCollapsed ? 'Developer Guidelines & Standards' : undefined}
         className={`group flex items-center ${
           isCollapsed ? 'justify-center p-2.5' : 'p-3 gap-3'

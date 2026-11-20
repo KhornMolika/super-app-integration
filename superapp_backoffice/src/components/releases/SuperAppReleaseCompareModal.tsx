@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { superAppApi } from '@/api';
@@ -264,7 +264,7 @@ export function SuperAppReleaseCompareModal({
                       {diffData?.baseRelease?.version}
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
-                      Mode: <strong className="text-slate-700 dark:text-slate-300 uppercase">{diffData?.baseRelease?.buildMode || 'release'}</strong> • Size: <strong>{diffData?.baseRelease?.apkSize || '89.4 MB'}</strong>
+                      Mode: <strong className="text-slate-700 dark:text-slate-300 uppercase">{diffData?.baseRelease?.buildMode || 'release'}</strong> • Size: <strong>{diffData?.baseRelease?.apkSize || '~25 MB'}</strong>
                     </p>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ export function SuperAppReleaseCompareModal({
                       {diffData?.targetRelease?.version}
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
-                      Mode: <strong className="text-accent-700 dark:text-accent-300 uppercase">{diffData?.targetRelease?.buildMode || 'debug'}</strong> • Size: <strong>{diffData?.targetRelease?.apkSize || '92.8 MB'}</strong>
+                      Mode: <strong className="text-accent-700 dark:text-accent-300 uppercase">{diffData?.targetRelease?.buildMode || 'debug'}</strong> • Size: <strong>{diffData?.targetRelease?.apkSize || '~28 MB'}</strong>
                     </p>
                   </div>
                 </div>

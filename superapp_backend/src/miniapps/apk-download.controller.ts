@@ -63,11 +63,12 @@ export class ApkDownloadController {
       ? Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')
       : '';
 
-    const primaryFilename = isRelease ? 'app-release.apk' : 'app-release.apk';
+    const primaryFilename = isRelease ? 'app-release.apk' : 'app-debug.apk';
     const altFilename = 'app-debug.apk';
 
     const candidateUrls = [
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${standardizedFilename}`,
+      `${nexusBase}/repository/${repoName}/superapp/${normVer}/${standardizedFilename.replace(/\.apk$/, '-arm64-v8a.apk')}`,
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${primaryFilename}`,
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${altFilename}`,
       `${nexusBase}/repository/${repoName}/superapp/latest/${primaryFilename}`,
