@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal, PlayCircle, ArrowLeft, Layers } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, ArrowLeft, Layers, Table } from 'lucide-react';
 import { miniappsApi } from '@/api';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
@@ -2427,9 +2427,9 @@ export default function ValidationReportTab({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg border ${
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg border shrink-0 ${
                   valStatus === 'PASSED'
                     ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
                     : valStatus === 'FAILED'
@@ -2444,59 +2444,98 @@ export default function ValidationReportTab({
                     <ShieldIcon className="w-5 h-5" />
                   )}
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Security & Compliance Attestation Report</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
-                      valStatus === 'PASSED'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                        : valStatus === 'FAILED'
-                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                    }`}>
-                      {valStatus || 'PENDING'}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold">
-                      {score ?? '--'}/100 Score
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                      Security & Compliance Report
+                    </h3>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                        valStatus === 'PASSED'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                          : valStatus === 'FAILED'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          valStatus === 'PASSED' ? 'bg-emerald-500' : valStatus === 'FAILED' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`} />
+                        {valStatus || 'PENDING'}
+                      </span>
+                      <span className="inline-flex items-center text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
+                        Score: <span className="ml-1 text-slate-900 dark:text-white">{score ?? '--'}/100</span>
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
                     Target: {miniApp.appId || miniApp.id} v{selectedVersion || miniApp.currentReleaseVersion || '1.0.0'} • Generated: {report?.completedAt ? new Date(report.completedAt).toLocaleString() : 'N/A'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowRawReportJson(!showRawReportJson)}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
-                >
-                  <CodeIcon className="w-3.5 h-3.5" />
-                  <span>{showRawReportJson ? 'View Table' : 'Raw JSON'}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDownloadAuditJson}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
-                >
-                  <DownloadIcon className="w-3.5 h-3.5" />
-                  <span>Download JSON</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDownloadScanReportMarkdown}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Download (.md)</span>
-                </Button>
+
+              {/* Action Controls: Segmented View Switcher + Export Menu + Close */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Segmented View Switch: Table vs Raw JSON */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowRawReportJson(false)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      !showRawReportJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawReportJson(true)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      showRawReportJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <CodeIcon className="w-3.5 h-3.5" />
+                    <span>Raw JSON</span>
+                  </button>
+                </div>
+
+                {/* Unified Export Menu */}
+                <ActionMenu
+                  align="right"
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-colors"
+                    >
+                      <DownloadIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <span>Export</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    </button>
+                  }
+                  items={[
+                    {
+                      label: 'Download Report (.json)',
+                      icon: <DownloadIcon className="w-4 h-4 text-brand-600" />,
+                      onClick: handleDownloadAuditJson,
+                    },
+                    {
+                      label: 'Download Report (.md)',
+                      icon: <FileText className="w-4 h-4 text-brand-600" />,
+                      onClick: handleDownloadScanReportMarkdown,
+                    },
+                  ]}
+                />
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
                 <button
                   type="button"
                   onClick={() => setShowReportModal(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   aria-label="Close modal"
                 >
                   <XIcon className="w-5 h-5" />
@@ -2768,46 +2807,72 @@ export default function ValidationReportTab({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50 shrink-0">
                   <ClipboardCheckIcon className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>CycloneDX 1.5 Software Bill of Materials (SBOM)</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                      CycloneDX 1.5 SBOM
+                    </h3>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold shrink-0">
                       {sbomComponents.length} Pkgs
                     </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
                     Serial: {sbom.serialNumber || 'urn:uuid:cyclonedx-manifest'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowRawSbomJson(!showRawSbomJson)}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
-                >
-                  <CodeIcon className="w-3.5 h-3.5" />
-                  <span>{showRawSbomJson ? 'View Table' : 'Raw JSON'}</span>
-                </Button>
+
+              {/* Action Controls: Segmented View Switcher + Export + Close */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Segmented View Switch: Table vs Raw JSON */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowRawSbomJson(false)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      !showRawSbomJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawSbomJson(true)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      showRawSbomJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <CodeIcon className="w-3.5 h-3.5" />
+                    <span>Raw JSON</span>
+                  </button>
+                </div>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleExportSbomJson}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
+                  className="text-xs px-2.5 py-1.5 h-8 flex items-center gap-1.5 shadow-xs"
                 >
-                  <DownloadIcon className="w-3.5 h-3.5" />
-                  <span>Download JSON</span>
+                  <DownloadIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span>Export JSON</span>
                 </Button>
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
                 <button
                   type="button"
                   onClick={() => setShowSbomModal(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   aria-label="Close modal"
                 >
                   <XIcon className="w-5 h-5" />
