@@ -488,7 +488,7 @@ export class NexusIntegrationService {
       const entryName = entry.entryName.replace(/\\/g, '/');
       const lower = entryName.toLowerCase();
 
-      // Skip build caches, ide files, and binaries
+      // Skip build caches, ide files, example apps, and binaries
       if (
         lower.startsWith('build/') ||
         lower.startsWith('.dart_tool/') ||
@@ -496,9 +496,13 @@ export class NexusIntegrationService {
         lower.startsWith('.gradle/') ||
         lower.startsWith('.idea/') ||
         lower.startsWith('.vscode/') ||
+        lower.startsWith('example/') ||
+        lower.startsWith('examples/') ||
         lower.includes('/.gradle/') ||
         lower.includes('/.dart_tool/') ||
         lower.includes('/build/') ||
+        lower.includes('/example/') ||
+        lower.includes('/examples/') ||
         lower.endsWith('.apk') ||
         lower.endsWith('.aar') ||
         lower.endsWith('.ipa') ||

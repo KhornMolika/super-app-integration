@@ -134,10 +134,10 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
 
   const nexusState: StepState = published
     ? 'done'
-    : publishError
-    ? 'failed'
     : scanState !== 'done'
     ? 'waiting'
+    : publishError
+    ? 'failed'
     : busy
     ? 'running'
     : 'waiting';

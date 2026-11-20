@@ -386,7 +386,7 @@ pipeline {
                                 -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "${FLUTTER_IMAGE:-ghcr.io/cirruslabs/flutter:3.44.0}" bash -c '
                                     trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE 2>/dev/null || true" EXIT
                                     dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN >/dev/null 2>&1 || true
-                                    flutter pub get
+                                    flutter pub get --no-example || flutter pub get
                                 ' > "$S/pub-get.log" 2>&1 || tail -n 15 "$S/pub-get.log" > "$S/deps-unresolved.txt"
                             [ -f "$S/deps-unresolved.txt" ] && { echo "flutter pub get failed:"; cat "$S/deps-unresolved.txt"; }
                         fi

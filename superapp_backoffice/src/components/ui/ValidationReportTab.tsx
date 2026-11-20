@@ -735,10 +735,10 @@ export default function ValidationReportTab({
     valStatus === 'PASSED' ? 'done' : valStatus === 'FAILED' ? 'failed' : isScanningActive ? 'running' : 'waiting';
   const nexusStepState = published
     ? 'done'
-    : publishError
-    ? 'failed'
     : valStatus !== 'PASSED'
     ? 'waiting'
+    : publishError
+    ? 'failed'
     : 'waiting';
 
   const handleDownloadScanReportMarkdown = () => {
