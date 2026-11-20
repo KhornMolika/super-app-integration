@@ -331,9 +331,28 @@ export class ValidationCallbackController {
           3 * count('MEDIUM') -
           count('LOW'),
       );
-      finalStatus = Object.values(finalChecks || {}).every((c: any) => c.passed)
+      finalStatus = (Object.values(finalChecks || {}).every((c: any) => c.passed) && count('CRITICAL') === 0 && count('HIGH') === 0)
         ? 'PASSED'
         : 'FAILED';
+    }
+
+    const hasBlockingFindings = finalFindings.some(
+      (f: any) =>
+        (f.severity || '').toUpperCase() === 'CRITICAL' ||
+        (f.severity || '').toUpperCase() === 'HIGH',
+    );
+    const hasFailedCheck = Object.values(finalChecks || {}).some(
+      (c: any) => c.passed === false,
+    );
+    const hasBlockingIssues = (app.issues || []).some(
+      (iss: any) =>
+        (iss.severity || '').toUpperCase() === 'CRITICAL' ||
+        ((iss.severity || '').toUpperCase() === 'HIGH' && iss.type === 'VALIDATION_ERROR'),
+    );
+
+    if (hasBlockingFindings || hasFailedCheck || hasBlockingIssues) {
+      finalStatus = 'FAILED';
+      finalScore = Math.min(finalScore ?? 45, 45);
     }
 
     app.validationReport = {

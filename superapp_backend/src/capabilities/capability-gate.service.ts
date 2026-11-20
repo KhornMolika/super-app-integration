@@ -47,7 +47,7 @@ export interface CapabilityAvailability {
 
 export interface CapabilityGateFinding {
   id: string;
-  severity: 'MEDIUM' | 'LOW';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   category: string;
   title: string;
   description: string;
@@ -167,7 +167,7 @@ export function capabilityFindings(availability: CapabilityAvailability): Capabi
       c.required
         ? {
             id: `CAP_UNSUPPORTED_${c.key.toUpperCase()}`,
-            severity: 'MEDIUM' as const,
+            severity: 'HIGH' as const,
             category: 'Capability Compliance',
             title: `Required capability "${c.key}" is unavailable: Mini App will not be launchable`,
             description: `The Mini App marks "${c.key}" as required, and it ${describe(c)}. Registration continues, but the Mini App stays hidden from launch (${availability.unavailableReason}) until the host supports it.`,
@@ -235,16 +235,17 @@ export class CapabilityGateService {
 
     const total = availability.capabilities.length;
     const unsupported = availability.capabilities.filter((c) => !c.supported);
-    stages.capability_gate.status = 'COMPLETED';
+    const hasBlocking = !availability.launchable;
+    stages.capability_gate.status = hasBlocking ? 'FAILED' : 'COMPLETED';
     stages.capability_gate.details = !total
       ? 'No host capabilities declared.'
       : !unsupported.length
         ? `All ${total} declared capabilities are supported by the Super App host.`
-        : !availability.launchable
+        : hasBlocking
           ? `${unsupported.length} of ${total} capabilities unsupported. ${availability.unavailableReason}.`
           : `${unsupported.length} of ${total} optional capabilities unsupported; they stay disabled until the host supports them.`;
     checks.capability_gate = {
-      passed: true,
+      passed: !hasBlocking,
       details: stages.capability_gate.details,
       launchable: availability.launchable,
       unavailableReason: availability.unavailableReason,

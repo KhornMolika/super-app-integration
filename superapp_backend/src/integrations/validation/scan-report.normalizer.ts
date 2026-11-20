@@ -403,8 +403,15 @@ export function normalizeScanReport(raw: RawScanReport): ValidationCallbackDto {
   }
 
   const count = (s: Severity) => findings.filter((f) => f.severity === s && f.category !== 'REPORT').length;
-  const score = Math.max(0, 100 - 25 * count('CRITICAL') - 10 * count('HIGH') - 3 * count('MEDIUM') - count('LOW'));
-  const passed = Object.values(checks).every((c) => c.passed);
+  const hasBlocking = count('CRITICAL') > 0 || count('HIGH') > 0;
+  const allChecksPassed = Object.values(checks).every((c) => c.passed !== false);
+  const passed = allChecksPassed && !hasBlocking;
+  const score = passed
+    ? Math.max(0, 100 - 3 * count('MEDIUM') - count('LOW'))
+    : Math.min(
+        45,
+        Math.max(0, 100 - 25 * count('CRITICAL') - 10 * count('HIGH') - 3 * count('MEDIUM') - count('LOW')),
+      );
 
   return {
     miniAppId: raw.miniAppId,

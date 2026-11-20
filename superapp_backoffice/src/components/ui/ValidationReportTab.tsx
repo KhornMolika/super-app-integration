@@ -379,9 +379,28 @@ export default function ValidationReportTab({
     setMounted(true);
   }, []);
 
-  const effectiveData = versionReportData || miniApp;
+  const effectiveData = useMemo(() => {
+    if (!versionReportData) return miniApp;
+    const isReportEmpty =
+      !versionReportData.validationReport &&
+      (!versionReportData.validationStages || Object.keys(versionReportData.validationStages).length === 0);
+    if (isReportEmpty && (miniApp.validationStatus === 'FAILED' || miniApp.validationStatus === 'PASSED')) {
+      return {
+        ...versionReportData,
+        validationStatus: miniApp.validationStatus,
+        validationScore: miniApp.validationScore,
+        validationReport: miniApp.validationReport,
+        validationStages: miniApp.validationStages,
+        validationErrors: miniApp.validationErrors,
+      };
+    }
+    return versionReportData;
+  }, [versionReportData, miniApp]);
+
   const report = effectiveData.validationReport || miniApp.validationReport || null;
-  const stages = effectiveData.validationStages || miniApp.validationStages || {};
+  const stages = (effectiveData.validationStages && Object.keys(effectiveData.validationStages).length > 0)
+    ? effectiveData.validationStages
+    : miniApp.validationStages || {};
   const issues = miniApp.issues || [];
   const findings = report?.findings || [];
   const sbom = report?.sbom || effectiveData.validationReport?.sbom || miniApp.validationReport?.sbom || null;
@@ -450,6 +469,25 @@ export default function ValidationReportTab({
 
     (issues || []).forEach((iss: any) => {
       const findingId = iss.metadata?.findingId || iss.id || `${iss.type || 'ISSUE'}-${iss.metadata?.field || Math.random().toString(36).slice(2, 7)}`;
+      const issCapMatch = (iss.description || '').match(/capability\s+"([^"]+)"/i);
+      const capKey = issCapMatch ? issCapMatch[1].toLowerCase() : null;
+
+      const existingCapFinding = capKey
+        ? list.find((f) => {
+            const fCapMatch = (f.title || '').match(/capability\s+"([^"]+)"/i) || (f.description || '').match(/capability\s+"([^"]+)"/i);
+            const fKey = fCapMatch ? fCapMatch[1].toLowerCase() : null;
+            return (fKey && fKey === capKey) || (f.id || '').toLowerCase().includes(`_${capKey}`);
+          })
+        : null;
+
+      if (existingCapFinding) {
+        existingCapFinding.severity = 'HIGH';
+        if (iss.description && !existingCapFinding.description.includes('not recognized')) {
+          existingCapFinding.description = iss.description;
+        }
+        return;
+      }
+
       if (!list.some((f) => (iss.id && f.id === iss.id) || (f.description && f.description === iss.description))) {
         list.push({
           id: findingId,

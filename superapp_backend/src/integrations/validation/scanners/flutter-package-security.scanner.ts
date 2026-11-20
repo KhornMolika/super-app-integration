@@ -412,15 +412,14 @@ export class FlutterPackageSecurityScanner {
     }
 
     // --- STAGE: Host Capability Gatekeeper (shared, ADR-004 Section 5) ---
-    // Unsupported capabilities never fail the scan: optional ones are disabled,
-    // required ones make the Mini App "not launchable" until the host supports them.
+    // Optional unsupported capabilities are disabled; required unsupported capabilities fail the gate.
     await this.capabilityGate.runStage(app, stages, checks, findings, emitUpdate);
 
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
     );
     if (hasCriticalOrHigh) {
-      score = Math.min(score, 60);
+      score = Math.min(score, 45);
     }
 
     await this.scanFinalizer.finalizeScan(

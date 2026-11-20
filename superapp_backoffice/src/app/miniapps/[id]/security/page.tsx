@@ -17,10 +17,10 @@ function MiniAppSecurityPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchApp = async () => {
+  const fetchApp = async (silent = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (!silent && !miniApp) setLoading(true);
       setError(null);
       const data = await miniappsApi.getById(id);
       setMiniApp(data);
