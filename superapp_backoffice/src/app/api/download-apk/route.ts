@@ -81,6 +81,8 @@ export async function GET(request: NextRequest) {
   for (const ver of versionCandidates) {
     const norm = ver.startsWith('v') ? ver : `v${ver}`;
     const fileCandidates = [
+      `superapp-test-${norm}-arm64-v8a.apk`,
+      `superapp-release-${norm}-arm64-v8a.apk`,
       `superapp-test-${norm}.apk`,
       `superapp-test-${ver}.apk`,
       `superapp-release-${norm}.apk`,

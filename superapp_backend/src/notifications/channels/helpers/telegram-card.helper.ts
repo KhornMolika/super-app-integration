@@ -200,15 +200,16 @@ ${cleanIssue}
 
 📱 <b>App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
-📦 <b>Artifact:</b> <code>${targetFilename}</code>
+📦 <b>Artifact:</b> <code>${targetFilename}</code> (Optimized ARM64)
 
 <pre><code class="language-diff">
-+ Test APK     : ${targetFilename}
-+ Web Sandbox  : Live & Interactive
++ Architecture : 64-bit ARM (ARM64-v8a)
++ Package Size : ~28 MB (Optimized)
 + Release Tag  : ${version}
++ Web Sandbox  : Live & Interactive
 </code></pre>
 
-<blockquote>SuperApp test binary packaging is complete! Tap the attached APK to install, or launch the interactive Web Sandbox.</blockquote>
+<blockquote>SuperApp test binary packaging is complete! Tap the attached lean APK to install directly on Android, or launch the interactive Web Sandbox.</blockquote>
         `.trim();
 
         buttons.push([

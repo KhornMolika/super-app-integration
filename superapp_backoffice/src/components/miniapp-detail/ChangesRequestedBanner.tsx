@@ -333,6 +333,17 @@ export default function ChangesRequestedBanner({
 
         {/* Top Right Accordion & Full Workspace Actions */}
         <div className="flex items-center gap-2 self-start shrink-0">
+          {miniAppId && (
+            <Link
+              href={`/miniapps/${miniAppId}/review`}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Open full dedicated version review and diff comparison"
+            >
+              <span>Review Diff</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          )}
+
           {miniAppId && !isStandalonePage && (
             <Link
               href={`/miniapps/${miniAppId}/remediation`}

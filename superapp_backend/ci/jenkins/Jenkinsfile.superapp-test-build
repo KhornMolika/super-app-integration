@@ -461,18 +461,20 @@ pipeline {
                                             fi
                                             echo "Gradle 9.1.0 distribution ready in cache."
                                         fi
-                                        if ! flutter build apk --$BUILD_TYPE --target-platform android-arm,android-arm64,android-x64 $DEFINES 2>&1 | tee /tmp/flutter-apk.log; then
+                                        # Size Optimization: Compile ONLY 64-bit ARM APK (--split-per-abi), omitting
+                                        # the ~92 MB multi-arch fat APK to save storage space in Nexus.
+                                        ARM64_APK="build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk"
+                                        rm -f "$ARM64_APK"
+                                        echo "Compiling optimized ARM64 Super App ($BUILD_TYPE) APK (~30 MB)..."
+                                        if ! flutter build apk --$BUILD_TYPE --split-per-abi --target-platform android-arm64 $DEFINES 2>&1 | tee /tmp/flutter-apk.log; then
                                             tail -n 25 /tmp/flutter-apk.log > "$MOBILE_DIR/stage-error-compile.log" 2>/dev/null || true
                                             cp -f "$MOBILE_DIR/stage-error-compile.log" ./stage-error-compile.log 2>/dev/null || true
                                             exit 1
                                         fi
-                                        # Same source as arm64 only (~30 MB instead of ~75 MB): the copy sent to Telegram,
-                                        # whose bot upload limit is 50 MB. The universal APK above stays the download.
-                                        # Optional: without it Telegram gets the download link instead.
-                                        ARM64_APK="build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk"
-                                        rm -f "$ARM64_APK"
-                                        flutter build apk --$BUILD_TYPE --split-per-abi --target-platform android-arm64 $DEFINES \
-                                            || echo "WARNING: arm64 APK build failed; Telegram gets the download link instead"
+                                        test -s "$ARM64_APK" || { echo "ARM64 APK not found at $ARM64_APK"; exit 1; }
+                                        # Maintain app-$BUILD_TYPE.apk alias for backward compatibility without duplicating storage
+                                        cp -f "$ARM64_APK" "build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
+
                                         # Same source and mini apps as the APK: the Backoffice preview and /preview/
                                         # show this build (the backend sets the base path for each)
                                         if [ "$BUILD_WEB" = "true" ]; then
@@ -515,14 +517,17 @@ pipeline {
                                     printf 'user = "%s:%s"\\n' "${NEXUS_USER:-admin}" "${NEXUS_PASSWORD:-}" \
                                         | curl -sSf -K - --upload-file "$1" "$2" > /dev/null
                                 }
+                                # 1. Upload primary test APK (superapp-test-<version>.apk) - lean ARM64 build (~30MB)
                                 upload "$APK" "$APK_URL"
-                                echo "Uploaded $APK_URL"
-                                # arm64 copy next to it (superapp-test-<version>-arm64-v8a.apk): the one Telegram gets
-                                ARM64_APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk"
-                                if [ -s "$ARM64_APK" ]; then
-                                    upload "$ARM64_APK" "${APK_URL%.apk}-arm64-v8a.apk"
-                                    echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
-                                fi
+                                echo "Uploaded $APK_URL (lean ARM64 ~30 MB)"
+
+                                # 2. app-debug.apk / app-release.apk alias for direct download routes
+                                upload "$APK" "${APK_URL%/*}/app-$BUILD_TYPE.apk"
+                                echo "Uploaded ${APK_URL%/*}/app-$BUILD_TYPE.apk"
+
+                                # 3. Explicit arm64 named copy for Telegram bot or ABI-specific callers
+                                upload "$APK" "${APK_URL%.apk}-arm64-v8a.apk"
+                                echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
                                 if [ -f "$MOBILE_DIR/native_sdks.json" ]; then upload "$MOBILE_DIR/native_sdks.json" "$LIST_URL"; echo "Uploaded $LIST_URL"; fi
                                 # Web build of this same version, published only after the APK, so the
                                 # previews never show a build whose APK failed. latest.json last.

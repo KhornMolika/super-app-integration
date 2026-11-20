@@ -1273,7 +1273,13 @@ export class AccessControlService {
   async updateRole(id: string, dto: UpdateRoleDto): Promise<Role> {
     const role = await this.findRoleById(id);
 
+    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
     if (dto.name !== undefined) {
+      if (systemRoles.includes(role.name.toUpperCase())) {
+        throw new BadRequestException(
+          `System role '${role.name}' is a core system role and its name cannot be changed.`,
+        );
+      }
       role.name = dto.name.toUpperCase().replace(/\s+/g, '_');
     }
     if (dto.description !== undefined) {
@@ -1296,7 +1302,7 @@ export class AccessControlService {
 
   async deleteRole(id: string): Promise<{ success: boolean; message: string }> {
     const role = await this.findRoleById(id);
-    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'];
+    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
     if (systemRoles.includes(role.name.toUpperCase())) {
       throw new BadRequestException(
         `System role '${role.name}' is a core system role and cannot be deleted.`,

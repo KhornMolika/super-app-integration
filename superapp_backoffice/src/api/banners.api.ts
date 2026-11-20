@@ -1,16 +1,17 @@
-import { apiClient, unwrapItem } from './client';
+import { apiClient, unwrapData, unwrapItem } from './client';
 import type {
   SuperAppBanner,
   BannerAudience,
 } from '@/types/banner.types';
 
 export const bannersApi = {
-  getAll: (params?: {
+  getAll: async (params?: {
     search?: string;
     isActive?: boolean;
     targetAudience?: BannerAudience;
-  }) => {
-    return apiClient<SuperAppBanner[]>('/api/banners', { params });
+  }): Promise<SuperAppBanner[]> => {
+    const res = await apiClient<any>('/api/banners', { params });
+    return unwrapData<SuperAppBanner>(res);
   },
 
   getById: async (id: string): Promise<SuperAppBanner> => {

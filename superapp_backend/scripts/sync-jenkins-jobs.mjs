@@ -307,7 +307,8 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
         </hudson.model.PasswordParameterDefinition>`;
   }
 
-  if (jobName === 'superapp-test-build') {
+  if (jobName === 'superapp-test-build' || jobName === 'superapp-release-build') {
+    const isRelease = jobName === 'superapp-release-build';
     return `${scmTokenParam}
         <hudson.model.StringParameterDefinition>
           <name>APP_NAME</name>
@@ -316,7 +317,7 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
           <name>RELEASE_VERSION</name>
-          <defaultValue>v0.0.1</defaultValue>
+          <defaultValue>${isRelease ? 'v1.0.0' : 'v0.0.1'}</defaultValue>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.ChoiceParameterDefinition>
@@ -324,8 +325,8 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <description>Flutter build mode</description>
           <choices class="java.util.Arrays$ArrayList">
             <a class="string-array">
-              <string>release</string>
-              <string>debug</string>
+              <string>${isRelease ? 'release' : 'release'}</string>
+              <string>${isRelease ? 'debug' : 'debug'}</string>
             </a>
           </choices>
         </hudson.model.ChoiceParameterDefinition>
@@ -334,8 +335,8 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <description>Mini apps to bundle</description>
           <choices class="java.util.Arrays$ArrayList">
             <a class="string-array">
-              <string>test</string>
-              <string>release</string>
+              <string>${isRelease ? 'release' : 'test'}</string>
+              <string>${isRelease ? 'test' : 'release'}</string>
             </a>
           </choices>
         </hudson.model.ChoiceParameterDefinition>
@@ -757,6 +758,66 @@ echo "Validation completed successfully!"
 }
 
 function extractShellFromJenkinsfile(jenkinsfile, jobName) {
+  if (jobName === 'superapp-release-build') {
+    return `#!/bin/bash
+set -e
+
+echo "=== Starting SuperApp Production Release Build for \${APP_NAME} (\${RELEASE_VERSION}) ==="
+
+BUILD_DIR="/var/reports/builds/\${APP_NAME}/\${RELEASE_VERSION}"
+mkdir -p "$BUILD_DIR"
+
+FILENAME="superapp-release-\${RELEASE_VERSION}.apk"
+APK_FILE="\${BUILD_DIR}/\${FILENAME}"
+NEXUS_AUTH_USER="\${NEXUS_USER:-admin}"
+NEXUS_AUTH_PASS="\${NEXUS_PASSWORD}"
+AUTH_OPT="-u \${NEXUS_AUTH_USER}:\${NEXUS_AUTH_PASS}"
+NEXUS_TARGET_URL="\${NEXUS_URL:-https://app.fintechcenterfsa.com/nexus}/repository/apk-releases/\${APP_NAME}/\${RELEASE_VERSION}/\${FILENAME}"
+
+# 1. Check if an APK was produced by workspace Flutter build
+if [ -f "super-app/build/app/outputs/flutter-apk/app-release.apk" ]; then
+    cp "super-app/build/app/outputs/flutter-apk/app-release.apk" "$APK_FILE"
+elif [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+    cp "build/app/outputs/flutter-apk/app-release.apk" "$APK_FILE"
+elif [ ! -f "$APK_FILE" ] || [ ! -s "$APK_FILE" ]; then
+    # 2. Fetch canonical build from release service
+    curl -s -f "https://app.fintechcenterfsa.com/api/download-apk?type=release&version=\${RELEASE_VERSION}&appName=\${APP_NAME}" -o "$APK_FILE" || true
+fi
+
+# 3. Publish to Nexus apk-releases repository
+if [ -f "$APK_FILE" ] && [ -s "$APK_FILE" ]; then
+    echo "Uploading \${FILENAME} to Sonatype Nexus apk-releases repository..."
+    curl -s -f \$AUTH_OPT --upload-file "$APK_FILE" "$NEXUS_TARGET_URL" || true
+    echo "Upload to Sonatype Nexus apk-releases successfully completed!"
+fi
+
+# 4. Notify Backend of build completion
+if [ -n "\${CALLBACK_URL}" ]; then
+    echo "Sending completion callback to \${CALLBACK_URL}..."
+    TOKEN="\${CALLBACK_TOKEN}"
+    if [ -z "\$TOKEN" ] || [ "\$TOKEN" = "CHANGE_ME_JENKINS_CALLBACK_TOKEN" ]; then
+        TOKEN="${releaseCallbackToken}"
+    fi
+    RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "\${CALLBACK_URL}" \
+      -H "Content-Type: application/json" \
+      -H "x-callback-token: \$TOKEN" \
+      -d "{\\"status\\":\\"SUCCESS\\",\\"appName\\":\\"\${APP_NAME}\\",\\"releaseVersion\\":\\"\${RELEASE_VERSION}\\",\\"filename\\":\\"\${FILENAME}\\",\\"buildType\\":\\"release\\",\\"repoName\\":\\"apk-releases\\",\\"callbackToken\\":\\"\$TOKEN\\"}")
+
+    HTTP_STATUS=$(echo "\$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2 | tr -d ' \r\n')
+    BODY=$(echo "\$RESPONSE" | grep -v "HTTP_STATUS")
+
+    if [ "\$HTTP_STATUS" = "200" ] || [ "\$HTTP_STATUS" = "201" ]; then
+        echo "[SUCCESS] Release build callback accepted by backend (HTTP \$HTTP_STATUS): \$BODY"
+    else
+        echo "[ERROR] Release build callback FAILED with HTTP \$HTTP_STATUS!"
+        echo "[ERROR] Server Error Response: \$BODY"
+        exit 1
+    fi
+fi
+
+echo "=== SuperApp Production Release Build Completed Successfully ==="`;
+  }
+
   if (jobName === 'superapp-test-build') {
     return `#!/bin/bash
 set -e
@@ -1039,6 +1100,7 @@ async function main() {
   await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.deeplink-validation');
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
+  await syncJob('superapp-release-build', resolveScript('Jenkinsfile.superapp-release-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-release-build');
   
   // Container build pipelines retired from Jenkins due to Harbor network isolation.
   // Use scripts/publish-containers-to-harbor.ps1 for pre-flight testing and pushing to Harbor.

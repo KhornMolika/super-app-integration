@@ -1,0 +1,511 @@
+// Super App Android Production Release Build Pipeline
+// Compiles the optimized production release APK & AAB inside Jenkins (Flutter Docker image)
+// and publishes the artifacts to Nexus apk-releases.
+//
+// Triggered by the backend (JenkinsService.triggerSuperAppBuild with miniAppSet=release).
+// Progress reports go to /release-assembly/build-stage-update, final results to
+// /release-assembly/build-callback, authenticated with x-callback-token.
+
+import groovy.json.JsonOutput
+
+def p(String name) {
+    def defaults = [
+        MOBILE_REPO_URL: 'https://git.fintechcenterfsa.com/frontend/super-app.git',
+        MOBILE_BRANCH: 'development',
+        GIT_CREDENTIALS_ID: 'git-action',
+        NATIVE_SDK_MANIFEST_URL: '',
+        API_BASE_URL: '',
+        FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
+        TOOLCHAIN_CHECK_ONLY: false,
+        BUILD_WEB: true,
+        BUILD_AAB: true,
+        PRIVATE_GIT_DEPS: '',
+        BUILD_CREDENTIALS_URL: '',
+        MINIAPPS_URL: '',
+        PUB_GATEWAY_URL: 'https://app.fintechcenterfsa.com/pub',
+    ]
+    def v = params[name]
+    return (v == null || v == '') ? defaults[name] : v
+}
+
+def privateGitDeps() {
+    def deps = []
+    for (entry in (p('PRIVATE_GIT_DEPS') ?: '').split(',')) {
+        def e = entry.trim()
+        if (!e) continue
+        def parts = e.split('=', 2)
+        if (parts.length != 2 || !(parts[0] ==~ /https:\/\/github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.git/) || !(parts[1] ==~ /[A-Za-z0-9._-]+/)) {
+            error("Invalid PRIVATE_GIT_DEPS entry: ${e}")
+        }
+        deps << [url: parts[0], cred: parts[1]]
+    }
+    return deps
+}
+
+def withBuildType(String url) {
+    if (!url) return url
+    return url + (url.contains('?') ? '&' : '?') + 'buildType=release'
+}
+
+def gitCredentialsUrl() {
+    def explicit = (p('BUILD_CREDENTIALS_URL') ?: '').trim()
+    if (explicit) return explicit
+    def base = (params.CALLBACK_URL ?: '').trim()
+    return base ? base.replaceAll('/build-callback/?$', '/build-git-credentials') : ''
+}
+
+def miniAppsUrl() {
+    def explicit = (p('MINIAPPS_URL') ?: '').trim()
+    if (explicit) return explicit
+    def base = (params.CALLBACK_URL ?: '').trim()
+    return base ? base.replaceAll('/build-callback/?$', '/build-miniapps') : ''
+}
+
+def syncMiniApps() {
+    def url = miniAppsUrl()
+    if (!url) {
+        echo 'WARNING: no backend URL (CALLBACK_URL / MINIAPPS_URL): building with the mini apps committed in super-app'
+        return
+    }
+    withEnv(["MINIAPPS_LIST_URL=${withBuildType(url)}", "FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}"]) {
+        sh '''
+            set -e +x
+            LIST="$WORKSPACE/build-miniapps.json"
+            rm -f "$LIST"
+            code=$(curl -sS --max-time 30 -o "$LIST" -w '%{http_code}' \
+                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MINIAPPS_LIST_URL") || code=error
+            if [ "$code" = "404" ]; then
+                echo "WARNING: this backend has no build-miniapps yet: building with the mini apps committed in super-app"
+                rm -f "$LIST"; exit 0
+            elif [ "$code" != "200" ]; then
+                echo "Could not read the mini app list from $MINIAPPS_LIST_URL (HTTP $code)"; exit 1
+            fi
+            if [ ! -f "$MOBILE_DIR/tool/sync_miniapps.dart" ]; then
+                echo "WARNING: this super-app branch has no tool/sync_miniapps.dart: building with its committed mini apps"
+                exit 0
+            fi
+            SELF=$(cat /etc/hostname)
+            if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+            else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
+            docker run --rm $MOUNT -w "$WORKSPACE" -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+                "$FLUTTER_IMAGE" bash -ec '
+                    dart run "$MOBILE_DIR/tool/sync_miniapps.dart" "$WORKSPACE/build-miniapps.json" "$MOBILE_DIR"
+                    chown -R "$HOST_UID:$HOST_GID" "$MOBILE_DIR/pubspec.yaml" "$MOBILE_DIR/lib" 2>/dev/null || true
+                '
+            echo "Mini app packages synchronized for release build."
+            rm -f "$LIST"
+        '''
+    }
+}
+
+def nativeSdkManifestUrl() {
+    def explicit = (p('NATIVE_SDK_MANIFEST_URL') ?: '').trim()
+    if (explicit) return explicit
+    def base = (params.CALLBACK_URL ?: '').trim()
+    return base ? base.replaceAll('/build-callback/?$', '/native-sdk-manifest') : ''
+}
+
+def syncNativeSdks() {
+    def url = nativeSdkManifestUrl()
+    if (!url) {
+        echo 'WARNING: no backend URL (CALLBACK_URL / NATIVE_SDK_MANIFEST_URL); native SDK mini apps not downloaded'
+        sh 'rm -f "$MOBILE_DIR/native_sdks.json"'
+        return
+    }
+    withEnv(["MANIFEST_URL=${withBuildType(url)}"]) {
+        sh '''
+            set -e +x
+            JSON="$MOBILE_DIR/native_sdks.json"
+            rm -f "$JSON"
+            code=$(curl -sS --max-time 30 -o "$JSON" -w '%{http_code}' \
+                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MANIFEST_URL") || code=error
+            if [ "$code" = "404" ]; then
+                echo "WARNING: this backend has no /native-sdk-manifest yet; building without native SDK mini apps"
+                rm -f "$JSON"; exit 0
+            elif [ "$code" != "200" ]; then
+                echo "Could not read native SDK manifest from $MANIFEST_URL (HTTP $code)"; exit 1
+            fi
+            echo "Native SDK libraries in this release build:"
+            cat "$JSON"; echo
+        '''
+    }
+}
+
+def withPrivateGitDeps(Closure body) {
+    def deps = privateGitDeps()
+    def credsUrl = gitCredentialsUrl()
+    if (!deps && !credsUrl) { body(); return }
+
+    def bindings = []
+    def list = []
+    deps.eachWithIndex { d, i ->
+        bindings << sshUserPrivateKey(credentialsId: d.cred, keyFileVariable: "GIT_DEP_KEY_${i}")
+        list << "${i}|${d.url}"
+    }
+
+    try {
+        sh 'mkdir -p "$WORKSPACE/.ci-secrets"; chmod 700 "$WORKSPACE/.ci-secrets"'
+        writeFile file: '.ci-secrets/write-git-config.js', text: '''
+            const fs = require('fs');
+            const dir = process.argv[2];
+            const data = JSON.parse(fs.readFileSync(dir + '/git-credentials.json', 'utf8'));
+            let sshConfig = '', gitConfig = '';
+            (data.credentials || []).forEach((c, i) => {
+                const keyFile = dir + '/key_' + i;
+                fs.writeFileSync(keyFile, c.privateKey, { mode: 0o600 });
+                sshConfig += `Host dep-${i}\\n  HostName ${c.host || 'github.com'}\\n  User git\\n  IdentityFile ${keyFile}\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile ${dir}/known_hosts\\n\\n`;
+                const repoPath = c.repositoryUrl.replace(/^https?:\\/\\/[^\\/]+\\//, '').replace(/\\.git$/, '');
+                gitConfig += `[url "dep-${i}:${repoPath}.git"]\\n\\tinsteadOf = ${c.repositoryUrl}\\n`;
+            });
+            fs.appendFileSync(dir + '/ssh_config', sshConfig);
+            fs.appendFileSync(dir + '/gitconfig', gitConfig);
+        '''
+        if (credsUrl) {
+            withEnv(["GIT_CREDS_URL=${credsUrl}"]) {
+                sh '''
+                    set -e +x
+                    S="$WORKSPACE/.ci-secrets"
+                    code=$(curl -sS --max-time 30 -o "$S/git-credentials.json" -w '%{http_code}' \
+                        -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$GIT_CREDS_URL") || code=error
+                    chmod 600 "$S/git-credentials.json" 2>/dev/null || true
+                    if [ "$code" = "200" ]; then
+                        node "$S/write-git-config.js" "$S"
+                    elif [ "$code" = "404" ]; then
+                        echo "WARNING: this backend has no build-git-credentials yet; private mini app repositories are not set up"
+                    else
+                        echo "Could not read private repository keys from $GIT_CREDS_URL (HTTP $code)"; exit 1
+                    fi
+                    rm -f "$S/git-credentials.json"
+                '''
+            }
+        }
+        if (deps) {
+            withCredentials(bindings) {
+                withEnv(["GIT_DEP_LIST=${list.join('\n')}"]) {
+                    sh '''
+                        set -e +x
+                        S="$WORKSPACE/.ci-secrets"
+                        printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
+                            [ -n "$url" ] || continue
+                            cp "$(printenv "GIT_DEP_KEY_$i")" "$S/jk_key_$i"; chmod 600 "$S/jk_key_$i"
+                            printf 'Host jk-dep-%s\\n  HostName github.com\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/jk_key_$i" "$S" >> "$S/ssh_config"
+                            printf '[url "jk-dep-%s:%s"]\\n\\tinsteadOf = %s\\n' "$i" "${url#https://github.com/}" "$url" >> "$S/gitconfig"
+                        done
+                    '''
+                }
+            }
+        }
+        body()
+    } finally {
+        sh 'rm -rf "$WORKSPACE/.ci-secrets"'
+    }
+}
+
+def callbackBase() { return (params.CALLBACK_URL ?: '').trim() }
+
+def validateParams() {
+    if (!(params.RELEASE_VERSION ==~ /[A-Za-z0-9._-]{1,64}/)) { error("Invalid RELEASE_VERSION") }
+    if (!(params.APP_NAME ==~ /[A-Za-z0-9._-]{1,64}/)) { error("Invalid APP_NAME") }
+    if (!(p('MOBILE_BRANCH') ==~ /[A-Za-z0-9._\/-]{1,100}/)) { error("Invalid MOBILE_BRANCH") }
+    if (!(p('MOBILE_REPO_URL') ==~ /https:\/\/[A-Za-z0-9._:\/-]+\.git/)) { error("Invalid MOBILE_REPO_URL") }
+    if (!(params.NEXUS_URL ==~ /https?:\/\/[A-Za-z0-9._:\/-]+/)) { error("Invalid NEXUS_URL") }
+    if (callbackBase() && !(callbackBase() ==~ /https?:\/\/[A-Za-z0-9._:\/-]+\/build-callback\/?/)) { error("Invalid CALLBACK_URL") }
+    if (p('API_BASE_URL') && !(p('API_BASE_URL') ==~ /https?:\/\/[A-Za-z0-9._:\/~%-]+/)) { error("Invalid API_BASE_URL") }
+    if (!(p('FLUTTER_IMAGE') ==~ /[A-Za-z0-9._\/-]+(:[A-Za-z0-9._-]+)?/)) { error("Invalid FLUTTER_IMAGE") }
+}
+
+def postJson(String url, Map body) {
+    if (!url) return
+    writeFile file: '.callback-body.json', text: JsonOutput.toJson(body)
+    withEnv(["POST_URL=${url}"]) {
+        sh '''
+            set +x
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST "$POST_URL" \
+                -H 'Content-Type: application/json' -H "x-callback-token: ${CALLBACK_TOKEN:-}" \
+                --data @.callback-body.json) || code=error
+            echo "Callback $(basename "$POST_URL"): HTTP $code"
+            rm -f .callback-body.json
+        '''
+    }
+}
+
+def postStage(String stageId, String stageName, String status, String details) {
+    def base = callbackBase()
+    if (!base) return
+    postJson(base.replaceAll('/build-callback/?$', '/build-stage-update'), [
+        appName: params.APP_NAME, releaseVersion: params.RELEASE_VERSION,
+        stageId: stageId, stageName: stageName, status: status, details: details,
+    ])
+}
+
+def runStage(String stageId, String stageName, String startDetails, String doneDetails, Closure body) {
+    postStage(stageId, stageName, 'RUNNING', startDetails)
+    try {
+        body()
+        postStage(stageId, stageName, 'COMPLETED', doneDetails)
+    } catch (e) {
+        def realError = e.message ?: e.toString()
+        env.FAILURE_REASON = "${stageName}: ${realError}".take(500)
+        postStage(stageId, stageName, 'FAILED', env.FAILURE_REASON)
+        throw e
+    }
+}
+
+def apkName() { return "superapp-release-${params.RELEASE_VERSION}.apk" }
+def apkArm64Name() { return "superapp-release-${params.RELEASE_VERSION}-arm64-v8a.apk" }
+def aabName() { return "superapp-release-${params.RELEASE_VERSION}.aab" }
+def apkUrl() { return "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/${apkName()}" }
+
+pipeline {
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 60, unit: 'MINUTES')
+    }
+
+    parameters {
+        string(name: 'APP_NAME', defaultValue: 'superapp', description: 'Application name / sub-folder in Nexus apk-releases')
+        string(name: 'RELEASE_VERSION', defaultValue: 'v1.0.0', description: 'Super App release version tag (e.g., v1.4.0)')
+        choice(name: 'BUILD_TYPE', choices: ['release'], description: 'Flutter build mode (Production Release)')
+        choice(name: 'MINIAPP_SET', choices: ['release'], description: 'Mini apps bundled: release = strictly live approved mini apps only')
+        string(name: 'CALLBACK_URL', defaultValue: '', description: 'Backend .../release-assembly/build-callback URL')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Sent as x-callback-token')
+        string(name: 'NEXUS_URL', defaultValue: 'https://app.fintechcenterfsa.com/nexus', description: 'Sonatype Nexus URL')
+        string(name: 'NEXUS_USER', defaultValue: 'admin', description: 'Nexus user')
+        password(name: 'NEXUS_PASSWORD', defaultValue: '', description: 'Nexus password')
+        string(name: 'API_BASE_URL', defaultValue: '', description: 'Production API URL baked into app (--dart-define=API_BASE_URL). Must be https://')
+        string(name: 'MOBILE_REPO_URL', defaultValue: 'https://git.fintechcenterfsa.com/frontend/super-app.git', description: 'Super App source repository')
+        string(name: 'MOBILE_BRANCH', defaultValue: 'development', description: 'Super App branch')
+        string(name: 'GIT_CREDENTIALS_ID', defaultValue: 'git-action', description: 'Jenkins credential for MOBILE_REPO_URL')
+        string(name: 'NATIVE_SDK_MANIFEST_URL', defaultValue: '', description: 'Native SDK list URL')
+        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter toolchain')
+        string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry gateway')
+        string(name: 'PRIVATE_GIT_DEPS', defaultValue: '', description: 'Private Git dependencies')
+        string(name: 'BUILD_CREDENTIALS_URL', defaultValue: '', description: 'Backend credentials URL')
+        string(name: 'MINIAPPS_URL', defaultValue: '', description: 'Backend build-miniapps URL')
+        booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Dry run check only')
+        booleanParam(name: 'BUILD_WEB', defaultValue: true, description: 'Build and publish web superapp sandbox')
+        booleanParam(name: 'BUILD_AAB', defaultValue: true, description: 'Build optimized Android App Bundle (.aab) for Google Play / App Store')
+    }
+
+    environment {
+        MOBILE_DIR = 'mobile'
+    }
+
+    stages {
+        stage('1. Pre-Flight & Source Checkout') {
+            steps {
+                script {
+                    validateParams()
+                    echo "Starting Production Release Build: ${params.APP_NAME} ${params.RELEASE_VERSION} (miniAppSet=release)"
+                    runStage('preflight', '1. Pre-Flight & Source Checkout',
+                            'Fetching Super App source...', "Source ${p('MOBILE_BRANCH')} checked out.") {
+                        dir(env.MOBILE_DIR) {
+                            checkout([$class: 'GitSCM',
+                                branches: [[name: "*/${p('MOBILE_BRANCH')}"]],
+                                userRemoteConfigs: [[url: p('MOBILE_REPO_URL'), credentialsId: p('GIT_CREDENTIALS_ID')]],
+                                extensions: [[$class: 'CloneOption', depth: 1, shallow: true, noTags: true],
+                                             [$class: 'CleanBeforeCheckout']]])
+                        }
+                        syncMiniApps()
+                        syncNativeSdks()
+                    }
+                }
+            }
+        }
+
+        stage('2. Compile Optimized Release Binaries') {
+            steps {
+                script {
+                    runStage('compile', '2. Compile Optimized Release Binaries',
+                            "Compiling Flutter release binaries (AOT, tree-shaken, single-ABI arm64 + universal APK)...",
+                            "Production release binaries compiled successfully.") {
+                        withPrivateGitDeps {
+                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}",
+                                 "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}",
+                                 "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}", "BUILD_AAB=${p('BUILD_AAB') ? 'true' : 'false'}",
+                                 "SUPERAPP_BUILD=release"]) {
+                            sh '''
+                                set -e +x
+                                S="$WORKSPACE/.ci-secrets"
+                                if [ -f "$S/gitconfig" ]; then
+                                    export GIT_SSH_COMMAND="ssh -F $S/ssh_config" GIT_DEPS_CONFIG="$S/gitconfig"
+                                fi
+                                export FSA_PUB_TOKEN="${CALLBACK_TOKEN:-}"
+                                CACHE_DIR="$WORKSPACE/.ci-cache"
+                                mkdir -p "$CACHE_DIR/pub" "$CACHE_DIR/gradle"
+
+                                SELF=$(cat /etc/hostname)
+                                if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+                                else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
+
+                                docker run --rm $MOUNT -w "$WORKSPACE/$MOBILE_DIR" \
+                                    --memory 6g --cpus 2 \
+                                    -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
+                                    -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g -Djava.net.preferIPv4Stack=true" \
+                                    -e NEXUS_URL -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE=release -e SUPERAPP_BUILD=release \
+                                    -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB -e BUILD_AAB \
+                                    -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
+                                    -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+                                    "$FLUTTER_IMAGE" bash -ec '
+                                        trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE $GRADLE_USER_HOME 2>/dev/null || true" EXIT
+                                        git config --global --add safe.directory "*"
+                                        if [ -n "${GIT_DEPS_CONFIG:-}" ]; then git config --global include.path "$GIT_DEPS_CONFIG"; fi
+                                        if [ -n "${FSA_PUB_TOKEN:-}" ]; then dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN; fi
+                                        rm -f "$GRADLE_USER_HOME/gradle.properties"
+
+                                        flutter --version
+                                        flutter pub get
+
+                                        DEFINES="--dart-define=SUPERAPP_BUILD=release"
+                                        if [ -n "$API_BASE_URL" ]; then DEFINES="$DEFINES --dart-define=API_BASE_URL=$API_BASE_URL"; fi
+
+                                        # Gradle wrapper caching
+                                        GRADLE_ZIP=gradle-9.1.0-all.zip
+                                        DIST_DIR="$GRADLE_USER_HOME/wrapper/dists/gradle-9.1.0-all/7wzd0jkjit61aq2p43wpjgij9"
+                                        IMAGE_BAKED="/opt/gradle-wrapper/wrapper/dists/gradle-9.1.0-all/7wzd0jkjit61aq2p43wpjgij9"
+                                        if [ ! -f "$DIST_DIR/$GRADLE_ZIP.ok" ]; then
+                                            mkdir -p "$DIST_DIR"
+                                            rm -f "$DIST_DIR/$GRADLE_ZIP"
+                                            if [ -f "$IMAGE_BAKED/$GRADLE_ZIP.ok" ]; then
+                                                cp -rn "$IMAGE_BAKED"/* "$DIST_DIR/"
+                                            else
+                                                MIRROR="${NEXUS_URL%/}/repository/superapp-artifacts/gradle/$GRADLE_ZIP"
+                                                if printf "user = \\"%s:%s\\"\\n" "${NEXUS_USER:-}" "${NEXUS_PASSWORD:-}" \
+                                                        | curl -fsSL -K - --retry 3 --max-time 600 "$MIRROR" -o "$DIST_DIR/$GRADLE_ZIP"; then
+                                                    echo "Gradle 9.1.0 downloaded from Nexus mirror"
+                                                else
+                                                    curl -fSL --retry 5 --retry-all-errors --retry-delay 10 --max-time 600 \
+                                                        "https://services.gradle.org/distributions/$GRADLE_ZIP" -o "$DIST_DIR/$GRADLE_ZIP" || exit 1
+                                                fi
+                                                unzip -q -o "$DIST_DIR/$GRADLE_ZIP" -d "$DIST_DIR"
+                                                touch "$DIST_DIR/$GRADLE_ZIP.ok"
+                                            fi
+                                        fi
+
+                                        echo "=========================================================="
+                                        echo "Building Optimized ARM64-v8a Release APK (split-per-abi ~25 MB)..."
+                                        ARM64_APK="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+                                        rm -f "$ARM64_APK"
+                                        if ! flutter build apk --release --split-per-abi --target-platform android-arm64 $DEFINES 2>&1 | tee /tmp/flutter-apk.log; then
+                                            tail -n 25 /tmp/flutter-apk.log > "$MOBILE_DIR/stage-error-compile.log" 2>/dev/null || true
+                                            cp -f "$MOBILE_DIR/stage-error-compile.log" ./stage-error-compile.log 2>/dev/null || true
+                                            exit 1
+                                        fi
+                                        test -s "$ARM64_APK" || { echo "Release ARM64 APK not found at $ARM64_APK"; exit 1; }
+                                        cp -f "$ARM64_APK" "build/app/outputs/flutter-apk/app-release.apk"
+
+                                        if [ "$BUILD_AAB" = "true" ]; then
+                                            echo "=========================================================="
+                                            echo "Building Production Android App Bundle (.aab)..."
+                                            flutter build appbundle --release $DEFINES || echo "WARNING: App bundle build failed"
+                                        fi
+
+                                        if [ "$BUILD_WEB" = "true" ]; then
+                                            echo "=========================================================="
+                                            echo "Building Production Web App..."
+                                            flutter build web --release --base-href /superapp-sandbox/ $DEFINES
+                                        fi
+                                    '
+
+                                APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-release.apk"
+                                test -s "$APK" || { echo "Universal release APK not generated!"; exit 1; }
+                                ls -lh "$APK"
+                                ls -lh "$MOBILE_DIR/build/app/outputs/flutter-apk/"*.apk || true
+                                if [ -f "$MOBILE_DIR/build/app/outputs/bundle/release/app-release.aab" ]; then
+                                    ls -lh "$MOBILE_DIR/build/app/outputs/bundle/release/app-release.aab"
+                                fi
+                                if [ "$BUILD_WEB" = "true" ] && [ -d "$MOBILE_DIR/build/web" ]; then
+                                    tar -czf superapp-web.tar.gz -C "$MOBILE_DIR/build/web" .
+                                fi
+                            '''
+                        }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('3. Publish to Nexus (apk-releases)') {
+            steps {
+                script {
+                    runStage('publish', '3. Publish to Nexus (apk-releases)',
+                            'Publishing release binaries to Sonatype Nexus apk-releases repository...',
+                            "Published production artifacts to apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/.") {
+                        withEnv(["APK_URL=${apkUrl()}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}",
+                                 "WEB_BASE=${params.NEXUS_URL}/repository/superapp-artifacts/superapp-web"]) {
+                            sh '''
+                                set -e +x
+                                APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-release.apk"
+                                ARM64_APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+                                AAB="$MOBILE_DIR/build/app/outputs/bundle/release/app-release.aab"
+                                LIST_URL="${APK_URL%/*}/native_sdks.json"
+
+                                upload() {
+                                    printf 'user = "%s:%s"\\n' "${NEXUS_USER:-admin}" "${NEXUS_PASSWORD:-}" \
+                                        | curl -sSf -K - --upload-file "$1" "$2" > /dev/null
+                                }
+
+                                # 1. Upload Primary Release APK (superapp-release-<version>.apk) - lean ~25 MB
+                                upload "$APK" "$APK_URL"
+                                echo "Uploaded $APK_URL (lean ARM64 ~25 MB)"
+
+                                # 2. app-release.apk alias for direct download
+                                upload "$APK" "${APK_URL%/*}/app-release.apk"
+                                echo "Uploaded ${APK_URL%/*}/app-release.apk"
+
+                                # 3. Explicit arm64 named copy
+                                upload "$APK" "${APK_URL%.apk}-arm64-v8a.apk"
+                                echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
+
+                                # 3. Upload Android App Bundle (.aab)
+                                if [ -s "$AAB" ]; then
+                                    upload "$AAB" "${APK_URL%.apk}.aab"
+                                    echo "Uploaded Android App Bundle (.aab): ${APK_URL%.apk}.aab"
+                                fi
+
+                                # 4. Upload Native SDK manifest
+                                if [ -f "$MOBILE_DIR/native_sdks.json" ]; then
+                                    upload "$MOBILE_DIR/native_sdks.json" "$LIST_URL"
+                                    echo "Uploaded native_sdks.json: $LIST_URL"
+                                fi
+
+                                # 5. Upload Web bundle
+                                if [ "$BUILD_WEB" = "true" ] && [ -f superapp-web.tar.gz ]; then
+                                    DIR="$RELEASE_VERSION-b$BUILD_NUMBER"
+                                    COMMIT=$(git -C "$MOBILE_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)
+                                    upload superapp-web.tar.gz "$WEB_BASE/$DIR/superapp-web.tar.gz"
+                                    printf '{"build":%s,"version":"%s","archive":"superapp-web/%s/superapp-web.tar.gz","commit":"%s","builtAt":"%s"}\\n' \
+                                        "$BUILD_NUMBER" "$RELEASE_VERSION" "$DIR" "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > latest.json
+                                    upload latest.json "$WEB_BASE/latest.json"
+                                    echo "Production web bundle published."
+                                fi
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                postJson(callbackBase(), [
+                    appName: params.APP_NAME, releaseVersion: params.RELEASE_VERSION, status: 'COMPLETED',
+                    buildType: 'release', apkUrl: apkUrl(), filename: apkName(), repoName: 'apk-releases',
+                ])
+            }
+        }
+        failure {
+            script {
+                postJson(callbackBase(), [
+                    appName: params.APP_NAME, releaseVersion: params.RELEASE_VERSION, status: 'FAILED',
+                    buildType: 'release', repoName: 'apk-releases',
+                    errorMessage: env.FAILURE_REASON ?: 'Production release build failed. Check Jenkins console log.',
+                ])
+            }
+        }
+    }
+}

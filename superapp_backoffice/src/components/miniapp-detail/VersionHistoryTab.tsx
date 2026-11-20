@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
@@ -58,6 +58,9 @@ export interface VersionHistoryTabProps {
   currentStatus?: string;
   teamTelegramChatId?: string;
   pendingRevision?: any;
+  ownerName?: string;
+  ownerEmail?: string;
+  teamName?: string;
   onOpenReviewDiff?: () => void;
 }
 
@@ -131,6 +134,27 @@ function formatDate(value?: string | null): string | null {
   });
 }
 
+function getDeveloperInitials(name: string): string {
+  if (!name) return 'DEV';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function formatShortHash(hash?: string | null): string {
+  if (!hash) return '—';
+  if (hash.startsWith('sha256:')) {
+    const raw = hash.replace('sha256:', '');
+    return `sha256:${raw.slice(0, 6)}...${raw.slice(-4)}`;
+  }
+  if (hash.length > 16) {
+    return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
+  }
+  return hash;
+}
+
 /** The capabilities a version asks for; amber only for ones still waiting for review. */
 function VersionCapabilities({ caps }: { caps?: VersionCapability[] }) {
   if (!caps) return <span className="text-xs text-slate-400">—</span>;
@@ -158,6 +182,9 @@ export default function VersionHistoryTab({
   currentStatus = 'DRAFT',
   teamTelegramChatId,
   pendingRevision,
+  ownerName,
+  ownerEmail,
+  teamName,
   onOpenReviewDiff,
 }: VersionHistoryTabProps) {
   // Rolling back changes what users get: admins only, and never on an archived app
@@ -169,6 +196,7 @@ export default function VersionHistoryTab({
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
   const [copiedChecksum, setCopiedChecksum] = useState<string | null>(null);
+  const [copiedGitRef, setCopiedGitRef] = useState<string | null>(null);
   const [compareModalState, setCompareModalState] = useState<{
     isOpen: boolean;
     baseVersion?: string;
@@ -219,7 +247,7 @@ export default function VersionHistoryTab({
     }
   };
 
-  const fetchVersions = async () => {
+  const fetchVersions = useCallback(async () => {
     if (!miniAppId) return;
     setLoading(true);
     try {
@@ -238,17 +266,24 @@ export default function VersionHistoryTab({
     } finally {
       setLoading(false);
     }
-  };
+  }, [miniAppId]);
 
   useEffect(() => {
     fetchVersions();
-  }, [miniAppId]);
+  }, [fetchVersions]);
 
   const handleCopyChecksum = (hash: string) => {
     copyText(hash);
     setCopiedChecksum(hash);
     toast.info(`SHA-256 Checksum copied: ${hash.substring(0, 16)}...`, 'Checksum Copied');
     setTimeout(() => setCopiedChecksum(null), 2500);
+  };
+
+  const handleCopyGitRef = (sha: string) => {
+    copyText(sha);
+    setCopiedGitRef(sha);
+    toast.info(`Git commit SHA copied: ${sha.substring(0, 10)}...`, 'Commit SHA Copied');
+    setTimeout(() => setCopiedGitRef(null), 2500);
   };
 
   const handleDownload = (ver: string, type: 'test' | 'release') => {
@@ -265,11 +300,71 @@ export default function VersionHistoryTab({
     });
   };
 
-  const versionsList = data?.versions || [];
-  const filteredVersions = versionsList.filter((v) => {
-    if (filterType === 'ALL') return true;
-    return v.type === filterType;
-  });
+  const versionsList = useMemo(() => data?.versions || [], [data?.versions]);
+  const filteredVersions = useMemo(() => {
+    if (filterType === 'ALL') return versionsList;
+    return versionsList.filter((v) => v.type === filterType);
+  }, [versionsList, filterType]);
+
+  const baseOptions = useMemo(() => {
+    if (versionsList.length === 0) {
+      return [{ value: data?.currentReleaseVersion || '1.0.0', label: `v${data?.currentReleaseVersion || '1.0.0'} (Active)` }];
+    }
+    return versionsList.map((v) => {
+      const isActive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+      const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+      const tag = isActive ? '(Active)' : isOld ? '(Prev)' : '(Test)';
+      return {
+        value: v.version,
+        label: `v${v.version} ${tag}`,
+      };
+    });
+  }, [versionsList, data?.currentReleaseVersion]);
+
+  const targetOptions = useMemo(() => {
+    const opts: Array<{ value: string; label: string }> = [];
+    if (pendingRevision?.version) {
+      opts.push({
+        value: pendingRevision.version,
+        label: `${pendingRevision.version} (Draft Revision)`,
+      });
+    }
+    for (const v of versionsList) {
+      const isActive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+      const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+      const tag = isActive ? '(Active)' : isOld ? '(Prev)' : '(Test)';
+      opts.push({
+        value: v.version,
+        label: `v${v.version} ${tag}`,
+      });
+    }
+    if (opts.length === 0) {
+      opts.push({ value: '1.0.0', label: 'v1.0.0 (Active)' });
+    }
+    return opts;
+  }, [pendingRevision, versionsList]);
+
+  // Keep compareBase and compareTarget initialized cleanly
+  useEffect(() => {
+    if (versionsList.length > 0) {
+      const live = data?.currentReleaseVersion || versionsList[0]?.version || '1.0.0';
+      if (!compareBase) {
+        setCompareBase(live);
+      }
+      if (!compareTarget) {
+        if (pendingRevision?.version) {
+          setCompareTarget(pendingRevision.version);
+        } else if (versionsList.length > 1) {
+          setCompareTarget(versionsList[1].version);
+        } else {
+          setCompareTarget(live);
+        }
+      }
+    }
+  }, [versionsList, data?.currentReleaseVersion, pendingRevision, compareBase, compareTarget]);
+
+  const effectiveBase = compareBase || baseOptions[0]?.value || data?.currentReleaseVersion || '1.0.0';
+  const effectiveTarget = compareTarget || targetOptions[0]?.value || effectiveBase;
 
   const activeProductionRecord = versionsList.find(
     (v) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW'),
@@ -423,7 +518,7 @@ export default function VersionHistoryTab({
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
             {pendingRevision
-              ? 'Draft changes saved in isolated staging. Live version continues running undisturbed.'
+              ? 'Draft changes saved in isolated staging. Active version continues running undisturbed.'
               : 'All configuration is up-to-date with published production releases.'}
           </p>
 
@@ -462,7 +557,7 @@ export default function VersionHistoryTab({
 
       {/* 2. Version History Timeline & Table */}
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,75 +572,58 @@ export default function VersionHistoryTab({
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Version Diff Comparator Selector */}
-            <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 text-xs">
-              <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 px-1 shrink-0">
-                <svg className="w-3.5 h-3.5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-1.5 shrink-0">
+                <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                <span>Diff:</span>
+                <span>Compare:</span>
               </span>
-              <div className="w-44">
+
+              <div className="w-36">
                 <Select
-                  value={compareBase || data?.currentReleaseVersion || '1.0.0'}
+                  value={effectiveBase}
                   onChange={(e) => setCompareBase(e.target.value)}
-                  className="!py-1.5 !px-3 text-xs"
+                  className="!py-1.5 !px-2.5 text-xs font-semibold"
                 >
-                  {versionsList.map((v) => {
-                    const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
-                    const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
-                    const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
-                    const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
-                    return (
-                      <option key={`base-${v.version}`} value={v.version}>
-                        {prefix}{v.version}{suffix}
-                      </option>
-                    );
-                  })}
+                  {baseOptions.map((opt) => (
+                    <option key={`base-${opt.value}`} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </Select>
               </div>
-              <span className="text-slate-400 font-bold px-0.5 shrink-0">vs</span>
-              <div className="w-44">
+
+              <span className="text-slate-400 dark:text-slate-500 text-xs font-bold shrink-0">➔</span>
+
+              <div className="w-36">
                 <Select
-                  value={compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop')}
+                  value={effectiveTarget}
                   onChange={(e) => setCompareTarget(e.target.value)}
-                  className="!py-1.5 !px-3 text-xs"
+                  className="!py-1.5 !px-2.5 text-xs font-semibold"
                 >
-                  {pendingRevision && (
-                    <option value="v1.1.0-draft">[Draft] Proposed Revision</option>
-                  )}
-                  {versionsList.map((v) => {
-                    const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
-                    const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
-                    const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
-                    const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
-                    return (
-                      <option key={`target-${v.version}`} value={v.version}>
-                        {prefix}{v.version}{suffix}
-                      </option>
-                    );
-                  })}
+                  {targetOptions.map((opt) => (
+                    <option key={`target-${opt.value}`} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </Select>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCompareModalState({
-                    isOpen: true,
-                    baseVersion: compareBase || data?.currentReleaseVersion || '1.0.0',
-                    targetVersion: compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop'),
-                  });
-                }}
-                className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+
+              <Link
+                href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(effectiveBase)}&target=${encodeURIComponent(effectiveTarget)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
+                title="Open dedicated PR-style diff review workspace"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
-                <span>Compare</span>
-              </button>
+                <span>Review Diff</span>
+              </Link>
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
               {(['ALL', 'PRODUCTION', 'TEST'] as const).map((mode) => (
                 <button
                   key={mode}
@@ -553,7 +631,7 @@ export default function VersionHistoryTab({
                   onClick={() => setFilterType(mode)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     filterType === mode
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -565,18 +643,18 @@ export default function VersionHistoryTab({
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
+            <thead className="bg-slate-50/90 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-4">Version</th>
-                <th className="py-3 px-4">Package &amp; Ref</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Permissions</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Developer</th>
-                <th className="py-3 px-4">Checksum</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 w-36">Version</th>
+                <th className="py-3 px-4 min-w-[200px]">Package &amp; Ref</th>
+                <th className="py-3 px-4 w-40">Status</th>
+                <th className="py-3 px-4 min-w-[140px]">Capabilities</th>
+                <th className="py-3 px-4 w-44">Date</th>
+                <th className="py-3 px-4 min-w-[170px]">Developer</th>
+                <th className="py-3 px-4 min-w-[180px]">Checksum</th>
+                <th className="py-3 px-4 text-right w-44">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
@@ -587,176 +665,279 @@ export default function VersionHistoryTab({
                   </td>
                 </tr>
               ) : (
-                filteredVersions.map((rec, idx) => (
-                  <tr
-                    key={`${rec.version}-${idx}`}
-                    className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                          <span>{rec.version}</span>
+                filteredVersions.map((rec, idx) => {
+                  const isFullCommit = typeof rec.gitRef === 'string' && /^[0-9a-f]{40}$/i.test(rec.gitRef);
+                  const resolvedDev =
+                    rec.releasedBy ||
+                    ownerName ||
+                    teamName ||
+                    (ownerEmail ? ownerEmail.split('@')[0] : null) ||
+                    'Developer';
+
+                  const rawChecksum =
+                    rec.checksum ||
+                    (rec.gitRef ? `sha256:${rec.gitRef.substring(0, 16)}...` : null);
+
+                  return (
+                    <tr
+                      key={`${rec.version}-${idx}`}
+                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      {/* Version */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                            {rec.version}
+                          </span>
                           {rec.sourceType && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
                               {SOURCE_LABELS[rec.sourceType] || rec.sourceType}
                             </span>
                           )}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {rec.packageName || data?.packageName || appId || 'miniapp'}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                          {rec.gitRef || (rec.type === 'TEST' ? 'branch: develop' : `tag: ${rec.version}`)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {rec.status === 'ACTIVE' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                          <DotBadge color="bg-emerald-500" pulse />
-                          <span>LIVE ACTIVE</span>
-                        </span>
-                      ) : rec.status === 'IN_REVIEW' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                          <DotBadge color="bg-amber-500" pulse />
-                          <span>IN REVIEW</span>
-                        </span>
-                      ) : rec.status === 'TESTING' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
-                          <DotBadge color="bg-brand-500" />
-                          <span>SANDBOX TESTING</span>
-                        </span>
-                      ) : OTHER_STAGES.includes(rec.status) ? (
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                            stageLabel(rec) === 'Changes requested' || stageLabel(rec) === 'Rejected'
-                              ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                              : 'bg-white text-slate-700 border-dashed border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-600'
-                          }`}
-                        >
-                          <DotBadge
-                            color={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted' ? 'bg-amber-500' : 'bg-slate-400'}
-                            pulse={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted'}
-                          />
-                          <span>{stageLabel(rec).toUpperCase()}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
-                          <DotBadge color="bg-slate-400" />
-                          <span>{rec.status === 'DEPRECATED' ? 'RETIRED' : 'PREVIOUS'}</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <VersionCapabilities caps={capsByVersion[rec.version]} />
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
-                      {formatDate(rec.releasedAt) ? (
-                        formatDate(rec.releasedAt)
-                      ) : formatDate(rec.submittedAt) ? (
-                        <span>Submitted {formatDate(rec.submittedAt)}</span>
-                      ) : formatDate(rec.createdAt) ? (
-                        <span>Started {formatDate(rec.createdAt)}</span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {rec.releasedBy || '—'}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {rec.checksum ? (
-                        <button
-                          type="button"
-                          onClick={() => handleCopyChecksum(rec.checksum!)}
-                          className="inline-flex items-center gap-1 font-mono text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                          title="Click to copy full SHA-256 checksum"
-                        >
-                          <span>{rec.checksum.substring(0, 13)}...</span>
-                          <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedChangelog(rec)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          title="View Changelog & Release Notes"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCompareModalState({
-                              isOpen: true,
-                              baseVersion: data?.currentReleaseVersion || '1.0.0',
-                              targetVersion: rec.version,
-                            });
-                          }}
-                          className="p-1.5 rounded-lg text-brand-600 hover:text-brand-800 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors"
-                          title={`Compare ${rec.version} with Current Version`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                          </svg>
-                        </button>
-                        <Link
-                          href={`/miniapps/${miniAppId}/security?version=${encodeURIComponent(rec.version)}`}
-                          target="_blank"
-                          className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
-                          title={`Security & Compliance Report for ${rec.version}`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => openInviteModal(rec.version, rec.type === 'PRODUCTION' ? 'release' : 'test')}
-                          className="p-1.5 rounded-lg text-brand-600 hover:text-brand-800 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors"
-                          title="Invite Testers & Generate QR"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                          </svg>
-                        </button>
-                        {canRollback &&
-                          rec.version !== data?.currentReleaseVersion &&
-                          (rec.status === 'PREVIOUS' || rec.status === 'DEPRECATED') && (
+                        </div>
+                      </td>
+
+                      {/* Package & Ref */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                            {rec.packageName || data?.packageName || appId || 'sc_public_miniapp'}
+                          </span>
+                          {isFullCommit ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyGitRef(rec.gitRef!)}
+                                className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                                title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
+                              >
+                                <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <circle cx="12" cy="12" r="3" strokeWidth="2" />
+                                  <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
+                                </svg>
+                                <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
+                                {copiedGitRef === rec.gitRef ? (
+                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                                ) : (
+                                  <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                              <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                              </svg>
+                              <span>{rec.gitRef || (rec.type === 'TEST' ? 'branch: develop' : `tag: v${rec.version}`)}</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
+                        {rec.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                            <DotBadge color="bg-emerald-500" pulse />
+                            <span>ACTIVE</span>
+                          </span>
+                        ) : rec.status === 'IN_REVIEW' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                            <DotBadge color="bg-amber-500" pulse />
+                            <span>IN REVIEW</span>
+                          </span>
+                        ) : rec.status === 'TESTING' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-50 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                            <DotBadge color="bg-brand-500" />
+                            <span>SANDBOX TESTING</span>
+                          </span>
+                        ) : OTHER_STAGES.includes(rec.status) ? (
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                              stageLabel(rec) === 'Changes requested' || stageLabel(rec) === 'Rejected'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                                : 'bg-white text-slate-700 border-dashed border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-600'
+                            }`}
+                          >
+                            <DotBadge
+                              color={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted' ? 'bg-amber-500' : 'bg-slate-400'}
+                              pulse={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted'}
+                            />
+                            <span>{stageLabel(rec).toUpperCase()}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                            <DotBadge color="bg-slate-400" />
+                            <span>{rec.status === 'DEPRECATED' ? 'RETIRED' : 'PREVIOUS'}</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Capabilities */}
+                      <td className="py-3.5 px-4">
+                        {capsByVersion[rec.version] && capsByVersion[rec.version].length > 0 ? (
+                          <VersionCapabilities caps={capsByVersion[rec.version]} />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+                            <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>None</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Date */}
+                      <td className="py-3.5 px-4 text-xs">
+                        {rec.releasedAt ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {formatDate(rec.releasedAt)}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Production Release</span>
+                          </div>
+                        ) : rec.submittedAt ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {formatDate(rec.submittedAt)}
+                            </span>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Submitted for Review</span>
+                          </div>
+                        ) : rec.createdAt ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              {formatDate(rec.createdAt)}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Created</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      {/* Developer */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold shadow-2xs shrink-0 ring-1 ring-white dark:ring-slate-800">
+                            {getDeveloperInitials(resolvedDev)}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span
+                              className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate"
+                              title={resolvedDev}
+                            >
+                              {resolvedDev}
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              {rec.type === 'PRODUCTION' ? 'Release Manager' : 'Developer'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Checksum */}
+                      <td className="py-3.5 px-4">
+                        {rawChecksum ? (
                           <button
                             type="button"
-                            onClick={() =>
-                              setRollbackModalState({
-                                isOpen: true,
-                                targetVersion: rec.version,
-                                reason: '',
-                              })
-                            }
-                            className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                            title={`Rollback SuperApp to ${rec.version}`}
+                            onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
+                            className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/90 dark:border-slate-700/80 transition-all shadow-2xs cursor-pointer"
+                            title={`Full SHA-256 Digest: ${rec.checksum || rawChecksum}\nClick to copy`}
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span className="font-semibold">{formatShortHash(rec.checksum || rawChecksum)}</span>
+                            {copiedChecksum === (rec.checksum || rawChecksum) ? (
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Copied!</span>
+                            ) : (
+                              <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Review Diff in Dedicated Workspace */}
+                          <Link
+                            href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(data?.currentReleaseVersion || '1.0.0')}&target=${encodeURIComponent(rec.version)}`}
+                            className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-800/60 transition-colors shadow-2xs cursor-pointer"
+                            title={`Review Diff comparison with base (${data?.currentReleaseVersion || '1.0.0'} ➔ ${rec.version})`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                          </Link>
+
+                          {/* Changelog & Release Notes */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChangelog(rec)}
+                            className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
+                            title="View Changelog & Release Notes"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+
+                          {/* Security Audit Report */}
+                          <Link
+                            href={`/miniapps/${miniAppId}/security?version=${encodeURIComponent(rec.version)}`}
+                            className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 transition-colors shadow-2xs cursor-pointer"
+                            title={`Security & Compliance Report for ${rec.version}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                          </Link>
+
+                          {/* Invite Testers & QR */}
+                          <button
+                            type="button"
+                            onClick={() => openInviteModal(rec.version, rec.type === 'PRODUCTION' ? 'release' : 'test')}
+                            className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/50 dark:hover:bg-brand-900/60 text-brand-600 dark:text-brand-400 border border-brand-200/80 dark:border-brand-800/60 transition-colors shadow-2xs cursor-pointer"
+                            title="Invite Testers & Generate QR"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                            </svg>
+                          </button>
+
+                          {/* Rollback button if applicable */}
+                          {canRollback &&
+                            rec.version !== data?.currentReleaseVersion &&
+                            (rec.status === 'PREVIOUS' || rec.status === 'DEPRECATED') && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRollbackModalState({
+                                  isOpen: true,
+                                  targetVersion: rec.version,
+                                  reason: '',
+                                })
+                              }
+                              className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800/60 transition-colors shadow-2xs cursor-pointer"
+                              title={`Rollback SuperApp to ${rec.version}`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

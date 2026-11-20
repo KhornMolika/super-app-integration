@@ -358,7 +358,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             ) : (
               <>
                 <RocketIcon className="w-3.5 h-3.5 text-white" />
-                <span>{gate2Report ? 'Re-run Gate 2' : 'Run Security Gate 2'}</span>
+                <span>{gate2Report ? 'Re-verify Artifacts' : 'Verify Artifacts & Digest'}</span>
               </>
             )}
           </Button>

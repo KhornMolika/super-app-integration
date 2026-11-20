@@ -428,17 +428,14 @@ export class TelegramApiHelper {
         return false;
       }
 
-      const isArm64 = filename === arm64Name;
-      const otherPhones = isArm64
-        ? /^https:\/\//.test(apkUrlOrPath || '')
-          ? `\nFor 64-bit Android phones. Older 32-bit phones: <a href="${TelegramApiHelper.escapeHtml(apkUrlOrPath)}">universal APK</a>.`
-          : '\nFor 64-bit Android phones.'
-        : '';
       const form = new FormData();
       form.append('chat_id', chatId);
+      const downloadLink = /^https:\/\//.test(apkUrlOrPath || '')
+        ? `\n📥 <a href="${TelegramApiHelper.escapeHtml(apkUrlOrPath)}">Nexus Artifact Download</a>`
+        : '';
       form.append(
         'caption',
-        `📲 <b>${TelegramApiHelper.escapeHtml(appName || 'Super App')}</b> test build <code>${normVer}</code> (${(apk.length / 1048576).toFixed(1)} MB)\nTap the file to install it on Android.${otherPhones}`,
+        `📲 <b>${TelegramApiHelper.escapeHtml(appName || 'Super App')}</b> test build <code>${normVer}</code> (${(apk.length / 1048576).toFixed(1)} MB)\nOptimized 64-bit ARM APK. Tap the file to install on Android.${downloadLink}`,
       );
       form.append('parse_mode', 'HTML');
       form.append('document', new Blob([apk], { type: 'application/vnd.android.package-archive' }), filename);

@@ -1,7 +1,16 @@
 "use client";
 
 import React from "react";
-import LifecycleFlow from "@/components/ui/LifecycleFlow";
+import dynamic from "next/dynamic";
+
+const LifecycleFlow = dynamic(() => import("@/components/ui/LifecycleFlow"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 w-full flex items-center justify-center text-xs text-slate-400 bg-slate-100/50 dark:bg-slate-800/40 rounded-xl animate-pulse">
+      Loading lifecycle diagram...
+    </div>
+  ),
+});
 
 export function Section08ValidationLifecycle() {
   return (
