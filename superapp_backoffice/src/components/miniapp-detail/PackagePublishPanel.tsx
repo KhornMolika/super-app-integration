@@ -85,7 +85,7 @@ export interface PackagePublishPanelProps {
 export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh }: PackagePublishPanelProps) {
   const [busy, setBusy] = useState(false);
   const { role } = useAuth();
-  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   // A new version under review carries its own package and scan
   const rev = formData?.pendingRevision;

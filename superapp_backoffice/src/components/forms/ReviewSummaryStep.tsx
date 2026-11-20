@@ -630,10 +630,10 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 <div className="p-3 bg-slate-50/80 dark:bg-slate-950/40 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 font-semibold">
                     <ShieldCheckIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    <span>Isolated MinIO Quarantine Staging</span>
+                    <span>Isolated Package Quarantine Staging</span>
                   </span>
                   <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                    Zero-Bytes to Nexus Pre-Approval
+                    Pre-Approval Verification
                   </span>
                 </div>
 

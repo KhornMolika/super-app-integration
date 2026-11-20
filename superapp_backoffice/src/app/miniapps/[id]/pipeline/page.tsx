@@ -23,7 +23,7 @@ function MiniAppPipelinePageContent() {
   const params = useParams();
   const id = params?.id as string;
   const { can, role } = useAuth();
-  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const [miniApp, setMiniApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -170,7 +170,7 @@ function MiniAppPipelinePageContent() {
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Package className="w-5 h-5 text-brand-500" />
-              <span>Artifact Packaging & Nexus Ingestion Pipeline</span>
+              <span>{isSuperAdmin ? 'Artifact Packaging & Nexus Ingestion Pipeline' : 'Artifact Packaging & SuperApp Release Pipeline'}</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Automated quarantine, CVE scanning, and distribution into the sovereign SuperApp repository.
@@ -187,37 +187,39 @@ function MiniAppPipelinePageContent() {
       </div>
 
       {/* Infrastructure Telemetry Details */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            <Server className="w-4 h-4 text-emerald-500" />
-            <span>S3 / MinIO Quarantine</span>
+      {isSuperAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <Server className="w-4 h-4 text-emerald-500" />
+              <span>S3 / MinIO Quarantine</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Encrypted object storage housing original uploaded package archives prior to automated malware and AST sanitization.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Encrypted object storage housing original uploaded package archives prior to automated malware and AST sanitization.
-          </p>
-        </div>
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4 text-sky-500" />
-            <span>Security Scan Gate</span>
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <ShieldCheck className="w-4 h-4 text-sky-500" />
+              <span>Security Scan Gate</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Automated CVE-2026 vulnerability checks, manifest verification, and restricted API analysis.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Automated CVE-2026 vulnerability checks, manifest verification, and restricted API analysis.
-          </p>
-        </div>
 
-        <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            <Cpu className="w-4 h-4 text-brand-500" />
-            <span>Sonatype Nexus Pub-Hosted</span>
+          <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <Cpu className="w-4 h-4 text-brand-500" />
+              <span>Sonatype Nexus Pub-Hosted</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Internal authenticated registry serving approved Flutter packages to SuperApp mobile client compilation containers.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Internal authenticated registry serving approved Flutter packages to SuperApp mobile client compilation containers.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }

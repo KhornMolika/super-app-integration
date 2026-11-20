@@ -673,7 +673,7 @@ export default function ValidationReportTab({
   }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage, checkAliases, stageFindingsMap]);
 
   const { role } = useAuth();
-  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const [selectedStageLog, setSelectedStageLog] = useState<{
     name: string;
