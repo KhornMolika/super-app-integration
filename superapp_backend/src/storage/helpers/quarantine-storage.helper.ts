@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Client as MinioClient } from 'minio';
 import type { Multer } from 'multer';
-import { ArchiveSanitizerHelper } from './archive-sanitizer.helper';
+import { ArchiveSanitizerHelper, checkDartSdkCompatibility } from './archive-sanitizer.helper';
 
 export interface UploadPackageArchiveResult {
   success: boolean;
@@ -23,6 +23,7 @@ export interface UploadPackageArchiveResult {
     environment?: Record<string, any>;
   };
   widgetCandidates: string[];
+  sdkWarning?: string;
 }
 
 export interface UploadSdkArchiveResult {
@@ -92,6 +93,8 @@ export class QuarantineStorageHelper {
     const version = parsedPubspec?.version
       ? String(parsedPubspec.version).trim()
       : undefined;
+    const sdkConstraint = parsedPubspec?.environment?.sdk;
+    const sdkWarning = checkDartSdkCompatibility(sdkConstraint);
 
     return {
       success: true,
@@ -113,6 +116,7 @@ export class QuarantineStorageHelper {
         environment: parsedPubspec?.environment,
       },
       widgetCandidates,
+      ...(sdkWarning ? { sdkWarning } : {}),
     };
   }
 

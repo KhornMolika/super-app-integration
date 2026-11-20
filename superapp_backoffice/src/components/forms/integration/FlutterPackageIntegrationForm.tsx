@@ -325,6 +325,7 @@ export default function FlutterPackageIntegrationForm({
           isSanitized: data.isSanitized,
           isArchiveSubmission: true,
           widgetCandidates: Array.isArray(data.widgetCandidates) ? data.widgetCandidates : [],
+          sdkWarning: data.sdkWarning || undefined,
         };
 
         if (onUpdateFlutterConfig) {
@@ -1053,6 +1054,7 @@ export default function FlutterPackageIntegrationForm({
             existingFilename={flutterConfig?.archiveFilename}
             existingChecksum={flutterConfig?.archiveChecksum}
             existingSize={flutterConfig?.archiveSize}
+            sdkWarning={archiveUploadSuccess?.sdkWarning || flutterConfig?.sdkWarning}
           />
 
           <FlutterNexusConfigSection

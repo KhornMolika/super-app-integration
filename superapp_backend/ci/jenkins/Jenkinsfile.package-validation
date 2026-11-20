@@ -73,9 +73,20 @@ try:
         done(details="No pubspec.yaml found: this is not a Flutter package.")
     root = min(roots, key=lambda p: p.count(os.sep))
 
-    name = version = ""
+    name = version = sdk_constraint = ""
+    in_environment = False
     with open(os.path.join(root, "pubspec.yaml"), encoding="utf-8", errors="replace") as f:
         for line in f:
+            stripped = line.strip()
+            if not line[:1].isspace() and stripped.startswith("environment:"):
+                in_environment = True
+                continue
+            if in_environment:
+                if line[:1].isalpha() and not stripped.startswith("#"):
+                    in_environment = False
+                elif "sdk:" in stripped:
+                    sdk_constraint = stripped.split("sdk:")[1].split("#")[0].strip().strip("'").strip('"')
+
             if not line[:1].isalpha():
                 continue  # nested keys and comments
             key, _, value = line.partition(":")
@@ -85,12 +96,26 @@ try:
             if key.strip() == "version" and not version:
                 version = value
 
+    sdk_warning = None
+    if sdk_constraint:
+        import re
+        m = re.search(r'[\^>=]?\s*(\d+)\.(\d+)(?:\.(\d+))?', sdk_constraint)
+        if m:
+            maj = int(m.group(1))
+            min_v = int(m.group(2))
+            patch = int(m.group(3) or 0)
+            if (maj, min_v, patch) > (3, 12, 0):
+                sdk_warning = (
+                    f"Your package requires Dart SDK {sdk_constraint}, but the SuperApp platform currently "
+                    f"runs on Dart 3.12.0. Please update your environment constraint to '>=3.0.0 <4.0.0' to ensure compatibility."
+                )
+
     files = sum(len(f) for _, _, f in os.walk(root))
     norm = lambda n: n.strip().replace("-", "_").lower()
     if expected and name and norm(name) != norm(expected):
         done(details='pubspec.yaml names the package "' + name + '", but the mini app is registered as "' + expected + '".',
-             packageName=name, version=version, root=root)
-    done(passed=True, packageName=name, version=version, files=files, root=root)
+             packageName=name, version=version, sdkConstraint=sdk_constraint, sdkWarning=sdk_warning, root=root)
+    done(passed=True, packageName=name, version=version, sdkConstraint=sdk_constraint, sdkWarning=sdk_warning, files=files, root=root)
 except zipfile.BadZipFile:
     done(details="The archive is not a valid .zip file.")
 except SystemExit:
@@ -228,7 +253,7 @@ pipeline {
         string(name: 'GITLEAKS_IMAGE', defaultValue: 'zricethezav/gitleaks:v8.21.2', description: 'Secret scanner')
         string(name: 'SEMGREP_IMAGE', defaultValue: 'semgrep/semgrep:1.85.0', description: 'Static analysis')
         string(name: 'TRIVY_IMAGE', defaultValue: 'aquasec/trivy:0.56.2', description: 'Dependency CVEs, licenses, SBOM')
-        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Resolves pubspec.lock when the package has none')
+        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:stable', description: 'Resolves pubspec.lock when the package has none')
     }
 
     stages {
@@ -248,7 +273,7 @@ pipeline {
                     env.GITLEAKS_IMAGE = (params.GITLEAKS_IMAGE ?: 'zricethezav/gitleaks:v8.21.2').trim()
                     env.SEMGREP_IMAGE = (params.SEMGREP_IMAGE ?: 'semgrep/semgrep:1.85.0').trim()
                     env.TRIVY_IMAGE = (params.TRIVY_IMAGE ?: 'aquasec/trivy:0.56.2').trim()
-                    env.FLUTTER_IMAGE = (params.FLUTTER_IMAGE ?: 'ghcr.io/cirruslabs/flutter:3.44.0').trim()
+                    env.FLUTTER_IMAGE = (params.FLUTTER_IMAGE ?: 'ghcr.io/cirruslabs/flutter:stable').trim()
                     sh(prelude() + '''
                         if [ -d "$S" ]; then rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "${GIT_IMAGE:-alpine/git:2.45.2}" -rf "$S"; fi
                         mkdir -p "$S/src" "$R" "$S/home" "$CACHE/trivy"
@@ -383,7 +408,7 @@ pipeline {
                             echo "No pubspec.lock: resolving dependencies with flutter pub get"
                             export FSA_PUB_TOKEN="${CALLBACK_TOKEN:-}"
                             docker run --rm $MOUNT -w "$PKG" -e PUB_CACHE="$S/pub-cache" -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
-                                -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "${FLUTTER_IMAGE:-ghcr.io/cirruslabs/flutter:3.44.0}" bash -c '
+                                -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "${FLUTTER_IMAGE:-ghcr.io/cirruslabs/flutter:stable}" bash -c '
                                     trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE 2>/dev/null || true" EXIT
                                     dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN >/dev/null 2>&1 || true
                                     flutter pub get --no-example || flutter pub get

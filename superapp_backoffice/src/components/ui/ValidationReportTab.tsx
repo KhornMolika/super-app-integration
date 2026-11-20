@@ -748,6 +748,23 @@ export default function ValidationReportTab({
     ? 'failed'
     : 'waiting';
 
+  const dartSdkWarning = useMemo(() => {
+    if (report?.ingest?.sdkWarning) return report.ingest.sdkWarning;
+    if (conf?.sdkWarning) return conf.sdkWarning;
+    const sdkFinding = allFindings.find(
+      (f) =>
+        (f.description && f.description.includes('Dart SDK')) ||
+        (f.description && f.description.includes('SDK version ^')) ||
+        (f.title && f.title.includes('SDK version')),
+    );
+    if (sdkFinding) {
+      const match = sdkFinding.description.match(/requires SDK version (\^[0-9.]+)/i);
+      const reqVer = match ? match[1] : '^3.12.2';
+      return `Your package requires Dart SDK ${reqVer}, but the SuperApp platform currently runs on Dart 3.12.0. Please update your environment constraint to '>=3.0.0 <4.0.0' to ensure compatibility.`;
+    }
+    return null;
+  }, [report, conf, allFindings]);
+
   const handleDownloadScanReportMarkdown = () => {
     const lines = [
       `# Security & Compliance Scan Report`,
@@ -1637,6 +1654,26 @@ export default function ValidationReportTab({
                   {nexusStepState === 'done' ? 'Published' : nexusStepState === 'failed' ? 'Failed' : 'Waiting'}
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pre-flight / Ingestion Dart SDK Compatibility Warning Banner */}
+        {dartSdkWarning && (
+          <div className="mt-4 p-4 rounded-xl border border-amber-300 dark:border-amber-800/80 bg-amber-50/90 dark:bg-amber-950/40 flex items-start gap-3 shadow-xs animate-in fade-in">
+            <span className="text-xl shrink-0 select-none">⚠️</span>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                  Dart SDK Version Compatibility Warning
+                </h4>
+                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                  Platform Runtime: Dart 3.12.0
+                </span>
+              </div>
+              <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+                {dartSdkWarning}
+              </p>
             </div>
           </div>
         )}
