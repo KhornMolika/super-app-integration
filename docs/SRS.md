@@ -1,4 +1,4 @@
-# Software Requirements Specification (SRS)
+compare to# Software Requirements Specification (SRS)
 ## FSA SuperApp Ecosystem & Governance Platform
 **Document Version:** 1.0.0  
 **Project:** FinTech Center FSA SuperApp Platform (POC & Staging)  
@@ -17,7 +17,7 @@
    - 1.4 Architectural Overview
 2. [User Roles, Personas & Access Hierarchy](#2-user-roles-personas--access-hierarchy)
 3. [System High-Level Architecture & Tech Stack](#3-system-high-level-architecture--tech-stack)
-4. [Functional Requirements (FR-001 to FR-125)](#4-functional-requirements)
+4. [Functional Requirements (FR-001 to FR-130)](#4-functional-requirements)
    - [Module 1: MiniApp Registration & Multi-Tier Onboarding (FR-001 to FR-016)](#module-1-miniapp-registration--multi-tier-onboarding)
    - [Module 2: CI/CD Pipeline, Automated Security Scanners & Nexus Artifact Management (FR-017 to FR-032)](#module-2-cicd-pipeline-automated-security-scanners--nexus-artifact-management)
    - [Module 3: Governance, Review Request Checklist & Instant Zero-Binary Rollback (FR-033 to FR-048)](#module-3-governance-review-request-checklist--instant-zero-binary-rollback)
@@ -26,6 +26,7 @@
    - [Module 6: Mobile SuperApp Consumer Shell & Dynamic Engine (FR-081 to FR-096)](#module-6-mobile-superapp-consumer-shell--dynamic-engine)
    - [Module 7: Notifications, Developer Announcements & System Alerts (FR-097 to FR-110)](#module-7-notifications-developer-announcements--system-alerts)
    - [Module 8: User Management, Multi-Tenancy & Platform Governance (FR-111 to FR-125)](#module-8-user-management-multi-tenancy--platform-governance)
+   - [Module 9: SuperApp Ecosystem Architecture & Release Pipeline (FR-126 to FR-130)](#module-9-superapp-ecosystem-architecture--release-pipeline)
 5. [Non-Functional Requirements (NFR-001 to NFR-025)](#5-non-functional-requirements)
    - 5.1 Security & Zero-Trust Isolation (NFR-001 to NFR-005)
    - 5.2 Performance, Throughput & Latency (NFR-006 to NFR-010)
@@ -295,6 +296,16 @@ The platform provides regulatory assurance through:
 
 ---
 
+### Module 9: SuperApp Ecosystem Architecture & Release Pipeline
+
+- **FR-126 (SuperApp Ecosystem & Release Navigation):** The Backoffice shall provide a dedicated top-level `SuperApp & Releases` route (`/releases`, with automatic `/superapp` redirection) in `SidebarNav.tsx` under the `ECOSYSTEM` navigation group, protected by `super_app:read` permissions.
+- **FR-127 (Ecosystem Health & Version Tracking):** The endpoints `GET /super-app/ecosystem-status` and `GET /super-app/info` shall expose real-time metrics including live production version (`v0.0.1`), next candidate assembly (`v0.0.3`), total bundled mini-apps, and infrastructure health.
+- **FR-128 (Security Gate 2 Checksum Verification & Assembly):** The endpoint `POST /super-app/verify-assembly` shall execute Security Gate 2, validating SHA-256 cryptographic hashes for all bundled mini-apps and packaging official SuperApp builds.
+- **FR-129 (SuperApp Release Comparison - SA vs SA):** The endpoint `GET /super-app/releases/compare?base=v1&target=v2` and `SuperAppReleaseCompareModal` shall calculate side-by-side release diffs, highlighting bundled mini-app additions/removals, version upgrades, and capability changes.
+- **FR-130 (SuperApp Flutter Shell Rebuild Panel):** The Backoffice shall provide `SuperAppRebuildPanel` with Super Admin RBAC (`super_app:manage`), enabling authorized administrators to trigger Flutter shell recompilation and binary packaging directly from the Backoffice with real-time log streaming.
+
+---
+
 ## 5. Non-Functional Requirements
 
 ### 5.1 Security & Zero-Trust Isolation
@@ -367,8 +378,9 @@ The platform provides regulatory assurance through:
 | **M-06** | Mobile Consumer Shell | FR-081 – FR-096 | 16 | `super-app/lib/features/` | `mobile.http.spec.ts`, `mobile-catalog.service.spec.ts` |
 | **M-07** | Notifications & Announcements | FR-097 – FR-110 | 14 | `notifications/`, `announcements/` | `notifications.service.spec.ts` |
 | **M-08** | Organizations & Governance | FR-111 – FR-125 | 15 | `organizations/`, `access-control/` | `organizations.service.spec.ts`, `rbac.guard.spec.ts` |
+| **M-09** | SuperApp Ecosystem & Releases | FR-126 – FR-130 | 5 | `releases/`, `super-app/` | `releases.page.spec.ts`, `super-app.service.spec.ts` |
 | **NFR** | Non-Functional Requirements | NFR-001 – NFR-025 | 25 | Platform-wide | 154 Passing Jest Suites (1,494 tests) |
-| **TOTAL** | **Full System Scope** | **FR-001 – NFR-025** | **150** | **895 Source Files** | **1,494 Automated Unit & E2E Tests** |
+| **TOTAL** | **Full System Scope** | **FR-001 – NFR-025** | **155** | **896 Source Files** | **1,494 Automated Unit & E2E Tests** |
 
 ---
 *End of Software Requirements Specification (SRS v1.0.0)*
