@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal, PlayCircle, Printer, ArrowLeft, Layers } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, ArrowLeft, Layers } from 'lucide-react';
 import { miniappsApi } from '@/api';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
@@ -799,12 +799,6 @@ export default function ValidationReportTab({
     URL.revokeObjectURL(url);
   };
 
-  const handlePrintReport = () => {
-    if (typeof window !== 'undefined') {
-      window.print();
-    }
-  };
-
   const handleDownloadAuditJson = () => {
     const dataToExport = {
       exportedAt: new Date().toISOString(),
@@ -1085,16 +1079,7 @@ export default function ValidationReportTab({
               <ArrowLeft className="w-4 h-4" />
               <span>Back to MiniApp Console</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => typeof window !== 'undefined' && window.print()}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print / Save PDF</span>
-              </button>
-            </div>
+
           </div>
           <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -1368,11 +1353,6 @@ export default function ValidationReportTab({
                   label: 'Download Audit JSON',
                   icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
                   onClick: handleDownloadAuditJson,
-                },
-                {
-                  label: 'Print Security Report',
-                  icon: <ExternalLinkIcon className="w-4 h-4 text-slate-500" />,
-                  onClick: handlePrintReport,
                 },
                 ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
                   ? [
