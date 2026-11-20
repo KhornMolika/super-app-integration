@@ -17,7 +17,6 @@ import {
   MiniAppDetailHeader,
   MiniAppLifecycleBanners,
   ChangesRequestedBanner,
-  MiniAppDetailTabs,
   MiniAppSectionContent,
   MiniAppDetailBottomBar,
   MiniAppNotFound,
@@ -285,15 +284,6 @@ function ManageMiniAppContent() {
               appName: formData.name,
             })
           }
-        />
-
-        {/* 9-Tab Navigation (First Image v.2: Inverted-Radius File-Folder Tabs) */}
-        <MiniAppDetailTabs
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          allErrors={allErrors}
-          validationStatus={formData.validationStatus}
-          currentReleaseVersion={formData.currentReleaseVersion}
         />
 
         {/* Section Contents Router with Smooth Enter Animation */}

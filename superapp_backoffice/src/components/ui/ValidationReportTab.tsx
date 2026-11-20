@@ -444,8 +444,8 @@ export default function ValidationReportTab({
     }));
 
     (issues || []).forEach((iss: any) => {
-      const findingId = iss.metadata?.findingId || iss.type || 'ISSUE';
-      if (!list.some((f) => f.id === findingId || (f.description && f.description === iss.description))) {
+      const findingId = iss.metadata?.findingId || iss.id || `${iss.type || 'ISSUE'}-${iss.metadata?.field || Math.random().toString(36).slice(2, 7)}`;
+      if (!list.some((f) => (iss.id && f.id === iss.id) || (f.description && f.description === iss.description))) {
         list.push({
           id: findingId,
           severity: (iss.severity || 'HIGH').toUpperCase(),
@@ -454,7 +454,7 @@ export default function ValidationReportTab({
           engineId: iss.metadata?.engineId || iss.metadata?.stage || (
             iss.type?.toLowerCase().includes('secret') ? 'secret_scan' :
             iss.type?.toLowerCase().includes('cve') || iss.type?.toLowerCase().includes('dep') ? 'dependency_scan' :
-            iss.type?.toLowerCase().includes('perm') || iss.type?.toLowerCase().includes('cap') ? 'capability_gate' :
+            iss.type?.toLowerCase().includes('perm') || iss.type?.toLowerCase().includes('cap') || iss.metadata?.field?.toLowerCase().includes('perm') || iss.description?.toLowerCase().includes('capability') ? 'capability_gate' :
             iss.type?.toLowerCase().includes('sast') || iss.type?.toLowerCase().includes('dart') ? 'sast' :
             undefined
           ),
@@ -465,6 +465,23 @@ export default function ValidationReportTab({
         });
       }
     });
+
+    // Fallback: If validationErrors exists on the app/version and wasn't already in issues
+    if (effectiveData.validationErrors && typeof effectiveData.validationErrors === 'object') {
+      Object.entries(effectiveData.validationErrors).forEach(([field, msg]) => {
+        const desc = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        if (!list.some((f) => f.description === desc)) {
+          list.push({
+            id: `VALIDATION_ERROR-${field}`,
+            severity: 'HIGH',
+            title: 'VALIDATION_ERROR',
+            description: desc,
+            engineId: field.toLowerCase().includes('perm') || desc.toLowerCase().includes('capability') ? 'capability_gate' : undefined,
+            recommendation: 'Remediate this finding in accordance with SuperApp security policies.',
+          });
+        }
+      });
+    }
 
     return list;
   }, [findings, issues]);

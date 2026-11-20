@@ -266,14 +266,14 @@ const miniAppRegisterNavGroups: NavGroupWithTab[] = [
         icon: null as any,
       },
       {
-        name: 'Security scans',
+        name: 'Security profile',
         href: '/miniapps/register?step=5',
         tabKey: '5',
         stepNumber: 5,
         icon: null as any,
       },
       {
-        name: 'Review',
+        name: 'Review & submit',
         href: '/miniapps/register?step=6',
         tabKey: '6',
         stepNumber: 6,
@@ -344,6 +344,16 @@ const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
     label: 'OPERATIONS & RELEASES',
     items: [
       {
+        name: 'Review & Diff Desk',
+        href: `/miniapps/${miniAppId}/review`,
+        tabKey: 'review',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        ),
+      },
+      {
         name: 'Version History',
         href: `/miniapps/${miniAppId}?tab=versions`,
         tabKey: 'versions',
@@ -355,8 +365,8 @@ const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
       },
       {
         name: 'Security & Validation',
-        href: `/miniapps/${miniAppId}?tab=report`,
-        tabKey: 'report',
+        href: `/miniapps/${miniAppId}/security`,
+        tabKey: 'security',
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -443,6 +453,8 @@ function SidebarNavContent() {
     pathname !== '/capabilities';
   const miniAppId = isMiniAppDetailMode ? pathname.split('/')[2] || '' : '';
   const capabilityId = isCapabilityDetailMode ? pathname.split('/')[2] || '' : '';
+  const miniAppSubpage = isMiniAppDetailMode ? pathname.split('/')[3] || '' : '';
+  const currentMiniAppTab = miniAppSubpage || searchParams?.get('tab') || 'overview';
   const currentTab = searchParams?.get('tab') || (isCapabilityDetailMode ? 'specs' : 'overview');
   const currentStep = parseInt(searchParams?.get('step') || '1', 10);
 
@@ -631,7 +643,13 @@ function SidebarNavContent() {
                       </div>
                     );
                   }
-                } else if (isMiniAppDetailMode || isCapabilityDetailMode) {
+                } else if (isMiniAppDetailMode) {
+                  if (miniAppSubpage) {
+                    isActive = item.tabKey === miniAppSubpage;
+                  } else {
+                    isActive = item.tabKey ? currentMiniAppTab === item.tabKey : false;
+                  }
+                } else if (isCapabilityDetailMode) {
                   isActive = item.tabKey ? currentTab === item.tabKey : false;
                 } else {
                   isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));

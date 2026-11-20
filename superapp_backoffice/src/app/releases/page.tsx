@@ -114,16 +114,15 @@ export default function ReleasesPage() {
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Compare Button */}
-          <button
-            type="button"
-            onClick={() => setCompareModalOpen(true)}
+          <Link
+            href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-xs"
           >
             <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span>Compare SA Releases (SA vs SA)</span>
-          </button>
+          </Link>
 
           <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
             <span className="text-xs text-slate-500 font-medium">Candidate Version:</span>
@@ -181,14 +180,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-xs">
             <span className="text-slate-500">Status: <strong className="text-emerald-700 dark:text-emerald-400">Live in Production</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
+            <Link
+              href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
               className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View Bundle</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -211,14 +209,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
             <span className="text-slate-500">Staging: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Staged</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
+            <Link
+              href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
               className="text-xs font-bold text-accent-700 dark:text-accent-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Compare Diff</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -241,14 +238,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
             <span className="text-slate-500">Repository: <strong className="text-slate-700 dark:text-slate-300">Nexus S3</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
-              className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:underline flex items-center gap-1"
+            <Link
+              href={`/releases/compare?base=v0.0.1&target=${encodeURIComponent(releaseVersion)}`}
+              className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View History</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>

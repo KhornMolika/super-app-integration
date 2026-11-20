@@ -188,8 +188,30 @@ export function useMiniAppRegister() {
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
     } catch (_) {}
-    setFormData(getInitialRegisterFormData());
+    const initial = getInitialRegisterFormData();
+    const userOrg = user?.organization;
+    const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name || '';
+    const userOrgCode = typeof userOrg === 'object' ? userOrg?.code || '' : '';
+    const userOrgId = user?.organizationId || (typeof userOrg === 'object' ? userOrg?.id : '') || '';
+
+    setFormData({
+      ...initial,
+      ownerName: user?.name || '',
+      ownerEmail: user?.email || '',
+      supportEmail: user?.email || '',
+      teamName: userOrgName ? `${userOrgName} Team` : 'MiniApp Development Team',
+      ...(userOrgName ? {
+        organization: userOrgName,
+        organizationCode: userOrgCode,
+        organizationId: userOrgId,
+      } : {}),
+    });
     setStep(1);
+    setMaxVisitedStep(1);
+    setPendingArchiveFile(null);
+    setPendingIosFile(null);
+    setPendingAndroidFile(null);
+    setLocalErrors({});
     setHasRestoredDraft(false);
     setDraftSavedAt(null);
     toast.info('Draft discarded. Started with a blank form.', 'Draft Reset');
@@ -501,7 +523,8 @@ export function useMiniAppRegister() {
         );
       const userOrg = user?.organization;
       const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
-      if (!isSuperAdmin && userOrgName) {
+      // Allow assigning organization if empty or if matching user's organization
+      if (!isSuperAdmin && userOrgName && value && value !== userOrgName) {
         return; // Disallow changing organization when bound to user's organization (non-super-admins)
       }
       setFormData((prev) => ({
@@ -518,7 +541,8 @@ export function useMiniAppRegister() {
         );
       const userOrg = user?.organization;
       const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
-      if (!isSuperAdmin && userOrgCode) {
+      // Allow assigning organization code if empty or if matching user's organization code
+      if (!isSuperAdmin && userOrgCode && value && value !== userOrgCode) {
         return; // Disallow changing organization code (non-super-admins)
       }
       setFormData((prev) => ({
