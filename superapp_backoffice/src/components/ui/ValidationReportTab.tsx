@@ -380,15 +380,20 @@ export default function ValidationReportTab({
   }, []);
 
   const effectiveData = versionReportData || miniApp;
-  const report = effectiveData.validationReport || null;
-  const stages = effectiveData.validationStages || {};
+  const report = effectiveData.validationReport || miniApp.validationReport || null;
+  const stages = effectiveData.validationStages || miniApp.validationStages || {};
   const issues = miniApp.issues || [];
   const findings = report?.findings || [];
-  const sbom = report?.sbom || effectiveData.validationReport?.sbom || null;
-  const valStatus = (effectiveData.validationStatus || 'PENDING').toUpperCase();
+  const sbom = report?.sbom || effectiveData.validationReport?.sbom || miniApp.validationReport?.sbom || null;
+  const valStatus = (
+    effectiveData.validationStatus && effectiveData.validationStatus !== 'PENDING'
+      ? effectiveData.validationStatus
+      : miniApp.validationStatus || 'PENDING'
+  ).toUpperCase();
   const score =
     effectiveData.validationScore ??
     report?.score ??
+    miniApp.validationScore ??
     (valStatus === 'PASSED' ? 100 : valStatus === 'FAILED' ? 45 : null);
   const isFlutterPackage = (effectiveData.integrationMethod || miniApp.integrationMethod) === 'FLUTTER_PACKAGE';
 

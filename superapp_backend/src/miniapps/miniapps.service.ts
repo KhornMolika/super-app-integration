@@ -1378,9 +1378,13 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     // 2. Fetch specific scan run from mini_app_scans
     const scanScope = isRevision ? 'REVISION' : 'APP';
-    const scan = this.runs
+    let scan = this.runs
       ? await this.runs.scanForVersion(app.id, normTarget, scanScope as any)
       : null;
+    if (!scan && this.runs) {
+      // Fallback: if scan was recorded without explicit version tag (e.g. initial draft or preflight)
+      scan = await this.runs.latestScan(app.id, scanScope as any);
+    }
 
     // 3. Fetch specific build run from mini_app_builds
     const build = this.runs
