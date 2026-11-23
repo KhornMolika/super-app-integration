@@ -810,9 +810,10 @@ function MiniAppsContent() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <AppStatusBadge app={app} />
+                  <AppStatusBadge app={app} showPrefix={true} />
                   <VersionStageBadge
                     app={app}
+                    showPrefix={true}
                     empty={
                       <span className="text-xs text-slate-400 dark:text-slate-500">
                         -

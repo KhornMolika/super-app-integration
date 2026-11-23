@@ -156,11 +156,22 @@ function Chip({
 }
 
 /** Can users get the app? Draft, Live, Suspended or Archived. */
-export function AppStatusBadge({ app, size }: { app: StatusSubject; size?: 'sm' | 'md' }) {
+export function AppStatusBadge({
+  app,
+  size,
+  showPrefix = false,
+}: {
+  app: StatusSubject;
+  size?: 'sm' | 'md';
+  showPrefix?: boolean;
+}) {
   const info = APP_STATUS[appStatusOf(app)];
   return (
-    <Chip tone={info.tone} size={size} title={`Status: ${info.hint}`}>
-      <span className="sr-only">Status: </span>
+    <Chip tone={info.tone} size={size} title={`App Status: ${info.hint}`}>
+      <span className="sr-only">App Status: </span>
+      {showPrefix && (
+        <span className="font-normal text-slate-400 dark:text-slate-500 mr-1">App:</span>
+      )}
       {info.label}
     </Chip>
   );
@@ -175,10 +186,12 @@ export function VersionStageBadge({
   app,
   size,
   empty,
+  showPrefix = false,
 }: {
   app: StatusSubject;
   size?: 'sm' | 'md';
   empty?: React.ReactNode;
+  showPrefix?: boolean;
 }) {
   const info = versionStageInfo(app);
   if (!info) return <>{empty ?? null}</>;
@@ -191,14 +204,20 @@ export function VersionStageBadge({
       size={size}
       title={
         hasNext
-          ? 'Next version: where it is in review, approval and testing'
+          ? 'Next version stage: where it is in review, approval and testing'
           : live
           ? 'Current active release version'
-          : 'Version: where it is in review, approval and testing'
+          : 'Version stage: where it is in review, approval and testing'
       }
     >
-      <span className="sr-only">{hasNext ? 'Next version: ' : 'Version: '}</span>
-      {hasNext && <span className="font-normal text-slate-500 dark:text-slate-400">Next: </span>}
+      <span className="sr-only">{hasNext ? 'Next version: ' : 'Version stage: '}</span>
+      {showPrefix ? (
+        <span className="font-normal text-slate-400 dark:text-slate-500 mr-1">
+          {hasNext ? 'Next Stage:' : 'Stage:'}
+        </span>
+      ) : (
+        hasNext && <span className="font-normal text-slate-500 dark:text-slate-400 mr-0.5">Next: </span>
+      )}
       {info.label}
     </Chip>
   );

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { AppStatusBadge, VersionStageBadge } from './MiniAppStatusBadges';
-import { ACCESS_LEVEL_INFO, toAccessLevel } from '@/lib/miniappAccess';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
@@ -63,7 +62,6 @@ export default function MiniAppDetailHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const accessInfo = ACCESS_LEVEL_INFO[toAccessLevel((formData as any).myAccess)];
   const testVersion =
     formData.activeTestVersion ||
     formData.integrationConfig?.superAppTestVersion ||
@@ -79,19 +77,11 @@ export default function MiniAppDetailHeader({
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight break-words mr-1">
               {formData.name || 'Manage MiniApp'}
             </h2>
-            {/* Can users get it (status), and where the version being worked on is */}
-            <AppStatusBadge app={formData} size="md" />
-            <VersionStageBadge app={formData} size="md" />
-            {/* The caller's access on this app (owner / collaborator role / admin) */}
-            <span
-              title={accessInfo.summary}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap"
-            >
-              <span className="sr-only">Your access: </span>
-              {accessInfo.label}
-            </span>
+            {/* Clear distinction between App Catalog Status and Version Lifecycle Stage */}
+            <AppStatusBadge app={formData} size="md" showPrefix={true} />
+            <VersionStageBadge app={formData} size="md" showPrefix={true} />
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-2.5 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {formData.appId && (
               <button
                 type="button"
@@ -112,8 +102,20 @@ export default function MiniAppDetailHeader({
                 {copiedAppId && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>}
               </button>
             )}
+            {formData.organization && (
+              <>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span 
+                  className="inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300"
+                  title={getOrganizationFullName(formData.organization)}
+                >
+                  <BuildingIcon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                  <span>{getOrganizationCode(formData.organization)}</span>
+                </span>
+              </>
+            )}
             <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-medium text-xs">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
               {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE || formData.integrationMethod === 'FLUTTER_PACKAGE'
                 ? 'Flutter Package'
                 : formData.integrationMethod === IntegrationMethod.NATIVE_SDK || formData.integrationMethod === 'NATIVE_SDK'
@@ -121,52 +123,6 @@ export default function MiniAppDetailHeader({
                 : formData.integrationMethod === IntegrationMethod.DEEP_LINK || formData.integrationMethod === 'DEEP_LINK'
                 ? 'Deep Link'
                 : 'WebView'}
-            </span>
-            {(formData.organization) && (
-              <>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span 
-                  className="inline-flex items-center gap-1 font-semibold text-sky-600 dark:text-sky-400"
-                  title={getOrganizationFullName(formData.organization)}
-                >
-                  <BuildingIcon className="w-3.5 h-3.5" />
-                  <span>{getOrganizationCode(formData.organization)}</span>
-                </span>
-              </>
-            )}
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${
-                formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
-                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-              }`}
-              title={
-                formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'Target Audience: Strictly private to this organization staff'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'Target Audience: Accessible by all FSA regulatory staff'
-                  : 'Target Audience: Publicly accessible by all consumers and citizens'
-              }
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  formData.targetAudience === 'ORGANIZATION_ONLY'
-                    ? 'bg-amber-500'
-                    : formData.targetAudience === 'ALL_FSA_STAFF'
-                    ? 'bg-indigo-500'
-                    : 'bg-emerald-500'
-                }`}
-              />
-              <span>
-                {formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'Private Authority'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'All FSA Staff'
-                  : 'Public'}
-              </span>
             </span>
           </div>
         </div>

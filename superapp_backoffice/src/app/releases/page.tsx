@@ -422,8 +422,8 @@ export default function ReleasesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <AppStatusBadge app={app} />
-                          {versionStageOf(app) && <VersionStageBadge app={app} />}
+                          <AppStatusBadge app={app} showPrefix={true} />
+                          {versionStageOf(app) && <VersionStageBadge app={app} showPrefix={true} />}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
