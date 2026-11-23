@@ -78,7 +78,7 @@ const mainNavGroups: NavGroup[] = [
       {
         name: 'SuperApp & Releases',
         href: '/releases',
-        requiredRole: ['SUPER_ADMIN'],
+        requiredRole: ['SUPER_ADMIN', 'PLATFORM_ADMIN'],
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -119,7 +119,7 @@ const mainNavGroups: NavGroup[] = [
       {
         name: 'Banners',
         href: '/banners',
-        requiredRole: ['SUPER_ADMIN', 'ADMIN'],
+        requiredRole: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'ORG_ADMIN', 'ADMIN'],
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -438,7 +438,7 @@ function SidebarNavContent() {
   const capabilityView = useCapabilityView();
   // Only the platform admin browses every organization; everyone else
   // (organization admins included) gets "My Organization"
-  const isSuperOrAdmin = role === 'SUPER_ADMIN';
+  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
   const { isCollapsed, isWizardStepAllowed, completedWizardSteps } = useSidebar();
 
 

@@ -1074,7 +1074,11 @@ export class AccessControlService {
     }
 
     const roleName = identity.staffProfile?.role?.name;
-    const isPrivileged = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
+    const isPrivileged =
+      roleName === 'SUPER_ADMIN' ||
+      roleName === 'PLATFORM_ADMIN' ||
+      roleName === 'ORG_ADMIN' ||
+      roleName === 'ADMIN';
     const nextStatus = isPrivileged ? 'ACTIVE' : 'PENDING_APPROVAL';
     identity.status = nextStatus;
     identity.emailVerifiedAt = new Date();
@@ -1273,7 +1277,17 @@ export class AccessControlService {
   async updateRole(id: string, dto: UpdateRoleDto): Promise<Role> {
     const role = await this.findRoleById(id);
 
-    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+    const systemRoles = [
+      'SUPER_ADMIN',
+      'PLATFORM_ADMIN',
+      'APP_REVIEWER',
+      'SECURITY_OFFICER',
+      'ORG_ADMIN',
+      'ADMIN',
+      'MA_DEVELOPER',
+      'MA_TESTER',
+      'STAFF',
+    ];
     if (dto.name !== undefined) {
       if (systemRoles.includes(role.name.toUpperCase())) {
         throw new BadRequestException(
@@ -1302,7 +1316,17 @@ export class AccessControlService {
 
   async deleteRole(id: string): Promise<{ success: boolean; message: string }> {
     const role = await this.findRoleById(id);
-    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+    const systemRoles = [
+      'SUPER_ADMIN',
+      'PLATFORM_ADMIN',
+      'APP_REVIEWER',
+      'SECURITY_OFFICER',
+      'ORG_ADMIN',
+      'ADMIN',
+      'MA_DEVELOPER',
+      'MA_TESTER',
+      'STAFF',
+    ];
     if (systemRoles.includes(role.name.toUpperCase())) {
       throw new BadRequestException(
         `System role '${role.name}' is a core system role and cannot be deleted.`,

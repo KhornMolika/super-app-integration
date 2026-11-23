@@ -46,14 +46,20 @@ function roleNamesOf(requester: unknown): string[] {
     .map((n) => n.toUpperCase().trim());
 }
 
-/** True for SUPER_ADMIN only: authority over every organization. */
+/** True for SUPER_ADMIN or PLATFORM_ADMIN: authority over platform. */
 export function isPlatformAdmin(requester: unknown): boolean {
-  return roleNamesOf(requester).includes('SUPER_ADMIN');
+  const roles = roleNamesOf(requester);
+  return roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
 
-/** True for ADMIN (organization admin). Scope it with `requesterOrgId`. */
+/** True for ORG_ADMIN or ADMIN (organization admin). Scope it with `requesterOrgId`. */
 export function isOrgAdmin(requester: unknown): boolean {
-  return roleNamesOf(requester).includes('ADMIN');
+  const roles = roleNamesOf(requester);
+  return (
+    roles.includes('ORG_ADMIN') ||
+    roles.includes('ADMIN') ||
+    roles.includes('ORGANIZATION_ADMIN')
+  );
 }
 
 /** The organization a requester belongs to, from the JWT payload. */

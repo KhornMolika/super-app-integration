@@ -5,7 +5,16 @@ import { authApi } from '@/api/auth.api';
 import { usersApi } from '@/api/users.api';
 import { resetSessionExpiredState } from '@/api/client';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MA_DEVELOPER' | 'STAFF';
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'PLATFORM_ADMIN'
+  | 'APP_REVIEWER'
+  | 'SECURITY_OFFICER'
+  | 'ORG_ADMIN'
+  | 'ADMIN'
+  | 'MA_DEVELOPER'
+  | 'MA_TESTER'
+  | 'STAFF';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -19,14 +28,43 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'organization:read', 'organization:manage',
     'audit_log:read', 'settings:manage'
   ],
-  // Organization admin (no approve/reject: review decisions are SUPER_ADMIN only).
-  // Every grant is scoped to their own organization by the
-  // API. Platform settings and Super App build tools (settings:manage,
-  // super_app:manage) are SUPER_ADMIN only.
+  PLATFORM_ADMIN: [
+    'miniapp:read', 'miniapp:suspend', 'issue:resolve',
+    'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
+    'super_app:read',
+    'user:read', 'user:manage',
+    'role:read',
+    'permission:read', 'permission:manage',
+    'organization:read', 'organization:manage',
+    'audit_log:read', 'settings:manage'
+  ],
+  APP_REVIEWER: [
+    'miniapp:read', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
+    'permission_proposal:read', 'permission_proposal:review',
+    'super_app:read', 'organization:read'
+  ],
+  SECURITY_OFFICER: [
+    'miniapp:read', 'miniapp:suspend',
+    'permission_proposal:read',
+    'super_app:read', 'permission:read',
+    'organization:read', 'audit_log:read'
+  ],
+  ORG_ADMIN: [
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
+    'permission_proposal:read',
+    'super_app:read',
+    'user:read', 'user:manage',
+    'role:read',
+    'permission:read',
+    'organization:read', 'organization:manage',
+    'audit_log:read'
+  ],
   ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', // sees their organization's requests, only SUPER_ADMIN decides
+    'permission_proposal:read',
     'super_app:read',
     'user:read', 'user:manage',
     'role:read',
@@ -41,6 +79,12 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'super_app:read',
     'organization:read'
   ],
+  MA_TESTER: [
+    'miniapp:read',
+    'super_app:read',
+    'permission:read',
+    'organization:read'
+  ],
   // FSA staff using mobile services: no mini app or capability work
   STAFF: ['miniapp:read', 'super_app:read', 'organization:read'],
 };
@@ -49,13 +93,34 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
 const ROLE_ALIASES: Record<string, Role> = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   SUPERADMIN: 'SUPER_ADMIN',
-  ADMIN: 'ADMIN',
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  PLATFORM_ADMINISTRATOR: 'PLATFORM_ADMIN',
+  APP_REVIEWER: 'APP_REVIEWER',
+  REVIEWER: 'APP_REVIEWER',
+  SECURITY_OFFICER: 'SECURITY_OFFICER',
+  SECURITY_AUDITOR: 'SECURITY_OFFICER',
+  ORG_ADMIN: 'ORG_ADMIN',
+  ADMIN: 'ORG_ADMIN',
+  ORGANIZATION_ADMIN: 'ORG_ADMIN',
   MA_DEVELOPER: 'MA_DEVELOPER',
   MINI_APP_DEVELOPER: 'MA_DEVELOPER',
   DEVELOPER: 'MA_DEVELOPER',
+  MA_TESTER: 'MA_TESTER',
+  TESTER: 'MA_TESTER',
+  QA_TESTER: 'MA_TESTER',
   STAFF: 'STAFF',
 };
-const ROLE_PRIORITY: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+const ROLE_PRIORITY: Role[] = [
+  'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'APP_REVIEWER',
+  'SECURITY_OFFICER',
+  'ORG_ADMIN',
+  'ADMIN',
+  'MA_DEVELOPER',
+  'MA_TESTER',
+  'STAFF',
+];
 
 /** Role names from the backend, with known aliases normalised. */
 function normaliseRoles(raw: unknown[]): string[] {
@@ -297,7 +362,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [role, currentUser?.permissions]
   );
 
-  const hasRole = useCallback((r: Role) => role === r, [role]);
+  const hasRole = useCallback(
+    (r: Role) => {
+      if (role === r) return true;
+      if (
+        (r === 'ADMIN' || r === 'ORG_ADMIN') &&
+        (role === 'ADMIN' || role === 'ORG_ADMIN')
+      ) {
+        return true;
+      }
+      return false;
+    },
+    [role]
+  );
 
   const authValue = useMemo(
     () => ({

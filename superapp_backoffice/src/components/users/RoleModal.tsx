@@ -6,7 +6,7 @@ import { Button, Input, Label } from '@/components/ui/inputs';
 import { ZapIcon, EyeIcon, DevicePhoneIcon } from '@/components/ui/Icons';
 import { useToast } from '@/components/ui/Toast';
 import { rolesApi, Role } from '@/api';
-import { PERMISSION_GROUPS, TOTAL_PERMISSIONS_COUNT, getSensitivityBadge } from './types';
+import { PERMISSION_GROUPS, TOTAL_PERMISSIONS_COUNT, getSensitivityBadge, isSystemRole } from './types';
 
 export interface RoleModalProps {
   isOpen: boolean;
@@ -172,7 +172,7 @@ export function RoleModal({
                 onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                 placeholder="e.g. COMPLIANCE_LEAD"
                 required
-                disabled={editingRole ? ['SUPER_ADMIN', 'ADMIN'].includes(editingRole.name) : false}
+                disabled={editingRole ? isSystemRole(editingRole.name) : false}
               />
             </div>
 

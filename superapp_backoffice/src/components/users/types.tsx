@@ -83,8 +83,13 @@ export const TOTAL_PERMISSIONS_COUNT = ALL_FLAT_PERMISSIONS.length;
 
 export const SYSTEM_ROLE_NAMES = [
   'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'APP_REVIEWER',
+  'SECURITY_OFFICER',
+  'ORG_ADMIN',
   'ADMIN',
   'MA_DEVELOPER',
+  'MA_TESTER',
   'STAFF',
 ] as const;
 
@@ -93,10 +98,15 @@ export const isSystemRole = (roleName?: string): boolean => {
   const upper = roleName.toUpperCase().trim();
   return (
     upper === 'SUPER_ADMIN' ||
+    upper === 'PLATFORM_ADMIN' ||
+    upper === 'APP_REVIEWER' ||
+    upper === 'SECURITY_OFFICER' ||
+    upper === 'ORG_ADMIN' ||
     upper === 'ADMIN' ||
     upper === 'MA_DEVELOPER' ||
     upper === 'MINI_APP_DEVELOPER' ||
     upper === 'DEVELOPER' ||
+    upper === 'MA_TESTER' ||
     upper === 'STAFF'
   );
 };
@@ -112,6 +122,31 @@ export const getRoleTheme = (roleName: string) => {
         bar: 'bg-emerald-500',
         label: 'Super Admin',
       };
+    case 'PLATFORM_ADMIN':
+      return {
+        badge: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30',
+        gradient: 'from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-200/80 dark:border-indigo-500/30',
+        iconBg: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
+        bar: 'bg-indigo-500',
+        label: 'Platform Admin',
+      };
+    case 'APP_REVIEWER':
+      return {
+        badge: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
+        gradient: 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/80 dark:border-amber-500/30',
+        iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+        bar: 'bg-amber-500',
+        label: 'App Reviewer',
+      };
+    case 'SECURITY_OFFICER':
+      return {
+        badge: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
+        gradient: 'from-rose-500/10 via-rose-500/5 to-transparent border-rose-200/80 dark:border-rose-500/30',
+        iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300',
+        bar: 'bg-rose-500',
+        label: 'Security Officer',
+      };
+    case 'ORG_ADMIN':
     case 'ADMIN':
       return {
         badge: 'bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300 border-accent-200 dark:border-accent-500/30',
@@ -129,6 +164,22 @@ export const getRoleTheme = (roleName: string) => {
         iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
         bar: 'bg-sky-500',
         label: 'MiniApp Developer',
+      };
+    case 'MA_TESTER':
+      return {
+        badge: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30',
+        gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent border-cyan-200/80 dark:border-cyan-500/30',
+        iconBg: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-300',
+        bar: 'bg-cyan-500',
+        label: 'QA / Tester',
+      };
+    case 'STAFF':
+      return {
+        badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+        gradient: 'from-slate-500/10 via-slate-500/5 to-transparent border-slate-200/80 dark:border-slate-700',
+        iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+        bar: 'bg-slate-500',
+        label: 'Staff',
       };
     case 'CONSUMER':
       return {

@@ -63,7 +63,78 @@ export function effectivePermissions(user: any): Set<string> | null {
   );
 
   // Role-based fallback permissions (for legacy tokens or unseeded DB relations)
-  if (normalizedRoles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR')) {
+  if (
+    normalizedRoles.some(
+      (r) =>
+        r === 'PLATFORM_ADMIN' ||
+        r === 'PLATFORM_ADMINISTRATOR' ||
+        r === 'OPS_ADMIN',
+    )
+  ) {
+    [
+      'miniapp:read',
+      'miniapp:suspend',
+      'issue:resolve',
+      'permission_proposal:read',
+      'permission_proposal:review',
+      'permission_proposal:approve',
+      'super_app:read',
+      'user:read',
+      'user:manage',
+      'role:read',
+      'permission:read',
+      'permission:manage',
+      'organization:read',
+      'organization:manage',
+      'audit_log:read',
+      'settings:manage',
+    ].forEach((p) => userPerms.add(p));
+  }
+
+  if (
+    normalizedRoles.some(
+      (r) => r === 'APP_REVIEWER' || r === 'REVIEWER',
+    )
+  ) {
+    [
+      'miniapp:read',
+      'miniapp:approve',
+      'miniapp:reject',
+      'miniapp:suspend',
+      'miniapp_permission:approve',
+      'issue:resolve',
+      'permission_proposal:read',
+      'permission_proposal:review',
+      'super_app:read',
+      'organization:read',
+    ].forEach((p) => userPerms.add(p));
+  }
+
+  if (
+    normalizedRoles.some(
+      (r) => r === 'SECURITY_OFFICER' || r === 'SECURITY_AUDITOR',
+    )
+  ) {
+    [
+      'miniapp:read',
+      'miniapp:suspend',
+      'permission_proposal:read',
+      'super_app:read',
+      'permission:read',
+      'organization:read',
+      'audit_log:read',
+    ].forEach((p) => userPerms.add(p));
+  }
+
+  if (
+    normalizedRoles.some(
+      (r) =>
+        r === 'ORG_ADMIN' ||
+        r === 'ADMIN' ||
+        r === 'ADMINISTRATOR' ||
+        r === 'ORGANIZATION_ADMIN',
+    )
+  ) {
     [
       'miniapp:create',
       'miniapp:read',
@@ -97,6 +168,19 @@ export function effectivePermissions(user: any): Set<string> | null {
       'permission_proposal:create',
       'permission:read',
       'super_app:read',
+      'organization:read',
+    ].forEach((p) => userPerms.add(p));
+  }
+
+  if (
+    normalizedRoles.some(
+      (r) => r === 'MA_TESTER' || r === 'TESTER' || r === 'QA_TESTER',
+    )
+  ) {
+    [
+      'miniapp:read',
+      'super_app:read',
+      'permission:read',
       'organization:read',
     ].forEach((p) => userPerms.add(p));
   }

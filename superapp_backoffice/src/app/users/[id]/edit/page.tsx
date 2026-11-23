@@ -43,11 +43,39 @@ const ROLE_OPTIONS: RoleOption[] = [
     capabilities: ['Create & submit MiniApps', 'Inspect build artifacts', 'Request bridge capabilities'],
   },
   {
-    key: 'ADMIN',
+    key: 'MA_TESTER',
+    label: 'QA / Tester',
+    badge: 'Tester',
+    desc: 'Validates staged builds in sandbox environments and reports issues',
+    capabilities: ['Sandbox access', 'Test release validation', 'Bug tracking & reporting'],
+  },
+  {
+    key: 'ORG_ADMIN',
     label: 'Organization Admin',
-    badge: 'Admin',
-    desc: 'Manages the users and mini apps of their own organization',
-    capabilities: ['Review & approve organization apps', 'Manage organization users', 'Resolve compliance issues'],
+    badge: 'Org Admin',
+    desc: 'Manages the users, promotional banners, and mini apps of their own organization',
+    capabilities: ['Manage organization users & teams', 'Oversee tenant MiniApps', 'Manage organization banners'],
+  },
+  {
+    key: 'APP_REVIEWER',
+    label: 'MiniApp Reviewer',
+    badge: 'Reviewer',
+    desc: 'Reviews MiniApp source code, bundle diffs, permissions, and approves/rejects submissions',
+    capabilities: ['Review & Diff Deck access', 'Approve / reject versions', 'Enforce capability governance'],
+  },
+  {
+    key: 'SECURITY_OFFICER',
+    label: 'Security Officer',
+    badge: 'Security',
+    desc: 'Audits CycloneDX SBOMs, static security scan reports, and compliance attestations',
+    capabilities: ['Inspect SBOMs & dependencies', 'Audit security vulnerabilities', 'Enforce compliance rules'],
+  },
+  {
+    key: 'PLATFORM_ADMIN',
+    label: 'Platform Administrator',
+    badge: 'Platform Admin',
+    desc: 'Operates ecosystem releases, partner organizations, and global settings',
+    capabilities: ['SuperApp host release pipelines', 'Manage partner organizations', 'Ecosystem operations'],
   },
   {
     key: 'SUPER_ADMIN',
@@ -55,6 +83,13 @@ const ROLE_OPTIONS: RoleOption[] = [
     badge: 'Super Admin',
     desc: 'Runs the platform across every organization (platform owner organization only)',
     capabilities: ['Global system governance', 'Manage RBAC & permissions', 'Full audit registry inspection'],
+  },
+  {
+    key: 'STAFF',
+    label: 'Organization Staff',
+    badge: 'Staff',
+    desc: 'Internal team member for mobile and backoffice support',
+    capabilities: ['Support access', 'Internal tooling', 'Read-only profile'],
   },
 ];
 
@@ -72,6 +107,7 @@ function EditUserContent() {
 
   const {
     user: currentUser,
+    hasRole,
     refreshSession,
     setAvatarPreview,
     clearAvatarPreview,
@@ -167,7 +203,8 @@ function EditUserContent() {
       setName(data.name || '');
       setEmail(data.email || '');
       const userRoles = getUserRoles(data);
-      const primaryRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
+      const rawRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
+      const primaryRole = rawRole === 'ADMIN' ? 'ORG_ADMIN' : rawRole;
       setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);
@@ -242,20 +279,26 @@ function EditUserContent() {
       getUserRoles(user).some((r) => r.name === 'SUPER_ADMIN')
     )
   );
+  const isSuper = hasRole('SUPER_ADMIN') || hasRole('PLATFORM_ADMIN');
+
   // Super Admin is only offered for members of the platform owner organization
-  const roleOptions = ROLE_OPTIONS.filter(
-    (opt) =>
-      opt.key !== 'SUPER_ADMIN' ||
-      isTargetSuperAdmin ||
-      isPlatformOwnerOrgCode(selectedOrg?.code),
-  );
+  // Org Admin / non-super users can only assign tenant roles
+  const roleOptions = ROLE_OPTIONS.filter((opt) => {
+    if (opt.key === 'SUPER_ADMIN') {
+      return isTargetSuperAdmin || (isSuper && isPlatformOwnerOrgCode(selectedOrg?.code));
+    }
+    if (!isSuper) {
+      return (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'MA_TESTER', 'STAFF'] as string[]).includes(opt.key);
+    }
+    return true;
+  });
   useEffect(() => {
     if (
       selectedRole === 'SUPER_ADMIN' &&
       !isTargetSuperAdmin &&
       !isPlatformOwnerOrgCode(selectedOrg?.code)
     ) {
-      setSelectedRole('ADMIN');
+      setSelectedRole('ORG_ADMIN');
     }
   }, [selectedRole, isTargetSuperAdmin, selectedOrg]);
 

@@ -16,27 +16,65 @@ import { toast } from '@/components/ui/Toast';
  * for the platform owner organization only).
  */
 
-type RoleKey = 'MA_DEVELOPER' | 'ADMIN' | 'SUPER_ADMIN' | 'STAFF';
+type RoleKey =
+  | 'MA_DEVELOPER'
+  | 'MA_TESTER'
+  | 'ORG_ADMIN'
+  | 'ADMIN'
+  | 'APP_REVIEWER'
+  | 'SECURITY_OFFICER'
+  | 'PLATFORM_ADMIN'
+  | 'SUPER_ADMIN'
+  | 'STAFF';
 
 const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
   MA_DEVELOPER: {
     label: 'Mini App Developer',
-    text: 'Registers and builds mini apps, and works on apps shared with them.',
+    text: 'Registers and builds mini apps, pushes package archives and fixes code issues.',
+  },
+  MA_TESTER: {
+    label: 'QA / Sandbox Tester',
+    text: 'Verifies staging builds and tests features in the SuperApp sandbox. Read-only code access.',
+  },
+  ORG_ADMIN: {
+    label: 'Organization Admin',
+    text: 'Manages team users, promotional banners, and mini apps for their organization.',
   },
   ADMIN: {
-    label: 'Org Admin',
+    label: 'Org Admin (Legacy)',
     text: 'Manages the users and mini apps of their organization.',
+  },
+  APP_REVIEWER: {
+    label: 'App Reviewer',
+    text: 'Operates Review & Diff Deck to evaluate submissions and issue approval/rejection decisions.',
+  },
+  SECURITY_OFFICER: {
+    label: 'Security & Compliance Auditor',
+    text: 'Reviews CVE vulnerabilities, CycloneDX SBOM dependencies, and MinIO quarantine archives.',
+  },
+  PLATFORM_ADMIN: {
+    label: 'Platform Admin',
+    text: 'Oversees partner onboarding, capabilities catalog, and platform-wide ecosystem operations.',
   },
   SUPER_ADMIN: {
     label: 'Super Admin',
-    text: 'Runs the platform: reviews and approves mini apps for every organization.',
+    text: 'Runs the platform: unrestricted infrastructure and system governance.',
   },
   STAFF: {
     label: 'Staff',
     text: 'Uses the Super App on mobile only. No Backoffice access.',
   },
 };
-const ROLE_ORDER: RoleKey[] = ['MA_DEVELOPER', 'ADMIN', 'SUPER_ADMIN', 'STAFF'];
+const ROLE_ORDER: RoleKey[] = [
+  'MA_DEVELOPER',
+  'MA_TESTER',
+  'ORG_ADMIN',
+  'APP_REVIEWER',
+  'SECURITY_OFFICER',
+  'PLATFORM_ADMIN',
+  'SUPER_ADMIN',
+  'STAFF',
+];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE = /^\+?[0-9 ()-]{6,30}$/;
@@ -248,10 +286,19 @@ export default function NewUserPage() {
 
   const roleOptions = useMemo(
     () =>
-      ROLE_ORDER.filter((r) => roleNames.length === 0 || roleNames.includes(r)).filter(
-        (r) => r !== 'SUPER_ADMIN' || superAdminAllowed,
-      ),
-    [roleNames, superAdminAllowed],
+      ROLE_ORDER.filter(
+        (r) =>
+          roleNames.length === 0 ||
+          roleNames.includes(r) ||
+          (r === 'ORG_ADMIN' && roleNames.includes('ADMIN')),
+      )
+        .filter(
+          (r) =>
+            isSuper ||
+            (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'MA_TESTER', 'STAFF'] as RoleKey[]).includes(r),
+        )
+        .filter((r) => r !== 'SUPER_ADMIN' || superAdminAllowed),
+    [roleNames, superAdminAllowed, isSuper],
   );
 
   // Super Admin disappears when the organization is not the platform owner's
