@@ -35,6 +35,9 @@ export interface VersionRecord {
   createdAt?: string | null;
   releasedBy?: string;
   buildNumber?: number;
+  endpointUrl?: string | null;
+  urlScheme?: string | null;
+  integrationConfig?: any;
 }
 
 export interface VersionHistoryData {
@@ -63,6 +66,8 @@ export interface VersionHistoryTabProps {
   ownerEmail?: string;
   teamName?: string;
   onOpenReviewDiff?: () => void;
+  integrationMethod?: string;
+  integrationConfig?: any;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -160,16 +165,19 @@ export default function VersionHistoryTab({
   ownerEmail,
   teamName,
   onOpenReviewDiff,
+  integrationMethod,
+  integrationConfig,
 }: VersionHistoryTabProps) {
   // Rolling back changes what users get: admins only, and never on an archived app
   const { role, can } = useAuth();
   const canRollback = (role === 'SUPER_ADMIN' || can?.('miniapp:approve')) && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST' | 'DRAFT'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
   const [copiedChecksum, setCopiedChecksum] = useState<string | null>(null);
   const [copiedGitRef, setCopiedGitRef] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [compareModalState, setCompareModalState] = useState<{
     isOpen: boolean;
     baseVersion?: string;
@@ -251,6 +259,13 @@ export default function VersionHistoryTab({
     setTimeout(() => setCopiedGitRef(null), 2500);
   };
 
+  const handleCopyUrl = (url: string, label: string = 'URL') => {
+    copyText(url);
+    setCopiedUrl(url);
+    toast.info(`${label} copied to clipboard`, 'Copied');
+    setTimeout(() => setCopiedUrl(null), 2500);
+  };
+
   const handleDownload = (ver: string, type: 'test' | 'release') => {
     const downloadUrl = `/api/mini-apps/${miniAppId}/artifacts/${type === 'release' ? 'release-apk' : 'test-apk'}?version=${encodeURIComponent(ver)}`;
     window.open(downloadUrl, '_blank');
@@ -289,6 +304,12 @@ export default function VersionHistoryTab({
       label: 'Test / Staging',
       count: versionsList.filter((v) => v.type === 'TEST').length,
       dotColor: 'bg-sky-500',
+    },
+    {
+      value: 'DRAFT',
+      label: 'Drafts & Revisions',
+      count: versionsList.filter((v) => v.type === 'DRAFT').length,
+      dotColor: 'bg-amber-500',
     },
   ], [versionsList]);
 
@@ -542,8 +563,9 @@ export default function VersionHistoryTab({
       </div>
 
       {/* 2. Version History Timeline & Table */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        {/* Row 1: Section Title & Subtitle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -552,69 +574,21 @@ export default function VersionHistoryTab({
               <span>MiniApp Version History &amp; Release Timeline</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Historical record of package versions, Git release tags, commit SHAs, and sandbox revisions for {miniAppName}.
+              Historical record of package releases, staging builds, and draft revisions for {miniAppName}.
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Version Diff Comparator Selector */}
-            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-1.5 shrink-0">
-                <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                <span>Compare:</span>
-              </span>
-
-              <div className="w-36">
-                <Select
-                  value={effectiveBase}
-                  onChange={(e) => setCompareBase(e.target.value)}
-                  className="!py-1.5 !px-2.5 text-xs font-semibold"
-                >
-                  {baseOptions.map((opt) => (
-                    <option key={`base-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <span className="text-slate-400 dark:text-slate-500 text-xs font-bold shrink-0">➔</span>
-
-              <div className="w-36">
-                <Select
-                  value={effectiveTarget}
-                  onChange={(e) => setCompareTarget(e.target.value)}
-                  className="!py-1.5 !px-2.5 text-xs font-semibold"
-                >
-                  {targetOptions.map((opt) => (
-                    <option key={`target-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <Link
-                href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(effectiveBase)}&target=${encodeURIComponent(effectiveTarget)}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
-                title="Open dedicated PR-style diff review workspace"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-                <span>Review Diff</span>
-              </Link>
-            </div>
-
-            {/* Filter Dropdown */}
+        {/* Row 2: Action & Filter Toolbar (Separate row so Compare Diff and Stage Filter never stack awkwardly) */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+          {/* Left: Filter Dropdown */}
+          <div className="flex items-center">
             <CleanDropdown
               label="Type:"
               value={filterType}
               options={versionFilterOptions}
-              onChange={(val) => setFilterType(val as 'ALL' | 'PRODUCTION' | 'TEST')}
-              align="right"
+              onChange={(val) => setFilterType(val as 'ALL' | 'PRODUCTION' | 'TEST' | 'DRAFT')}
+              align="left"
               dropdownWidth="w-56"
               icon={
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -622,6 +596,57 @@ export default function VersionHistoryTab({
                 </svg>
               }
             />
+          </div>
+
+          {/* Right: Version Diff Comparator Selector */}
+          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs self-start md:self-auto">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-1.5 shrink-0">
+              <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span>Compare:</span>
+            </span>
+
+            <div className="w-32 sm:w-36">
+              <Select
+                value={effectiveBase}
+                onChange={(e) => setCompareBase(e.target.value)}
+                className="!py-1.5 !px-2.5 text-xs font-semibold"
+              >
+                {baseOptions.map((opt) => (
+                  <option key={`base-${opt.value}`} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <span className="text-slate-400 dark:text-slate-500 text-xs font-bold shrink-0">➔</span>
+
+            <div className="w-32 sm:w-36">
+              <Select
+                value={effectiveTarget}
+                onChange={(e) => setCompareTarget(e.target.value)}
+                className="!py-1.5 !px-2.5 text-xs font-semibold"
+              >
+                {targetOptions.map((opt) => (
+                  <option key={`target-${opt.value}`} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <Link
+              href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(effectiveBase)}&target=${encodeURIComponent(effectiveTarget)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
+              title="Open dedicated PR-style diff review workspace"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Review Diff</span>
+            </Link>
           </div>
         </div>
 
@@ -631,11 +656,11 @@ export default function VersionHistoryTab({
             <thead className="bg-slate-50/90 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-4 w-36">Version</th>
-                <th className="py-3 px-4 min-w-[190px]">Git Reference</th>
+                <th className="py-3 px-4 min-w-[240px]">Release Summary</th>
+                <th className="py-3 px-4 w-56">Target Source</th>
                 <th className="py-3 px-4 w-36">Status</th>
-                <th className="py-3 px-4 w-44">Date</th>
-                <th className="py-3 px-4 w-40">Developer</th>
-                <th className="py-3 px-4 text-right w-44">Actions</th>
+                <th className="py-3 px-4 w-48">Date &amp; Author</th>
+                <th className="py-3 px-4 text-right w-36">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
@@ -647,7 +672,6 @@ export default function VersionHistoryTab({
                 </tr>
               ) : (
                 filteredVersions.map((rec, idx) => {
-                  const isFullCommit = typeof rec.gitRef === 'string' && /^[0-9a-f]{40}$/i.test(rec.gitRef);
                   const resolvedDev =
                     rec.releasedBy ||
                     ownerName ||
@@ -655,81 +679,200 @@ export default function VersionHistoryTab({
                     (ownerEmail ? ownerEmail.split('@')[0] : null) ||
                     'Developer';
 
-                  const rawChecksum =
-                    rec.checksum ||
-                    (rec.gitRef ? `sha256:${rec.gitRef.substring(0, 16)}...` : null);
+                  const isCurrentActive =
+                    rec.version === data?.currentReleaseVersion &&
+                    (rec.status === 'ACTIVE' || rec.type === 'PRODUCTION');
 
                   return (
                     <tr
                       key={`${rec.version}-${idx}`}
                       className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* Version */}
+                      {/* 1. Version */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
-                            v{rec.version}
-                          </span>
-                          {rec.type === 'PRODUCTION' ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              Release
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                              v{rec.version}
                             </span>
-                          ) : (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                              Staging
+                            {isCurrentActive && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Current Active Release" />
+                            )}
+                          </div>
+                          <div>
+                            {rec.type === 'PRODUCTION' ? (
+                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                Release
+                              </span>
+                            ) : rec.type === 'TEST' ? (
+                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                Staging
+                              </span>
+                            ) : (
+                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                Draft
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 2. Release Summary (Fills flexible table width) */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col gap-1 max-w-md">
+                          <p
+                            className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed cursor-pointer hover:text-slate-900 dark:hover:text-white"
+                            onClick={() => setSelectedChangelog(rec)}
+                            title={rec.changelog || 'Click to view full notes'}
+                          >
+                            {rec.changelog || (rec.type === 'PRODUCTION' ? `Release package build v${rec.version}` : `Sandbox testing revision v${rec.version}`)}
+                          </p>
+                          {rec.buildNumber && (
+                            <span className="text-[10px] font-mono font-medium text-slate-400 dark:text-slate-500">
+                              Build #{rec.buildNumber}
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Git Reference & Checksum */}
+                      {/* 3. Polymorphic Target Source */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {isFullCommit ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCopyGitRef(rec.gitRef!)}
-                              className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                              title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
-                            >
-                              <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="3" strokeWidth="2" />
-                                <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
-                              </svg>
-                              <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
-                              {copiedGitRef === rec.gitRef ? (
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                        {(() => {
+                          const resolvedSource = (rec.sourceType || integrationMethod || 'GIT').toUpperCase();
+
+                          if (resolvedSource === 'WEBVIEW') {
+                            const targetUrl =
+                              rec.endpointUrl ||
+                              rec.integrationConfig?.productionUrl ||
+                              rec.integrationConfig?.stagingUrl ||
+                              rec.integrationConfig?.webUrl ||
+                              integrationConfig?.productionUrl ||
+                              integrationConfig?.stagingUrl ||
+                              '';
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                  <svg className="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                  </svg>
+                                  <span className="font-semibold text-[11px] text-slate-500 dark:text-slate-400">Web Endpoint</span>
+                                </div>
+                                {targetUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUrl(targetUrl, 'Web Endpoint URL')}
+                                    className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    title={`Target URL: ${targetUrl}\nClick to copy`}
+                                  >
+                                    <span className="truncate">{targetUrl.replace(/^https?:\/\//, '')}</span>
+                                    {copiedUrl === targetUrl ? (
+                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                    ) : (
+                                      <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No URL configured</span>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (resolvedSource === 'DEEP_LINK') {
+                            const targetScheme =
+                              rec.urlScheme ||
+                              rec.integrationConfig?.urlScheme ||
+                              rec.integrationConfig?.deepLinkUri ||
+                              integrationConfig?.urlScheme ||
+                              '';
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                  <svg className="w-3.5 h-3.5 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                  </svg>
+                                  <span className="font-semibold text-[11px] text-slate-500 dark:text-slate-400">App Scheme</span>
+                                </div>
+                                {targetScheme ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUrl(targetScheme, 'Deep Link Scheme')}
+                                    className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    title={`URI Scheme: ${targetScheme}\nClick to copy`}
+                                  >
+                                    <span className="truncate">{targetScheme}</span>
+                                    {copiedUrl === targetScheme ? (
+                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                    ) : (
+                                      <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No Scheme configured</span>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          // Default: Flutter Package, Native SDK, Git
+                          const isFullCommit = typeof rec.gitRef === 'string' && /^[0-9a-f]{40}$/i.test(rec.gitRef);
+                          const rawChecksum =
+                            rec.checksum ||
+                            (rec.gitRef ? `sha256:${rec.gitRef.substring(0, 16)}...` : null);
+
+                          return (
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isFullCommit ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyGitRef(rec.gitRef!)}
+                                  className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                                  title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
+                                >
+                                  <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3" strokeWidth="2" />
+                                    <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
+                                  </svg>
+                                  <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
+                                  {copiedGitRef === rec.gitRef ? (
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                                  ) : (
+                                    <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                </button>
                               ) : (
-                                <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
+                                <span className="text-xs font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
+                                  <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                  </svg>
+                                  <span>{rec.gitRef || (rec.type === 'TEST' ? 'develop' : `tag: v${rec.version}`)}</span>
+                                </span>
                               )}
-                            </button>
-                          ) : (
-                            <span className="text-xs font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
-                              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                              </svg>
-                              <span>{rec.gitRef || (rec.type === 'TEST' ? 'develop' : `tag: v${rec.version}`)}</span>
-                            </span>
-                          )}
 
-                          {rawChecksum && (
-                            <button
-                              type="button"
-                              onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
-                              className="group p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer"
-                              title={`SHA-256 Checksum: ${rec.checksum || rawChecksum}\nClick to copy digest`}
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
+                              {rawChecksum && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
+                                  className="group p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer shrink-0"
+                                  title={`SHA-256 Checksum: ${rec.checksum || rawChecksum}\nClick to copy digest`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
-                      {/* Status */}
+                      {/* 4. Status */}
                       <td className="py-3.5 px-4">
                         {rec.status === 'ACTIVE' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
@@ -768,50 +911,32 @@ export default function VersionHistoryTab({
                         )}
                       </td>
 
-                      {/* Date */}
+                      {/* 5. Date & Author */}
                       <td className="py-3.5 px-4 text-xs">
-                        {rec.releasedAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.releasedAt)}
-                            </span>
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Production Release</span>
-                          </div>
-                        ) : rec.submittedAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.submittedAt)}
-                            </span>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Submitted for Review</span>
-                          </div>
-                        ) : rec.createdAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.createdAt)}
-                            </span>
-                            <span className="text-[10px] text-slate-400">Created</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      {/* Developer */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
-                            {getDeveloperInitials(resolvedDev)}
-                          </div>
-                          <span
-                            className="font-medium text-xs text-slate-800 dark:text-slate-200 truncate max-w-[130px]"
-                            title={resolvedDev}
-                          >
-                            {resolvedDev}
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {rec.releasedAt
+                              ? formatDate(rec.releasedAt)
+                              : rec.submittedAt
+                              ? formatDate(rec.submittedAt)
+                              : formatDate(rec.createdAt) || '—'}
                           </span>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[9px] font-bold shrink-0">
+                              {getDeveloperInitials(resolvedDev)}
+                            </div>
+                            <span className="truncate max-w-[110px]" title={resolvedDev}>
+                              {resolvedDev}
+                            </span>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span className="text-[10px] text-slate-400">
+                              {rec.releasedAt ? 'Released' : rec.submittedAt ? 'Submitted' : 'Created'}
+                            </span>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Actions */}
+                      {/* 6. Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Review Diff in Dedicated Workspace */}
