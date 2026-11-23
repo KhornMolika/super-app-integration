@@ -153,20 +153,6 @@ export class SeederService implements OnApplicationBootstrap {
         ],
       },
       {
-        name: 'SECURITY_OFFICER',
-        description:
-          'Security & Compliance Auditor: inspects vulnerability findings, CycloneDX SBOM, and MinIO quarantine',
-        perms: [
-          'miniapp:read',
-          'miniapp:suspend',
-          'permission_proposal:read',
-          'super_app:read',
-          'permission:read',
-          'organization:read',
-          'audit_log:read',
-        ],
-      },
-      {
         name: 'ORG_ADMIN',
         description:
           'Organization Administrator: supervises the mini apps, users, banners and audit trail of their own organization',
@@ -227,17 +213,6 @@ export class SeederService implements OnApplicationBootstrap {
           'permission_proposal:create',
           'permission:read',
           'super_app:read',
-          'organization:read',
-        ],
-      },
-      {
-        name: 'MA_TESTER',
-        description:
-          'QA & Sandbox Tester: verifies test builds and sandbox capabilities in staging environments',
-        perms: [
-          'miniapp:read',
-          'super_app:read',
-          'permission:read',
           'organization:read',
         ],
       },

@@ -18,11 +18,9 @@ import { toast } from '@/components/ui/Toast';
 
 type RoleKey =
   | 'MA_DEVELOPER'
-  | 'MA_TESTER'
   | 'ORG_ADMIN'
   | 'ADMIN'
   | 'APP_REVIEWER'
-  | 'SECURITY_OFFICER'
   | 'PLATFORM_ADMIN'
   | 'SUPER_ADMIN'
   | 'STAFF';
@@ -31,10 +29,6 @@ const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
   MA_DEVELOPER: {
     label: 'Mini App Developer',
     text: 'Develops, tests in sandbox, pushes package archives, and submits capability proposals.',
-  },
-  MA_TESTER: {
-    label: 'QA / Sandbox Tester',
-    text: 'Verifies staging builds and tests features in the SuperApp sandbox. Read-only code access.',
   },
   ORG_ADMIN: {
     label: 'Organization Admin',
@@ -47,10 +41,6 @@ const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
   APP_REVIEWER: {
     label: 'App Reviewer & Auditor',
     text: 'Operates Review & Diff Deck, inspects CVE vulnerabilities & SBOMs, and issues verdicts.',
-  },
-  SECURITY_OFFICER: {
-    label: 'Security & Compliance Auditor',
-    text: 'Reviews CVE vulnerabilities, CycloneDX SBOM dependencies, and MinIO quarantine archives.',
   },
   PLATFORM_ADMIN: {
     label: 'Platform Admin',

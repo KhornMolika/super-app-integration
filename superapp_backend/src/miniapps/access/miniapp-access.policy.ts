@@ -111,11 +111,6 @@ export function resolveMiniAppAccess(
 
   if (isOrgAdmin(user)) return MiniAppAccess.ADMIN;
 
-  // QA Tester within the organization has read-only access to builds and sandbox
-  if (names.includes('MA_TESTER') || names.includes('TESTER') || names.includes('QA_TESTER')) {
-    return MiniAppAccess.VIEW;
-  }
-
   const me = subjectId(user);
   if (me && app.ownerId && app.ownerId === me) return MiniAppAccess.OWN;
 
@@ -142,8 +137,7 @@ export function scopeMiniAppQuery<T extends ObjectLiteral>(
   if (
     isSuperAdmin(user) ||
     names.includes('PLATFORM_ADMIN') ||
-    names.includes('APP_REVIEWER') ||
-    names.includes('SECURITY_OFFICER')
+    names.includes('APP_REVIEWER')
   ) {
     return true;
   }
@@ -155,12 +149,7 @@ export function scopeMiniAppQuery<T extends ObjectLiteral>(
   qb.andWhere(`${alias}.organizationId = :accessOrgId`, {
     accessOrgId: userOrg,
   });
-  if (
-    isOrgAdmin(user) ||
-    names.includes('MA_TESTER') ||
-    names.includes('TESTER') ||
-    names.includes('QA_TESTER')
-  ) {
+  if (isOrgAdmin(user)) {
     return true;
   }
 

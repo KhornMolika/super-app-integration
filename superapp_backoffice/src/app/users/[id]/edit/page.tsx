@@ -190,10 +190,7 @@ function EditUserContent() {
       setEmail(data.email || '');
       const userRoles = getUserRoles(data);
       const rawRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
-      let primaryRole = rawRole;
-      if (rawRole === 'ADMIN') primaryRole = 'ORG_ADMIN';
-      if (rawRole === 'SECURITY_OFFICER') primaryRole = 'APP_REVIEWER';
-      if (rawRole === 'MA_TESTER') primaryRole = 'MA_DEVELOPER';
+      const primaryRole = rawRole === 'ADMIN' ? 'ORG_ADMIN' : rawRole;
       setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);

@@ -1281,11 +1281,9 @@ export class AccessControlService {
       'SUPER_ADMIN',
       'PLATFORM_ADMIN',
       'APP_REVIEWER',
-      'SECURITY_OFFICER',
       'ORG_ADMIN',
       'ADMIN',
       'MA_DEVELOPER',
-      'MA_TESTER',
       'STAFF',
     ];
     if (dto.name !== undefined) {
@@ -1320,11 +1318,9 @@ export class AccessControlService {
       'SUPER_ADMIN',
       'PLATFORM_ADMIN',
       'APP_REVIEWER',
-      'SECURITY_OFFICER',
       'ORG_ADMIN',
       'ADMIN',
       'MA_DEVELOPER',
-      'MA_TESTER',
       'STAFF',
     ];
     if (systemRoles.includes(role.name.toUpperCase())) {

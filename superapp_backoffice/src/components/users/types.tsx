@@ -98,13 +98,11 @@ export const isSystemRole = (roleName?: string): boolean => {
     upper === 'SUPER_ADMIN' ||
     upper === 'PLATFORM_ADMIN' ||
     upper === 'APP_REVIEWER' ||
-    upper === 'SECURITY_OFFICER' ||
     upper === 'ORG_ADMIN' ||
     upper === 'ADMIN' ||
     upper === 'MA_DEVELOPER' ||
     upper === 'MINI_APP_DEVELOPER' ||
     upper === 'DEVELOPER' ||
-    upper === 'MA_TESTER' ||
     upper === 'STAFF'
   );
 };
@@ -129,7 +127,6 @@ export const getRoleTheme = (roleName: string) => {
         label: 'Platform Admin',
       };
     case 'APP_REVIEWER':
-    case 'SECURITY_OFFICER':
       return {
         badge: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
         gradient: 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/80 dark:border-amber-500/30',
@@ -149,7 +146,6 @@ export const getRoleTheme = (roleName: string) => {
     case 'MA_DEVELOPER':
     case 'MINI_APP_DEVELOPER':
     case 'DEVELOPER':
-    case 'MA_TESTER':
       return {
         badge: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border-sky-200 dark:border-sky-500/30',
         gradient: 'from-sky-500/10 via-sky-500/5 to-transparent border-sky-200/80 dark:border-sky-500/30',

@@ -317,7 +317,7 @@ export class AuthService implements OnModuleInit {
           'settings:manage',
         ].forEach((p) => permissions.add(p));
       }
-      if (roles.includes('APP_REVIEWER') || roles.includes('SECURITY_OFFICER')) {
+      if (roles.includes('APP_REVIEWER')) {
         [
           'miniapp:read',
           'miniapp:approve',
@@ -354,11 +354,7 @@ export class AuthService implements OnModuleInit {
           'audit_log:read',
         ].forEach((p) => permissions.add(p));
       }
-      if (
-        roles.includes('MA_DEVELOPER') ||
-        roles.includes('DEVELOPER') ||
-        roles.includes('MA_TESTER')
-      ) {
+      if (roles.includes('MA_DEVELOPER') || roles.includes('DEVELOPER')) {
         [
           'miniapp:create',
           'miniapp:read',
@@ -1355,27 +1351,9 @@ export function platformRoles(user: any): string[] {
         .map((r: string) => {
           const upper = r.toUpperCase().trim();
           if (upper === 'ORGANIZATION_ADMIN') return 'ORG_ADMIN';
-          if (
-            [
-              'MINI_APP_DEVELOPER',
-              'DEVELOPER',
-              'MA_TESTER',
-              'TESTER',
-              'QA',
-              'QA_TESTER',
-            ].includes(upper)
-          )
+          if (['MINI_APP_DEVELOPER', 'DEVELOPER'].includes(upper))
             return 'MA_DEVELOPER';
-          if (
-            [
-              'REVIEWER',
-              'APP_REVIEW',
-              'SECURITY_OFFICER',
-              'SECURITY',
-              'AUDITOR',
-              'SECURITY_AUDITOR',
-            ].includes(upper)
-          )
+          if (['REVIEWER', 'APP_REVIEW'].includes(upper))
             return 'APP_REVIEWER';
           if (['PLATFORM_ADMINISTRATOR', 'OPS_ADMIN'].includes(upper))
             return 'PLATFORM_ADMIN';
@@ -1386,11 +1364,9 @@ export function platformRoles(user: any): string[] {
             'SUPER_ADMIN',
             'PLATFORM_ADMIN',
             'APP_REVIEWER',
-            'SECURITY_OFFICER',
             'ORG_ADMIN',
             'ADMIN',
             'MA_DEVELOPER',
-            'MA_TESTER',
             'STAFF',
           ].includes(r),
         ),
@@ -1406,11 +1382,9 @@ export const BACKOFFICE_ROLES = [
   'SUPER_ADMIN',
   'PLATFORM_ADMIN',
   'APP_REVIEWER',
-  'SECURITY_OFFICER',
   'ORG_ADMIN',
   'ADMIN',
   'MA_DEVELOPER',
-  'MA_TESTER',
 ] as const;
 
 export function hasBackofficeAccess(

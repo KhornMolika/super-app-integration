@@ -93,11 +93,7 @@ export function effectivePermissions(user: any): Set<string> | null {
 
   if (
     normalizedRoles.some(
-      (r) =>
-        r === 'APP_REVIEWER' ||
-        r === 'REVIEWER' ||
-        r === 'SECURITY_OFFICER' ||
-        r === 'SECURITY_AUDITOR',
+      (r) => r === 'APP_REVIEWER' || r === 'REVIEWER',
     )
   ) {
     [
@@ -148,12 +144,7 @@ export function effectivePermissions(user: any): Set<string> | null {
 
   if (
     normalizedRoles.some(
-      (r) =>
-        r === 'MA_DEVELOPER' ||
-        r === 'DEVELOPER' ||
-        r === 'MA_TESTER' ||
-        r === 'TESTER' ||
-        r === 'QA_TESTER',
+      (r) => r === 'MA_DEVELOPER' || r === 'DEVELOPER',
     )
   ) {
     [

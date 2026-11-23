@@ -18,14 +18,12 @@ export class ExpandEnterpriseRbacRoles1796400000000 implements MigrationInterfac
       ON CONFLICT ("name") DO UPDATE SET "description" = EXCLUDED."description";
     `);
 
-    // 2. Insert PLATFORM_ADMIN, APP_REVIEWER, SECURITY_OFFICER, MA_TESTER
+    // 2. Insert PLATFORM_ADMIN and APP_REVIEWER
     await queryRunner.query(`
       INSERT INTO "roles" ("id", "name", "description", "isActive", "createdAt", "updatedAt")
       VALUES 
         (gen_random_uuid(), 'PLATFORM_ADMIN', 'Platform Administrator: oversees ecosystem operations, organization governance, and capabilities', true, now(), now()),
-        (gen_random_uuid(), 'APP_REVIEWER', 'Ecosystem Reviewer: evaluates submissions on the Review & Diff Deck and issues approve/reject verdicts', true, now(), now()),
-        (gen_random_uuid(), 'SECURITY_OFFICER', 'Security & Compliance Auditor: inspects vulnerability findings, CycloneDX SBOM, and MinIO quarantine', true, now(), now()),
-        (gen_random_uuid(), 'MA_TESTER', 'QA & Sandbox Tester: verifies test builds and sandbox capabilities in staging environments', true, now(), now())
+        (gen_random_uuid(), 'APP_REVIEWER', 'Ecosystem Reviewer & Auditor: evaluates submissions on Review & Diff Deck, inspects CVEs/SBOMs, and issues verdicts', true, now(), now())
       ON CONFLICT ("name") DO UPDATE SET "description" = EXCLUDED."description";
     `);
 
