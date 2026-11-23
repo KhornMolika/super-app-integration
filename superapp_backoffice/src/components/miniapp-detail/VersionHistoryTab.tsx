@@ -65,13 +65,6 @@ export interface VersionHistoryTabProps {
   onOpenReviewDiff?: () => void;
 }
 
-interface VersionCapability {
-  key: string;
-  required: boolean;
-  purpose: string | null;
-  status: 'REQUESTED' | 'APPROVED';
-}
-
 const SOURCE_LABELS: Record<string, string> = {
   GIT: 'Git',
   ARTIFACT: 'Package',
@@ -156,26 +149,6 @@ function formatShortHash(hash?: string | null): string {
   return hash;
 }
 
-/** The capabilities a version asks for; amber only for ones still waiting for review. */
-function VersionCapabilities({ caps }: { caps?: VersionCapability[] }) {
-  if (!caps) return <span className="text-xs text-slate-400">—</span>;
-  if (caps.length === 0) return <span className="text-xs text-slate-500 dark:text-slate-400">None</span>;
-  const waiting = caps.filter((c) => c.status !== 'APPROVED').length;
-  return (
-    <div className="max-w-[220px] space-y-0.5">
-      <p
-        className="text-xs text-slate-700 dark:text-slate-300 truncate"
-        title={caps.map((c) => `${c.key}${c.required ? ' (required)' : ''}${c.purpose ? `: ${c.purpose}` : ''}`).join(', ')}
-      >
-        {caps.map((c) => c.key).join(', ')}
-      </p>
-      <p className={`text-[11px] ${waiting ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-        {waiting ? `${waiting} waiting for review` : 'Approved'}
-      </p>
-    </div>
-  );
-}
-
 export default function VersionHistoryTab({
   miniAppId,
   miniAppName,
@@ -192,7 +165,6 @@ export default function VersionHistoryTab({
   const { role, can } = useAuth();
   const canRollback = (role === 'SUPER_ADMIN' || can?.('miniapp:approve')) && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
-  const [capsByVersion, setCapsByVersion] = useState<Record<string, VersionCapability[]>>({});
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
@@ -252,16 +224,8 @@ export default function VersionHistoryTab({
     if (!miniAppId) return;
     setLoading(true);
     try {
-      const [result, versionCaps] = await Promise.all([
-        miniappsApi.getVersions(miniAppId),
-        miniappsApi.getVersionCapabilities(miniAppId).catch(() => []),
-      ]);
+      const result = await miniappsApi.getVersions(miniAppId);
       setData(result as any);
-      const byVersion: Record<string, VersionCapability[]> = {};
-      for (const v of versionCaps as any[]) {
-        if (!byVersion[v.version]) byVersion[v.version] = v.capabilities || [];
-      }
-      setCapsByVersion(byVersion);
     } catch (err) {
       console.error('Failed to load version history:', err);
     } finally {
@@ -667,19 +631,17 @@ export default function VersionHistoryTab({
             <thead className="bg-slate-50/90 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-4 w-36">Version</th>
-                <th className="py-3 px-4 min-w-[200px]">Package &amp; Ref</th>
-                <th className="py-3 px-4 w-40">Status</th>
-                <th className="py-3 px-4 min-w-[140px]">Capabilities</th>
+                <th className="py-3 px-4 min-w-[190px]">Git Reference</th>
+                <th className="py-3 px-4 w-36">Status</th>
                 <th className="py-3 px-4 w-44">Date</th>
-                <th className="py-3 px-4 min-w-[170px]">Developer</th>
-                <th className="py-3 px-4 min-w-[180px]">Checksum</th>
+                <th className="py-3 px-4 w-40">Developer</th>
                 <th className="py-3 px-4 text-right w-44">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
               {filteredVersions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
                     No version records found matching this filter.
                   </td>
                 </tr>
@@ -706,51 +668,63 @@ export default function VersionHistoryTab({
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
-                            {rec.version}
+                            v{rec.version}
                           </span>
-                          {rec.sourceType && (
-                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
-                              {SOURCE_LABELS[rec.sourceType] || rec.sourceType}
+                          {rec.type === 'PRODUCTION' ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              Release
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                              Staging
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Package & Ref */}
+                      {/* Git Reference & Checksum */}
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                            {rec.packageName || data?.packageName || appId || 'sc_public_miniapp'}
-                          </span>
+                        <div className="flex items-center gap-2 min-w-0">
                           {isFullCommit ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleCopyGitRef(rec.gitRef!)}
-                                className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                                title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
-                              >
-                                <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="12" r="3" strokeWidth="2" />
-                                  <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
+                            <button
+                              type="button"
+                              onClick={() => handleCopyGitRef(rec.gitRef!)}
+                              className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                              title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
+                            >
+                              <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3" strokeWidth="2" />
+                                <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
+                              </svg>
+                              <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
+                              {copiedGitRef === rec.gitRef ? (
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                              ) : (
+                                <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
-                                <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
-                                {copiedGitRef === rec.gitRef ? (
-                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
-                                ) : (
-                                  <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                )}
-                              </button>
-                            </div>
+                              )}
+                            </button>
                           ) : (
-                            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                              <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span className="text-xs font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
+                              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                               </svg>
-                              <span>{rec.gitRef || (rec.type === 'TEST' ? 'branch: develop' : `tag: v${rec.version}`)}</span>
+                              <span>{rec.gitRef || (rec.type === 'TEST' ? 'develop' : `tag: v${rec.version}`)}</span>
                             </span>
+                          )}
+
+                          {rawChecksum && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
+                              className="group p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer"
+                              title={`SHA-256 Checksum: ${rec.checksum || rawChecksum}\nClick to copy digest`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                            </button>
                           )}
                         </div>
                       </td>
@@ -794,20 +768,6 @@ export default function VersionHistoryTab({
                         )}
                       </td>
 
-                      {/* Capabilities */}
-                      <td className="py-3.5 px-4">
-                        {capsByVersion[rec.version] && capsByVersion[rec.version].length > 0 ? (
-                          <VersionCapabilities caps={capsByVersion[rec.version]} />
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>None</span>
-                          </span>
-                        )}
-                      </td>
-
                       {/* Date */}
                       <td className="py-3.5 px-4 text-xs">
                         {rec.releasedAt ? (
@@ -838,48 +798,17 @@ export default function VersionHistoryTab({
 
                       {/* Developer */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold shadow-2xs shrink-0 ring-1 ring-white dark:ring-slate-800">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
                             {getDeveloperInitials(resolvedDev)}
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span
-                              className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate"
-                              title={resolvedDev}
-                            >
-                              {resolvedDev}
-                            </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                              {rec.type === 'PRODUCTION' ? 'Release Manager' : 'Developer'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Checksum */}
-                      <td className="py-3.5 px-4">
-                        {rawChecksum ? (
-                          <button
-                            type="button"
-                            onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
-                            className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/90 dark:border-slate-700/80 transition-all shadow-2xs cursor-pointer"
-                            title={`Full SHA-256 Digest: ${rec.checksum || rawChecksum}\nClick to copy`}
+                          <span
+                            className="font-medium text-xs text-slate-800 dark:text-slate-200 truncate max-w-[130px]"
+                            title={resolvedDev}
                           >
-                            <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            <span className="font-semibold">{formatShortHash(rec.checksum || rawChecksum)}</span>
-                            {copiedChecksum === (rec.checksum || rawChecksum) ? (
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Copied!</span>
-                            ) : (
-                              <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            )}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
+                            {resolvedDev}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Actions */}
