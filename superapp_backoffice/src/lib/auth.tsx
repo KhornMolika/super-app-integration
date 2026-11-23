@@ -42,13 +42,13 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'miniapp:read', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
     'permission_proposal:read', 'permission_proposal:review',
-    'super_app:read', 'organization:read'
+    'super_app:read', 'permission:read', 'organization:read', 'audit_log:read'
   ],
   SECURITY_OFFICER: [
-    'miniapp:read', 'miniapp:suspend',
-    'permission_proposal:read',
-    'super_app:read', 'permission:read',
-    'organization:read', 'audit_log:read'
+    'miniapp:read', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
+    'permission_proposal:read', 'permission_proposal:review',
+    'super_app:read', 'permission:read', 'organization:read', 'audit_log:read'
   ],
   ORG_ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:suspend',
@@ -97,28 +97,26 @@ const ROLE_ALIASES: Record<string, Role> = {
   PLATFORM_ADMINISTRATOR: 'PLATFORM_ADMIN',
   APP_REVIEWER: 'APP_REVIEWER',
   REVIEWER: 'APP_REVIEWER',
-  SECURITY_OFFICER: 'SECURITY_OFFICER',
-  SECURITY_AUDITOR: 'SECURITY_OFFICER',
+  SECURITY_OFFICER: 'APP_REVIEWER',
+  SECURITY_AUDITOR: 'APP_REVIEWER',
   ORG_ADMIN: 'ORG_ADMIN',
   ADMIN: 'ORG_ADMIN',
   ORGANIZATION_ADMIN: 'ORG_ADMIN',
   MA_DEVELOPER: 'MA_DEVELOPER',
   MINI_APP_DEVELOPER: 'MA_DEVELOPER',
   DEVELOPER: 'MA_DEVELOPER',
-  MA_TESTER: 'MA_TESTER',
-  TESTER: 'MA_TESTER',
-  QA_TESTER: 'MA_TESTER',
+  MA_TESTER: 'MA_DEVELOPER',
+  TESTER: 'MA_DEVELOPER',
+  QA_TESTER: 'MA_DEVELOPER',
   STAFF: 'STAFF',
 };
 const ROLE_PRIORITY: Role[] = [
   'SUPER_ADMIN',
   'PLATFORM_ADMIN',
   'APP_REVIEWER',
-  'SECURITY_OFFICER',
   'ORG_ADMIN',
   'ADMIN',
   'MA_DEVELOPER',
-  'MA_TESTER',
   'STAFF',
 ];
 

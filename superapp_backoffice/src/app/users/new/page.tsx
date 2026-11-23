@@ -30,7 +30,7 @@ type RoleKey =
 const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
   MA_DEVELOPER: {
     label: 'Mini App Developer',
-    text: 'Registers and builds mini apps, pushes package archives and fixes code issues.',
+    text: 'Develops, tests in sandbox, pushes package archives, and submits capability proposals.',
   },
   MA_TESTER: {
     label: 'QA / Sandbox Tester',
@@ -45,8 +45,8 @@ const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
     text: 'Manages the users and mini apps of their organization.',
   },
   APP_REVIEWER: {
-    label: 'App Reviewer',
-    text: 'Operates Review & Diff Deck to evaluate submissions and issue approval/rejection decisions.',
+    label: 'App Reviewer & Auditor',
+    text: 'Operates Review & Diff Deck, inspects CVE vulnerabilities & SBOMs, and issues verdicts.',
   },
   SECURITY_OFFICER: {
     label: 'Security & Compliance Auditor',
@@ -67,10 +67,8 @@ const ROLE_INFO: Record<RoleKey, { label: string; text: string }> = {
 };
 const ROLE_ORDER: RoleKey[] = [
   'MA_DEVELOPER',
-  'MA_TESTER',
   'ORG_ADMIN',
   'APP_REVIEWER',
-  'SECURITY_OFFICER',
   'PLATFORM_ADMIN',
   'SUPER_ADMIN',
   'STAFF',
@@ -295,7 +293,7 @@ export default function NewUserPage() {
         .filter(
           (r) =>
             isSuper ||
-            (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'MA_TESTER', 'STAFF'] as RoleKey[]).includes(r),
+            (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'] as RoleKey[]).includes(r),
         )
         .filter((r) => r !== 'SUPER_ADMIN' || superAdminAllowed),
     [roleNames, superAdminAllowed, isSuper],

@@ -85,11 +85,9 @@ export const SYSTEM_ROLE_NAMES = [
   'SUPER_ADMIN',
   'PLATFORM_ADMIN',
   'APP_REVIEWER',
-  'SECURITY_OFFICER',
   'ORG_ADMIN',
   'ADMIN',
   'MA_DEVELOPER',
-  'MA_TESTER',
   'STAFF',
 ] as const;
 
@@ -131,20 +129,13 @@ export const getRoleTheme = (roleName: string) => {
         label: 'Platform Admin',
       };
     case 'APP_REVIEWER':
+    case 'SECURITY_OFFICER':
       return {
         badge: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
         gradient: 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/80 dark:border-amber-500/30',
         iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
         bar: 'bg-amber-500',
         label: 'App Reviewer',
-      };
-    case 'SECURITY_OFFICER':
-      return {
-        badge: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
-        gradient: 'from-rose-500/10 via-rose-500/5 to-transparent border-rose-200/80 dark:border-rose-500/30',
-        iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300',
-        bar: 'bg-rose-500',
-        label: 'Security Officer',
       };
     case 'ORG_ADMIN':
     case 'ADMIN':
@@ -158,20 +149,13 @@ export const getRoleTheme = (roleName: string) => {
     case 'MA_DEVELOPER':
     case 'MINI_APP_DEVELOPER':
     case 'DEVELOPER':
+    case 'MA_TESTER':
       return {
         badge: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border-sky-200 dark:border-sky-500/30',
         gradient: 'from-sky-500/10 via-sky-500/5 to-transparent border-sky-200/80 dark:border-sky-500/30',
         iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
         bar: 'bg-sky-500',
         label: 'MiniApp Developer',
-      };
-    case 'MA_TESTER':
-      return {
-        badge: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30',
-        gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent border-cyan-200/80 dark:border-cyan-500/30',
-        iconBg: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-300',
-        bar: 'bg-cyan-500',
-        label: 'QA / Tester',
       };
     case 'STAFF':
       return {

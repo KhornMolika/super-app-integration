@@ -39,15 +39,8 @@ const ROLE_OPTIONS: RoleOption[] = [
     key: 'MA_DEVELOPER',
     label: 'MiniApp Developer',
     badge: 'Developer',
-    desc: 'Build, configure, publish mini applications and submit capability proposals',
-    capabilities: ['Create & submit MiniApps', 'Inspect build artifacts', 'Request bridge capabilities'],
-  },
-  {
-    key: 'MA_TESTER',
-    label: 'QA / Tester',
-    badge: 'Tester',
-    desc: 'Validates staged builds in sandbox environments and reports issues',
-    capabilities: ['Sandbox access', 'Test release validation', 'Bug tracking & reporting'],
+    desc: 'Build, configure, test in sandbox, publish mini applications and submit capability proposals',
+    capabilities: ['Create & submit MiniApps', 'Inspect build artifacts & test in sandbox', 'Request bridge capabilities'],
   },
   {
     key: 'ORG_ADMIN',
@@ -58,17 +51,10 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
   {
     key: 'APP_REVIEWER',
-    label: 'MiniApp Reviewer',
+    label: 'App Reviewer & Auditor',
     badge: 'Reviewer',
-    desc: 'Reviews MiniApp source code, bundle diffs, permissions, and approves/rejects submissions',
-    capabilities: ['Review & Diff Deck access', 'Approve / reject versions', 'Enforce capability governance'],
-  },
-  {
-    key: 'SECURITY_OFFICER',
-    label: 'Security Officer',
-    badge: 'Security',
-    desc: 'Audits CycloneDX SBOMs, static security scan reports, and compliance attestations',
-    capabilities: ['Inspect SBOMs & dependencies', 'Audit security vulnerabilities', 'Enforce compliance rules'],
+    desc: 'Reviews MiniApp source code, bundle diffs, CycloneDX SBOMs, CVE vulnerabilities, and approves/rejects submissions',
+    capabilities: ['Review & Diff Deck access', 'Audit SBOMs & security scans', 'Approve / reject versions'],
   },
   {
     key: 'PLATFORM_ADMIN',
@@ -204,7 +190,10 @@ function EditUserContent() {
       setEmail(data.email || '');
       const userRoles = getUserRoles(data);
       const rawRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
-      const primaryRole = rawRole === 'ADMIN' ? 'ORG_ADMIN' : rawRole;
+      let primaryRole = rawRole;
+      if (rawRole === 'ADMIN') primaryRole = 'ORG_ADMIN';
+      if (rawRole === 'SECURITY_OFFICER') primaryRole = 'APP_REVIEWER';
+      if (rawRole === 'MA_TESTER') primaryRole = 'MA_DEVELOPER';
       setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);
@@ -288,7 +277,7 @@ function EditUserContent() {
       return isTargetSuperAdmin || (isSuper && isPlatformOwnerOrgCode(selectedOrg?.code));
     }
     if (!isSuper) {
-      return (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'MA_TESTER', 'STAFF'] as string[]).includes(opt.key);
+      return (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'] as string[]).includes(opt.key);
     }
     return true;
   });

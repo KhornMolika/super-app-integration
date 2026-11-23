@@ -93,7 +93,11 @@ export function effectivePermissions(user: any): Set<string> | null {
 
   if (
     normalizedRoles.some(
-      (r) => r === 'APP_REVIEWER' || r === 'REVIEWER',
+      (r) =>
+        r === 'APP_REVIEWER' ||
+        r === 'REVIEWER' ||
+        r === 'SECURITY_OFFICER' ||
+        r === 'SECURITY_AUDITOR',
     )
   ) {
     [
@@ -105,20 +109,6 @@ export function effectivePermissions(user: any): Set<string> | null {
       'issue:resolve',
       'permission_proposal:read',
       'permission_proposal:review',
-      'super_app:read',
-      'organization:read',
-    ].forEach((p) => userPerms.add(p));
-  }
-
-  if (
-    normalizedRoles.some(
-      (r) => r === 'SECURITY_OFFICER' || r === 'SECURITY_AUDITOR',
-    )
-  ) {
-    [
-      'miniapp:read',
-      'miniapp:suspend',
-      'permission_proposal:read',
       'super_app:read',
       'permission:read',
       'organization:read',
@@ -156,9 +146,16 @@ export function effectivePermissions(user: any): Set<string> | null {
     ].forEach((p) => userPerms.add(p));
   }
 
-  // Exact role names only: a user with no role, or a role that merely
-  // contains "DEV" (e.g. DEVOPS), gets no developer rights.
-  if (normalizedRoles.some((r) => r === 'MA_DEVELOPER' || r === 'DEVELOPER')) {
+  if (
+    normalizedRoles.some(
+      (r) =>
+        r === 'MA_DEVELOPER' ||
+        r === 'DEVELOPER' ||
+        r === 'MA_TESTER' ||
+        r === 'TESTER' ||
+        r === 'QA_TESTER',
+    )
+  ) {
     [
       'miniapp:create',
       'miniapp:read',
@@ -168,19 +165,6 @@ export function effectivePermissions(user: any): Set<string> | null {
       'permission_proposal:create',
       'permission:read',
       'super_app:read',
-      'organization:read',
-    ].forEach((p) => userPerms.add(p));
-  }
-
-  if (
-    normalizedRoles.some(
-      (r) => r === 'MA_TESTER' || r === 'TESTER' || r === 'QA_TESTER',
-    )
-  ) {
-    [
-      'miniapp:read',
-      'super_app:read',
-      'permission:read',
       'organization:read',
     ].forEach((p) => userPerms.add(p));
   }

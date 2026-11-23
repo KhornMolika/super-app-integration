@@ -136,7 +136,7 @@ export class SeederService implements OnApplicationBootstrap {
       {
         name: 'APP_REVIEWER',
         description:
-          'Ecosystem Reviewer: evaluates submissions on the Review & Diff Deck and issues approve/reject verdicts',
+          'Ecosystem Reviewer & Security Auditor: evaluates submissions on Review & Diff Deck, inspects CVEs/SBOMs, and issues verdicts',
         perms: [
           'miniapp:read',
           'miniapp:approve',
@@ -147,7 +147,9 @@ export class SeederService implements OnApplicationBootstrap {
           'permission_proposal:read',
           'permission_proposal:review',
           'super_app:read',
+          'permission:read',
           'organization:read',
+          'audit_log:read',
         ],
       },
       {

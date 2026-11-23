@@ -317,7 +317,7 @@ export class AuthService implements OnModuleInit {
           'settings:manage',
         ].forEach((p) => permissions.add(p));
       }
-      if (roles.includes('APP_REVIEWER')) {
+      if (roles.includes('APP_REVIEWER') || roles.includes('SECURITY_OFFICER')) {
         [
           'miniapp:read',
           'miniapp:approve',
@@ -327,15 +327,6 @@ export class AuthService implements OnModuleInit {
           'issue:resolve',
           'permission_proposal:read',
           'permission_proposal:review',
-          'super_app:read',
-          'organization:read',
-        ].forEach((p) => permissions.add(p));
-      }
-      if (roles.includes('SECURITY_OFFICER')) {
-        [
-          'miniapp:read',
-          'miniapp:suspend',
-          'permission_proposal:read',
           'super_app:read',
           'permission:read',
           'organization:read',
@@ -363,7 +354,11 @@ export class AuthService implements OnModuleInit {
           'audit_log:read',
         ].forEach((p) => permissions.add(p));
       }
-      if (roles.includes('MA_DEVELOPER')) {
+      if (
+        roles.includes('MA_DEVELOPER') ||
+        roles.includes('DEVELOPER') ||
+        roles.includes('MA_TESTER')
+      ) {
         [
           'miniapp:create',
           'miniapp:read',
@@ -373,14 +368,6 @@ export class AuthService implements OnModuleInit {
           'permission_proposal:create',
           'permission:read',
           'super_app:read',
-          'organization:read',
-        ].forEach((p) => permissions.add(p));
-      }
-      if (roles.includes('MA_TESTER')) {
-        [
-          'miniapp:read',
-          'super_app:read',
-          'permission:read',
           'organization:read',
         ].forEach((p) => permissions.add(p));
       }
@@ -1368,14 +1355,28 @@ export function platformRoles(user: any): string[] {
         .map((r: string) => {
           const upper = r.toUpperCase().trim();
           if (upper === 'ORGANIZATION_ADMIN') return 'ORG_ADMIN';
-          if (['MINI_APP_DEVELOPER', 'DEVELOPER'].includes(upper))
+          if (
+            [
+              'MINI_APP_DEVELOPER',
+              'DEVELOPER',
+              'MA_TESTER',
+              'TESTER',
+              'QA',
+              'QA_TESTER',
+            ].includes(upper)
+          )
             return 'MA_DEVELOPER';
-          if (['TESTER', 'QA', 'QA_TESTER'].includes(upper))
-            return 'MA_TESTER';
-          if (['REVIEWER', 'APP_REVIEW'].includes(upper))
+          if (
+            [
+              'REVIEWER',
+              'APP_REVIEW',
+              'SECURITY_OFFICER',
+              'SECURITY',
+              'AUDITOR',
+              'SECURITY_AUDITOR',
+            ].includes(upper)
+          )
             return 'APP_REVIEWER';
-          if (['SECURITY', 'AUDITOR', 'SECURITY_AUDITOR'].includes(upper))
-            return 'SECURITY_OFFICER';
           if (['PLATFORM_ADMINISTRATOR', 'OPS_ADMIN'].includes(upper))
             return 'PLATFORM_ADMIN';
           return upper;
