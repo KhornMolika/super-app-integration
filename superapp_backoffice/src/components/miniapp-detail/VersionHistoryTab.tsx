@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/inputs';
 import { DotBadge } from '@/components/ui/Icons';
 import { useAuth } from '@/lib/auth';
 import { copyText } from '@/lib/clipboard';
+import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
 
 export interface VersionRecord {
   id?: string;
@@ -305,6 +306,27 @@ export default function VersionHistoryTab({
     if (filterType === 'ALL') return versionsList;
     return versionsList.filter((v) => v.type === filterType);
   }, [versionsList, filterType]);
+
+  const versionFilterOptions: CleanDropdownOption[] = useMemo(() => [
+    {
+      value: 'ALL',
+      label: 'All Versions',
+      count: versionsList.length,
+      dotColor: 'bg-slate-400',
+    },
+    {
+      value: 'PRODUCTION',
+      label: 'Releases',
+      count: versionsList.filter((v) => v.type === 'PRODUCTION').length,
+      dotColor: 'bg-emerald-500',
+    },
+    {
+      value: 'TEST',
+      label: 'Test / Staging',
+      count: versionsList.filter((v) => v.type === 'TEST').length,
+      dotColor: 'bg-sky-500',
+    },
+  ], [versionsList]);
 
   const baseOptions = useMemo(() => {
     if (versionsList.length === 0) {
@@ -622,23 +644,20 @@ export default function VersionHistoryTab({
               </Link>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
-              {(['ALL', 'PRODUCTION', 'TEST'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setFilterType(mode)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    filterType === mode
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {mode === 'ALL' ? 'All Versions' : mode === 'PRODUCTION' ? 'Releases' : 'Test / Staging'}
-                </button>
-              ))}
-            </div>
+            {/* Filter Dropdown */}
+            <CleanDropdown
+              label="Type:"
+              value={filterType}
+              options={versionFilterOptions}
+              onChange={(val) => setFilterType(val as 'ALL' | 'PRODUCTION' | 'TEST')}
+              align="right"
+              dropdownWidth="w-56"
+              icon={
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              }
+            />
           </div>
         </div>
 
