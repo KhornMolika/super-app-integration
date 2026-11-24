@@ -221,6 +221,7 @@ if ($Target -eq 'all' -or $Target -eq 'manager') {
 
     Write-Host "Building Docker Image: $imgManager" -ForegroundColor Yellow
     docker build --platform linux/amd64 `
+        --build-arg NEXT_PUBLIC_API_URL=https://app.fintechcenterfsa.com/api `
         --build-arg NEXT_PUBLIC_SOCKET_URL=https://app.fintechcenterfsa.com `
         --build-arg NEXT_PUBLIC_ENVIRONMENT=PROD `
         --build-arg NEXT_PUBLIC_NEXUS_URL=https://app.fintechcenterfsa.com/nexus `

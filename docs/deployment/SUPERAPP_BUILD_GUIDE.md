@@ -94,6 +94,7 @@ docker push registry.fintechcenterfsa.com/super-app/backend:migrator
 cd superapp_backoffice
 
 docker build --platform linux/amd64 \
+  --build-arg NEXT_PUBLIC_API_URL=https://app.fintechcenterfsa.com/api \
   --build-arg NEXT_PUBLIC_SOCKET_URL=https://app.fintechcenterfsa.com \
   --build-arg NEXT_PUBLIC_ENVIRONMENT=PROD \
   --build-arg NEXT_PUBLIC_NEXUS_URL=https://app.fintechcenterfsa.com/nexus \
