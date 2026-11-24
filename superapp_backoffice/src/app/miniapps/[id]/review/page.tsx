@@ -30,6 +30,8 @@ import {
   ShieldAlert,
   ArrowLeft,
   Layers,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 type AuditSubTab = 'OVERVIEW' | 'PERMISSIONS' | 'WEBVIEW' | 'DEEPLINK' | 'SPECS' | 'DIFF' | 'NETWORK';
@@ -380,22 +382,16 @@ function MiniAppReviewPageContent() {
 
   return (
     <div className="w-full min-w-0 pb-16 animate-in fade-in duration-300">
-      {/* 1. Sticky Decision Bar */}
+      {/* 1. Sticky Decision Header Bar */}
       <ReviewDecisionBar
         miniAppId={id}
         miniAppName={miniApp.name}
         logoUrl={miniApp.logoUrl}
         appId={miniApp.appId}
         integrationMethod={miniApp.integrationMethod}
-        versionsList={versionsList}
-        baseVersion={baseVersion}
         targetVersion={targetVersion}
-        onChangeBaseVersion={handleChangeBaseVersion}
-        onChangeTargetVersion={handleChangeTargetVersion}
-        isHighRiskChange={isHighRisk}
         securityScore={securityScore}
         scanFailed={scanFailed}
-        domainVerified={domainVerified}
         canApprove={canApprove}
         canReject={canReject}
         actionLoading={actionLoading}
@@ -410,38 +406,110 @@ function MiniAppReviewPageContent() {
       />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 space-y-6">
-        {/* 2. Audit Sub-Tabs Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-2 overflow-x-auto scrollbar-none">
-          {auditTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isTabActive =
-              activeTab === tab.id ||
-              (tab.id === 'WEBVIEW' && activeTab === 'NETWORK' && isWebview);
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.id)}
-                className={`pb-3 px-3.5 border-b-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
-                  isTabActive
-                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+        {/* 2. Audit Sub-Tabs Navigation & Version Scope Comparator */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
+          {/* Tabs */}
+          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none">
+            {auditTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isTabActive =
+                activeTab === tab.id ||
+                (tab.id === 'WEBVIEW' && activeTab === 'NETWORK' && isWebview);
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleSelectTab(tab.id)}
+                  className={`pb-2.5 px-3 border-b-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                     isTabActive
-                      ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  {tab.badge}
-                </span>
-              </button>
-            );
-          })}
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      isTabActive
+                        ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Version Scope Comparator & Risk Chip */}
+          <div className="flex items-center gap-2 self-start lg:self-center shrink-0">
+            {/* Comparator capsule */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-2xs">
+              <span className="text-[11px] font-bold text-slate-400 pl-1.5 hidden xl:inline">
+                Compare:
+              </span>
+
+              {/* Base Version */}
+              <div className="relative">
+                <select
+                  aria-label="Base Version"
+                  value={baseVersion}
+                  onChange={(e) => handleChangeBaseVersion(e.target.value)}
+                  className="appearance-none pl-6 pr-7 py-1 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs focus:outline-none cursor-pointer"
+                >
+                  {versionsList.map((v) => (
+                    <option key={`base-${v.version}`} value={v.version}>
+                      base: {v.version} {v.type === 'PRODUCTION' ? '(Active)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute left-2.5 top-3 pointer-events-none">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block ring-2 ring-emerald-500/20" />
+                </div>
+              </div>
+
+              <span className="text-xs font-black text-slate-400 px-0.5">➔</span>
+
+              {/* Target Version */}
+              <div className="relative">
+                <select
+                  aria-label="Target Version"
+                  value={targetVersion}
+                  onChange={(e) => handleChangeTargetVersion(e.target.value)}
+                  className="appearance-none pl-6 pr-7 py-1 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs focus:outline-none cursor-pointer"
+                >
+                  {versionsList.map((v) => (
+                    <option key={`target-${v.version}`} value={v.version}>
+                      target: {v.version} {v.status ? `[${v.status}]` : ''}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute left-2.5 top-3 pointer-events-none">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block ring-2 ring-amber-500/20" />
+                </div>
+              </div>
+            </div>
+
+            {/* Delta Risk Level Chip */}
+            {isHighRisk ? (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs shrink-0"
+                title="This revision declares high-risk capabilities, modified permissions, or network boundaries."
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <span className="hidden sm:inline">High-Risk</span>
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs shrink-0"
+                title="Low-risk revision without elevated permissions or critical boundary changes."
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span className="hidden sm:inline">Low-Risk</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* 3. Sub-Tab Panel Content */}
