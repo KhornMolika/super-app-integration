@@ -413,7 +413,7 @@ function MiniAppReviewPageContent() {
         isHighRiskChange={isHighRisk}
       />
 
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6 animate-in fade-in duration-300">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-[196px] space-y-6 animate-in fade-in duration-300">
         {/* 2. Sub-Tab Panel Content */}
         {diffLoading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-3">

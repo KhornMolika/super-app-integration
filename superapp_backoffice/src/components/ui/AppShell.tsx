@@ -106,7 +106,13 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col h-full overflow-y-auto relative bg-slate-50 dark:bg-slate-900 transition-all duration-300 min-w-0">
-          <header className="sticky top-0 z-10 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 h-16 flex items-center px-4 sm:px-6 lg:px-8 shadow-xs transition-all">
+          <header
+            className={`h-16 flex items-center px-4 sm:px-6 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/60 shadow-xs transition-all ${
+              isWorkspaceRoute
+                ? 'fixed top-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md'
+                : 'sticky top-0 z-10 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md'
+            }`}
+          >
             <div className="flex items-center min-w-0 pr-4">
               {isWorkspaceRoute ? (
                 <div className="flex items-center gap-3">
