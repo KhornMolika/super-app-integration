@@ -142,7 +142,9 @@ export function AppShell({ children }: AppShellProps) {
               <HeaderProfile />
             </div>
           </header>
-          <div className="p-4 sm:p-6 lg:p-8 w-full min-w-0">{children}</div>
+          <div className={isWorkspaceRoute ? "w-full min-w-0" : "p-4 sm:p-6 lg:p-8 w-full min-w-0"}>
+            {children}
+          </div>
         </main>
       </div>
     </SidebarProvider>
