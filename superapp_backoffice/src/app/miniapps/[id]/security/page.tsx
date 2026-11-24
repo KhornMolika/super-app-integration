@@ -69,7 +69,7 @@ function MiniAppSecurityPageContent() {
   }
 
   return (
-    <div className="w-full min-w-0 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-16 animate-in fade-in duration-300">
+    <div className="w-full min-w-0 pb-16">
       <ValidationReportTab
         miniApp={miniApp}
         onRefresh={fetchApp}
