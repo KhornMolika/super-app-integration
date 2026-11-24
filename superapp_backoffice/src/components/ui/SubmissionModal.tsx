@@ -487,10 +487,10 @@ export default function SubmissionModal({
                 {state.createdId && (
                   <Button
                     className="flex-1 h-10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-                    onClick={() => router.push(`/miniapps/${state.createdId}`)}
+                    onClick={() => router.push(`/miniapps/${state.createdId}/security`)}
                   >
                     <ClipboardCheckIcon className="w-4 h-4" />
-                    <span>View Full Report</span>
+                    <span>View Security Report</span>
                   </Button>
                 )}
               </div>
