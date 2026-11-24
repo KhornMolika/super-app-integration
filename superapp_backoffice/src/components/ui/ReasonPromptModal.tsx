@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from '@/components/ui/Toast';
 
 export interface ReasonPromptModalProps {
@@ -40,7 +41,12 @@ export default function ReasonPromptModal({
 }: ReasonPromptModalProps) {
   const [reason, setReason] = useState('');
   const [checked, setChecked] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -52,7 +58,7 @@ export default function ReasonPromptModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -84,13 +90,13 @@ export default function ReasonPromptModal({
   const isDanger = confirmVariant === 'danger';
   const isWarning = confirmVariant === 'warning';
 
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div 
         className="fixed inset-0" 
         onClick={!isLoading ? onClose : undefined}
       />
-      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden space-y-6 p-8 sm:p-9 animate-in zoom-in-95 duration-150 z-10">
+      <div className="relative w-full max-w-3xl my-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden space-y-6 p-8 sm:p-9 animate-in zoom-in-95 duration-150 z-10">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-4">
@@ -250,6 +256,7 @@ export default function ReasonPromptModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

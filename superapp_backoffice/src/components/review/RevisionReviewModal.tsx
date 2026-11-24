@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import { DotBadge, ZapIcon, ExternalLinkIcon } from '@/components/ui/Icons';
@@ -34,6 +35,11 @@ export function RevisionReviewModal({
   const canReject = can('miniapp:reject');
   const [diffData, setDiffData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [activeTab, setActiveTab] = useState<'DIFF' | 'PERMISSIONS' | 'NETWORK' | 'METADATA'>('DIFF');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonModalState, setReasonModalState] = useState<{
@@ -140,9 +146,11 @@ export function RevisionReviewModal({
   const removedDomains = d?.integration?.allowedDomains?.removed || [];
   const metaDiff = d?.metadata || {};
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl my-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
           <div className="flex items-center gap-3.5">
@@ -578,6 +586,7 @@ export function RevisionReviewModal({
           }}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

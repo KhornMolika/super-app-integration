@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
@@ -173,6 +174,11 @@ export default function VersionHistoryTab({
   const canRollback = (role === 'SUPER_ADMIN' || can?.('miniapp:approve')) && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST' | 'DRAFT'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
   const [copiedChecksum, setCopiedChecksum] = useState<string | null>(null);
@@ -1017,10 +1023,10 @@ export default function VersionHistoryTab({
         </div>
       </div>
 
-      {/* Changelog Modal */}
-      {selectedChangelog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      {/* Changelog Modal (Portaled to document.body for full-screen edge-to-edge backdrop blur) */}
+      {mounted && selectedChangelog && createPortal(
+        <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-mono font-bold text-lg text-slate-900 dark:text-slate-100">
@@ -1075,7 +1081,8 @@ export default function VersionHistoryTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Version Diff Comparison Modal */}
@@ -1105,10 +1112,10 @@ export default function VersionHistoryTab({
         buildType={inviteModalState.buildType}
         teamTelegramChatId={teamTelegramChatId}
       />
-      {/* Rollback Confirmation Modal */}
-      {rollbackModalState.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 space-y-4">
+      {/* Rollback Confirmation Modal (Portaled to document.body for full-screen edge-to-edge backdrop blur) */}
+      {mounted && rollbackModalState.isOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1161,7 +1168,8 @@ export default function VersionHistoryTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
