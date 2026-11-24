@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/inputs';
 import { superAppApi, miniappsApi, MiniApp } from '@/api';
 import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppReleaseCompareModal';
 import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
@@ -99,61 +98,74 @@ export default function ReleasesPage() {
   return (
     <div className="w-full min-w-0 space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">SuperApp Release Pipeline</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              SuperApp Release Pipeline
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
               Release Verification
             </span>
           </div>
-          <p className="text-slate-500 mt-1 text-sm">
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
             Verify mini-app packages, validate security checksums, and assemble official SuperApp releases.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Compare Button */}
+        {/* Unified Action Toolbar - Uniform h-10 height, rounded-xl, and aligned */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+          {/* 1. Compare Button */}
           <Link
             href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-xs"
+            className="h-10 px-3.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-2 shadow-2xs shrink-0 whitespace-nowrap"
+            title="Compare official live and candidate release manifests"
           >
-            <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span>Compare SA Releases (SA vs SA)</span>
           </Link>
 
-          <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-xs text-slate-500 font-medium">Candidate Version:</span>
+          {/* 2. Candidate Version Input Pill */}
+          <div className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700 flex items-center gap-2 shrink-0 shadow-2xs">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+              Candidate Version:
+            </span>
             <input
               type="text"
               value={releaseVersion}
               onChange={e => setReleaseVersion(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-900 dark:text-white w-20 outline-none font-mono"
+              className="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white w-18 outline-none text-center"
+              title="Candidate staging release version tag"
             />
           </div>
 
-          <Button
+          {/* 3. Run Gate 2 & Assemble Test Build Primary Button */}
+          <button
+            type="button"
             onClick={handleRunGate2}
             disabled={isAssembling}
-            className="bg-accent-500 hover:bg-accent-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center space-x-2"
+            className="h-10 px-4 rounded-xl text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 shadow-sm hover:shadow transition-all flex items-center gap-2 shrink-0 whitespace-nowrap disabled:opacity-50 cursor-pointer"
             title="Runs Gate 2 verification and triggers Jenkins superapp-test-build to assemble candidate staging APK"
           >
             {isAssembling ? (
               <>
-                <svg className="animate-spin w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg className="animate-spin w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
                 <span>Running Gate 2 & Assembling...</span>
               </>
             ) : (
               <>
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <span>Run Gate 2 & Assemble Test Build</span>
               </>
             )}
-          </Button>
+          </button>
         </div>
       </div>
 
