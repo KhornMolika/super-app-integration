@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal, PlayCircle, ArrowLeft, Layers, Table, Check, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, ArrowLeft, Layers, Table, Check, CheckCircle2, ShieldAlert, Activity } from 'lucide-react';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { miniappsApi } from '@/api';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
@@ -1193,7 +1193,13 @@ export default function ValidationReportTab({
         : miniApp.integrationConfig?.repoUrl
         ? `Git Repo: ${miniApp.integrationConfig.repoUrl}${miniApp.integrationConfig.commitSha ? ` @ ${miniApp.integrationConfig.commitSha.substring(0, 7)}` : ''}`
         : 'Flutter Package Ingestion')
-    : (miniApp.integrationConfig?.productionUrl || miniApp.integrationConfigWebView?.productionUrl || 'N/A');
+    : (miniApp.integrationConfig?.productionUrl ||
+       miniApp.integrationConfigWebView?.productionUrl ||
+       miniApp.integrationConfigWebView?.targetUrl ||
+       miniApp.integrationConfigDeepLink?.universalLink ||
+       miniApp.integrationConfigDeepLink?.customScheme ||
+       (miniApp.appId ? `MiniApp Target (${miniApp.appId})` : '') ||
+       'Production Target Endpoint');
 
   // Selected Security Checks list for profile badges
   const activeProfileChecks = useMemo(() => {
@@ -1703,15 +1709,43 @@ export default function ValidationReportTab({
             isScanningActive ? 'pb-6 border-b border-slate-100 dark:border-slate-800' : ''
           }`}>
             <div className="flex items-start gap-4">
-              <div className={`w-18 h-18 rounded-2xl border flex flex-col items-center justify-center p-2 flex-shrink-0 transition-all ${
+              <div className={`relative w-18 h-18 rounded-2xl border flex flex-col items-center justify-center p-1.5 flex-shrink-0 transition-all ${
                 isScanningActive
-                  ? 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-500/15 dark:border-amber-500/40 ring-2 ring-amber-500/20 animate-pulse'
+                  ? 'bg-emerald-500/5 border-emerald-500/25 dark:bg-emerald-950/20 dark:border-emerald-800/50 shadow-xs'
                   : scoreBg
               }`}>
                 {isScanningActive ? (
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <RefreshIcon className="w-6 h-6 text-amber-500 animate-spin" />
-                    <span className="text-[9px] font-black tracking-wider text-amber-600 dark:text-amber-400 mt-1 uppercase">AUDITING</span>
+                  <div className="relative flex items-center justify-center w-full h-full">
+                    {/* Circular SVG Gauge */}
+                    <svg className="w-14 h-14 -rotate-90 transform" viewBox="0 0 48 48">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="19"
+                        className="stroke-slate-200/80 dark:stroke-slate-700/60"
+                        strokeWidth="3.5"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="19"
+                        className="stroke-emerald-500 dark:stroke-emerald-400 transition-all duration-500 ease-out"
+                        strokeWidth="3.5"
+                        strokeDasharray={2 * Math.PI * 19}
+                        strokeDashoffset={2 * Math.PI * 19 * (1 - Math.max(scanProgressPercent, 5) / 100)}
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-sm font-black font-mono text-slate-900 dark:text-white leading-none">
+                        {scanProgressPercent}%
+                      </span>
+                      <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5">
+                        AUDIT
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -1731,7 +1765,7 @@ export default function ValidationReportTab({
                     valStatus === 'PASSED'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                       : valStatus === 'RUNNING'
-                      ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-sm animate-pulse'
+                      ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs'
                       : valStatus === 'FAILED'
                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
                       : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -1739,10 +1773,10 @@ export default function ValidationReportTab({
                     {valStatus === 'RUNNING' ? (
                       <>
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <span>SCANNING IN PROGRESS</span>
+                        <span className="tracking-wide">SCANNING IN PROGRESS</span>
                       </>
                     ) : valStatus === 'PASSED' ? (
                       <>
@@ -1760,10 +1794,16 @@ export default function ValidationReportTab({
                   </span>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
-                  <span>Target:</span>
-                  <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 truncate max-w-[550px]">
+                  <span className="text-xs text-slate-400 font-medium">Target:</span>
+                  <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[550px]">
                     {scannedTargetLabel}
                   </code>
+                  {isScanningActive && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Activity className="w-3 h-3 animate-pulse" />
+                      <span>Live Telemetry Active</span>
+                    </span>
+                  )}
                 </p>
                 {report?.completedAt && (
                   <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-1 flex-wrap">
@@ -1879,6 +1919,32 @@ export default function ValidationReportTab({
                     ]}
                   />
                 </>
+              ) : isScanningActive ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                    <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
+                    <span>Live Audit Active</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-850 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {completedStagesCount}/{totalStagesCount}
+                    </span>
+                    <span>Checks Finished</span>
+                  </span>
+                  {isCancelling ? (
+                    <span className="text-xs text-rose-500 font-semibold animate-pulse">Stopping...</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleCancelScan}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-xs font-medium text-rose-700 dark:text-rose-300 transition-colors cursor-pointer"
+                      title="Cancel live scan"
+                    >
+                      <XCircleIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Stop</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-850 text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -1896,34 +1962,99 @@ export default function ValidationReportTab({
             </div>
           </div>
 
-        {/* Live Scan Progress Bar Banner (when scan is active) */}
+        {/* Modern Live Pipeline Execution Deck (when scan is active) */}
         {isScanningActive && (
-          <div className="mt-4 p-4 rounded-xl bg-slate-900/5 dark:bg-slate-800/40 border border-brand-200/80 dark:border-brand-800/60 flex flex-col gap-2.5 animate-in fade-in duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xs font-bold animate-spin flex-shrink-0">
-                  <RefreshIcon className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    Live Security Pipeline Executing
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col gap-3.5 animate-in fade-in duration-300">
+            {/* Top row: Stage Title + Monospace Progress Stats */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <RefreshIcon className="w-3.5 h-3.5 animate-spin" />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  {runningStage && (
-                    <span className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-100 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-800">
-                      Stage {runningStage.index} of {totalStagesCount}: {runningStage.title}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                      Live Security Pipeline Executing
                     </span>
-                  )}
+                    {runningStage && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Stage {runningStage.index} of {totalStagesCount}: {runningStage.title}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    {runningStage?.description || 'Automated SAST, SCA, Secret Scanning & Network Policy Validation in progress...'}
+                  </p>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
-                {completedStagesCount}/{totalStagesCount} Checks Completed ({scanProgressPercent}%)
-              </span>
+
+              {/* Progress Count Badge */}
+              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{completedStagesCount}</span>
+                  <span className="text-slate-400">/</span>
+                  <span>{totalStagesCount} Checks Completed</span>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{scanProgressPercent}%</span>
+                </span>
+              </div>
             </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+
+            {/* Glowing Shimmer Progress Bar */}
+            <div className="relative w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-200/60 dark:border-slate-700/50">
               <div
-                className="bg-gradient-to-r from-brand-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${Math.max(scanProgressPercent, 8)}%` }}
-              />
+                className="relative bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out overflow-hidden shadow-xs"
+                style={{ width: `${Math.max(scanProgressPercent, 6)}%` }}
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] animate-[shimmer_2s_infinite]" />
+              </div>
+            </div>
+
+            {/* 5-Stage Visual Stepper Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+              {activeStages.map((stage) => {
+                const isCompleted = stage.recorded?.status === 'COMPLETED';
+                const isRunning = stage.recorded?.status === 'RUNNING' || (runningStage?.id === stage.id);
+                const isFailed = stage.recorded?.status === 'FAILED';
+                const isPending = !isCompleted && !isRunning && !isFailed;
+
+                return (
+                  <div
+                    key={stage.id}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-xs transition-all ${
+                      isRunning
+                        ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-xs ring-1 ring-emerald-500/20'
+                        : isCompleted
+                        ? 'border-slate-200/70 dark:border-slate-700/70 bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300'
+                        : isFailed
+                        ? 'border-rose-300 dark:border-rose-800 bg-rose-50/60 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
+                        : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/40 text-slate-400 dark:text-slate-500'
+                    }`}
+                  >
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : isRunning ? (
+                        <RefreshIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                      ) : isFailed ? (
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[9px] font-mono text-slate-400">
+                          {stage.index}
+                        </div>
+                      )}
+                    </div>
+                    <span className="truncate font-medium text-[11px] leading-tight">
+                      {stage.title}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
