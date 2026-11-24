@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/inputs';
 import { STAGE_CATALOG } from '@/components/ui/ValidationReportTab';

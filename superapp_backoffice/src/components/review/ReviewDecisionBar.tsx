@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Check,
   ArrowRight,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
 
 export interface VersionOption {
@@ -55,14 +57,23 @@ export interface ReviewDecisionBarProps {
   isHighRiskChange?: boolean;
 }
 
-interface VersionDropdownProps {
-  type: 'base' | 'target';
-  value: string;
-  options: VersionOption[];
-  onChange: (version: string) => void;
+interface UnifiedComparatorProps {
+  baseVersion: string;
+  targetVersion: string;
+  versionsList: VersionOption[];
+  onChangeBaseVersion: (ver: string) => void;
+  onChangeTargetVersion: (ver: string) => void;
+  isHighRiskChange: boolean;
 }
 
-function VersionDropdown({ type, value, options, onChange }: VersionDropdownProps) {
+function UnifiedComparator({
+  baseVersion,
+  targetVersion,
+  versionsList,
+  onChangeBaseVersion,
+  onChangeTargetVersion,
+  isHighRiskChange,
+}: UnifiedComparatorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,52 +83,73 @@ function VersionDropdown({ type, value, options, onChange }: VersionDropdownProp
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
-  const selectedOption = options.find((o) => o.version === value);
-  const isBase = type === 'base';
+  const activeBase = versionsList.find((v) => v.version === baseVersion);
+  const activeTarget = versionsList.find((v) => v.version === targetVersion);
 
   return (
     <div className="relative inline-block" ref={containerRef}>
+      {/* Option 1: Single Unified Capsule Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer border shadow-2xs ${
-          isBase
-            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
-            : 'bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-700/80 text-amber-900 dark:text-amber-200 hover:border-amber-400'
-        }`}
-        title={`Select ${isBase ? 'Base' : 'Target'} Version to Compare`}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-2xs transition-all cursor-pointer group"
+        title="Open Comparison Version Scope"
       >
-        {/* Indicator Dot */}
-        <span
-          className={`w-2 h-2 rounded-full shrink-0 ${
-            isBase
-              ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
-              : 'bg-amber-500 ring-2 ring-amber-500/20'
-          }`}
-        />
+        <span className="text-[10px] font-sans font-extrabold uppercase tracking-wider text-slate-400">
+          Compare:
+        </span>
 
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase font-sans font-extrabold text-slate-400 tracking-wider">
-            {isBase ? 'base:' : 'target:'}
-          </span>
-          <span className="font-bold">{value || 'None'}</span>
-          {selectedOption?.type === 'PRODUCTION' && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-sans font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Active
-            </span>
+        {/* Base Version Chip */}
+        <span className="inline-flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>{baseVersion || '1.0.0'}</span>
+        </span>
+
+        <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" />
+
+        {/* Target Version Chip */}
+        <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span>{targetVersion || '1.0.0'}</span>
+        </span>
+
+        <span className="text-slate-200 dark:text-slate-700">|</span>
+
+        {/* Delta Risk Pill */}
+        <span
+          className={`inline-flex items-center gap-1 text-[11px] font-sans font-bold ${
+            isHighRiskChange
+              ? 'text-rose-600 dark:text-rose-400'
+              : 'text-emerald-600 dark:text-emerald-400'
+          }`}
+        >
+          {isHighRiskChange ? (
+            <>
+              <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
+              <span className="hidden xl:inline">High-Risk</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+              <span className="hidden xl:inline">Low-Risk</span>
+            </>
           )}
-          {selectedOption?.status && selectedOption.type !== 'PRODUCTION' && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-sans font-bold bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-              {selectedOption.status}
-            </span>
-          )}
-        </div>
+        </span>
 
         <ChevronDown
           className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
@@ -126,50 +158,151 @@ function VersionDropdown({ type, value, options, onChange }: VersionDropdownProp
         />
       </button>
 
-      {/* Popover Dropdown */}
+      {/* Unified Comparison Scope Popover */}
       {isOpen && (
-        <div className="absolute top-full mt-1.5 right-0 sm:left-0 sm:right-auto z-50 min-w-[240px] max-w-[300px] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <span>Select {isBase ? 'Base' : 'Target'} Version</span>
-            <span className="text-[9px] font-mono font-semibold">{options.length} available</span>
+        <div className="absolute top-full mt-2 right-0 z-50 w-[380px] sm:w-[480px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150">
+          {/* Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                <SlidersHorizontal className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
+                  Version Comparison Scope
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Select baseline and candidate versions to compute delta
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
-            {options.map((opt) => {
-              const isSelected = opt.version === value;
-              const isProd = opt.type === 'PRODUCTION' || opt.status === 'ACTIVE';
-              return (
-                <button
-                  key={`${type}-${opt.version}`}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.version);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 text-left text-xs font-mono flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-bold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        isProd ? 'bg-emerald-500' : 'bg-amber-500'
-                      }`}
-                    />
-                    <span className="truncate">{opt.version}</span>
-                    <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 shrink-0">
-                      {opt.status || opt.type || 'REVISION'}
-                    </span>
-                  </div>
+          {/* 2-Column Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3">
+            {/* Column 1: Base Version */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Base (Baseline)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {versionsList.length} total
+                </span>
+              </div>
 
-                  {isSelected && (
-                    <Check className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
-                  )}
-                </button>
-              );
-            })}
+              <div className="max-h-48 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 scrollbar-thin">
+                {versionsList.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-slate-400">No versions declared</div>
+                ) : (
+                  versionsList.map((v) => {
+                    const isSelected = v.version === baseVersion;
+                    const isProd = v.type === 'PRODUCTION' || v.status === 'ACTIVE';
+                    return (
+                      <button
+                        key={`pop-base-${v.version}`}
+                        type="button"
+                        onClick={() => onChangeBaseVersion(v.version)}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-mono flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300/80 dark:border-emerald-700/80'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{v.version}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isProd && (
+                            <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                              Active
+                            </span>
+                          )}
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Column 2: Target Version */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Target (Candidate)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {versionsList.length} total
+                </span>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 scrollbar-thin">
+                {versionsList.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-slate-400">No versions declared</div>
+                ) : (
+                  versionsList.map((v) => {
+                    const isSelected = v.version === targetVersion;
+                    return (
+                      <button
+                        key={`pop-target-${v.version}`}
+                        type="button"
+                        onClick={() => onChangeTargetVersion(v.version)}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-mono flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 font-bold border border-amber-300/80 dark:border-amber-700/80'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{v.version}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {v.status && (
+                            <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                              {v.status}
+                            </span>
+                          )}
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer: Current Summary */}
+          <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+            <span className="text-slate-500 text-[11px]">
+              Comparing{' '}
+              <strong className="text-slate-800 dark:text-slate-200 font-mono">
+                {baseVersion}
+              </strong>{' '}
+              ➔{' '}
+              <strong className="text-amber-600 dark:text-amber-400 font-mono">
+                {targetVersion}
+              </strong>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer"
+            >
+              Apply Scope
+            </button>
           </div>
         </div>
       )}
@@ -236,7 +369,7 @@ export function ReviewDecisionBar({
   const isScoreClean = securityScore >= 80;
 
   return (
-    <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs transition-all mb-6">
+    <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs transition-all mb-8 sm:mb-10">
       {/* Deck 1: Identity & Decision Actions (Aligned with max-w-[1700px] grid) */}
       <div className="border-b border-slate-100 dark:border-slate-800/70">
         <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
@@ -277,14 +410,9 @@ export function ReviewDecisionBar({
                   >
                     {methodBadge.label}
                   </span>
-                  {targetVersion && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
-                      {targetVersion}
-                    </span>
-                  )}
                 </div>
                 {appId && (
-                  <span className="text-[11px] font-mono text-slate-400 block truncate max-w-[200px]">
+                  <span className="text-[11px] font-mono text-slate-400 block truncate max-w-[240px]">
                     {appId}
                   </span>
                 )}
@@ -371,10 +499,10 @@ export function ReviewDecisionBar({
         </div>
       </div>
 
-      {/* Deck 2: Sub-Tabs Navigation & Version Comparator (Aligned with max-w-[1700px] grid) */}
+      {/* Deck 2: Sub-Tabs Navigation & Unified Comparator (Linear/Vercel Clean Style) */}
       {tabs && tabs.length > 0 && (
-        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-1 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Subnav Tabs */}
+        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-0.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Subnav Tabs: Crisp Underline Navigation with Muted Counters */}
           <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mb-px">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -384,19 +512,19 @@ export function ReviewDecisionBar({
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab && onSelectTab(tab.id)}
-                  className={`pb-2.5 pt-2 px-3 border-b-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                  className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                     isTabActive
-                      ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
-                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
+                      ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
                       isTabActive
-                        ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                     }`}
                   >
                     {tab.badge}
@@ -406,55 +534,17 @@ export function ReviewDecisionBar({
             })}
           </div>
 
-          {/* Version Scope Comparator & Risk Chip */}
+          {/* Option 1: Single Unified Version Comparator Capsule Button */}
           {onChangeBaseVersion && onChangeTargetVersion && (
-            <div className="flex items-center gap-2.5 self-start lg:self-center shrink-0 pb-2 lg:pb-1.5">
-              {/* Clean, Modern Comparator Widget */}
-              <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-                <span className="text-[11px] font-bold text-slate-400 pl-2 hidden xl:inline">
-                  Compare:
-                </span>
-
-                {/* Base Version Custom Dropdown */}
-                <VersionDropdown
-                  type="base"
-                  value={baseVersion || ''}
-                  options={versionsList}
-                  onChange={onChangeBaseVersion}
-                />
-
-                {/* Clean Arrow Divider */}
-                <div className="w-5 h-5 rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
-                  <ArrowRight className="w-3 h-3" />
-                </div>
-
-                {/* Target Version Custom Dropdown */}
-                <VersionDropdown
-                  type="target"
-                  value={targetVersion || ''}
-                  options={versionsList}
-                  onChange={onChangeTargetVersion}
-                />
-              </div>
-
-              {/* Delta Risk Level Chip */}
-              {isHighRiskChange ? (
-                <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs shrink-0"
-                  title="This revision declares high-risk capabilities, modified permissions, or network boundaries."
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span className="hidden sm:inline">High-Risk Delta</span>
-                </span>
-              ) : (
-                <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs shrink-0"
-                  title="Low-risk revision without elevated permissions or critical boundary changes."
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span className="hidden sm:inline">Low-Risk Delta</span>
-                </span>
-              )}
+            <div className="self-start lg:self-center shrink-0 pb-2 lg:pb-1.5">
+              <UnifiedComparator
+                baseVersion={baseVersion || '1.0.0'}
+                targetVersion={targetVersion || '1.0.0'}
+                versionsList={versionsList}
+                onChangeBaseVersion={onChangeBaseVersion}
+                onChangeTargetVersion={onChangeTargetVersion}
+                isHighRiskChange={isHighRiskChange}
+              />
             </div>
           )}
         </div>
