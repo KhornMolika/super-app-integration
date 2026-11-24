@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 
 export interface VersionOption {
   version: string;
@@ -388,17 +389,12 @@ export function ReviewDecisionBar({
 
             {/* Logo & Name */}
             <div className="flex items-center gap-2.5 min-w-0">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={miniAppName}
-                  className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
-                  {miniAppName ? miniAppName.charAt(0).toUpperCase() : 'M'}
-                </div>
-              )}
+              <AppLogoAvatar
+                logo={logoUrl}
+                name={miniAppName}
+                size="md"
+                className="shrink-0"
+              />
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">

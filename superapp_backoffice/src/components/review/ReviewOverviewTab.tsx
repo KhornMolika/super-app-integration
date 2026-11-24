@@ -31,6 +31,7 @@ import {
   CheckSquare,
   Lock,
 } from 'lucide-react';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 
 export interface ReviewOverviewTabProps {
   miniApp: any;
@@ -140,8 +141,8 @@ export function ReviewOverviewTab({
       description: 'Square 512x512 PNG asset for launcher & store banner',
       changed: Boolean(logoDiff?.changed),
       statusLabel: logoDiff?.changed ? 'NEW ASSET' : 'Unchanged',
-      base: logoDiff?.base || miniApp?.logoUrl,
-      target: logoDiff?.target || miniApp?.logoUrl,
+      base: logoDiff?.base || miniApp?.logo || miniApp?.logoUrl || miniApp?.iconUrl,
+      target: logoDiff?.target || miniApp?.logo || miniApp?.logoUrl || miniApp?.iconUrl,
       type: 'logo',
     },
     {
@@ -504,13 +505,7 @@ export function ReviewOverviewTab({
                             Base ({baseVersion})
                           </span>
                           {item.type === 'logo' ? (
-                            <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
-                              {item.base ? (
-                                <img src={item.base} alt="Base logo" className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-xs font-bold text-slate-400">M</span>
-                              )}
-                            </div>
+                            <AppLogoAvatar logo={item.base} name={miniApp?.name || 'Base'} size="sm" />
                           ) : (
                             <span className="font-mono text-slate-600 dark:text-slate-400 block truncate">
                               {item.base}
@@ -534,13 +529,7 @@ export function ReviewOverviewTab({
                             Target ({targetVersion})
                           </span>
                           {item.type === 'logo' ? (
-                            <div className="w-8 h-8 rounded-lg overflow-hidden border border-brand-300 dark:border-brand-700 bg-white dark:bg-slate-800 flex items-center justify-center">
-                              {item.target ? (
-                                <img src={item.target} alt="Target logo" className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-xs font-bold text-brand-600">M</span>
-                              )}
-                            </div>
+                            <AppLogoAvatar logo={item.target} name={miniApp?.name || 'Target'} size="sm" />
                           ) : (
                             <span
                               className={`font-mono block truncate ${

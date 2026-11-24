@@ -386,7 +386,13 @@ function MiniAppReviewPageContent() {
       <ReviewDecisionBar
         miniAppId={id}
         miniAppName={miniApp.name}
-        logoUrl={miniApp.logoUrl}
+        logoUrl={
+          miniApp.logo ||
+          miniApp.logoUrl ||
+          miniApp.iconUrl ||
+          diffData?.differences?.metadata?.logo?.target ||
+          diffData?.differences?.metadata?.logo?.base
+        }
         appId={miniApp.appId}
         integrationMethod={miniApp.integrationMethod}
         targetVersion={targetVersion}

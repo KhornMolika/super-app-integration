@@ -35,5 +35,11 @@ export function normalizeAssetUrl(url?: string | null): string | undefined {
     }
   }
 
+  // If stored as a plain storage key/path (e.g. "logos/logo-123.png" or "mini-app-logos/...")
+  if (url.startsWith('logos/') || url.startsWith('mini-app-logos/') || url.startsWith('mini-app-assets/')) {
+    const key = url.replace(/^(?:mini-app-assets|mini-app-logos|logos)\/?/, '');
+    return `/api/storage/asset?key=${encodeURIComponent(key)}`;
+  }
+
   return url;
 }
