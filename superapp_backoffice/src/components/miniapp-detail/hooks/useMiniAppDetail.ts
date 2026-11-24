@@ -7,7 +7,7 @@ import { miniappsApi, superAppApi, unwrapItem } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { missingArtifactFiles } from '@/lib/miniapp-form.validator';
-import { formatCompliantPurpose } from '@/components/forms/CapabilitiesForm';
+import { formatCompliantPurpose, normalizeCapabilityKey } from '@/components/forms/CapabilitiesForm';
 import { IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/miniapp.types';
 import { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
@@ -620,12 +620,19 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   };
 
   const togglePermission = (type: string) => {
-    const exists = formData.permissions?.find((p) => p.type === type);
+    const canon = normalizeCapabilityKey(type);
+    const exists = formData.permissions?.find(
+      (p) => normalizeCapabilityKey(p.type) === canon || p.type?.toLowerCase() === type.toLowerCase()
+    );
     setFormData((prev) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
       if (nextValidationErrors) {
         Object.keys(nextValidationErrors).forEach((key) => {
-          if (key.toLowerCase().includes(type.toLowerCase()) || key.startsWith('permissions.')) {
+          if (
+            key.toLowerCase().includes(type.toLowerCase()) ||
+            key.toLowerCase().includes(canon.toLowerCase()) ||
+            key.startsWith('permissions.')
+          ) {
             delete nextValidationErrors[key];
           }
         });
@@ -633,7 +640,9 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
 
       let updatedPermissions;
       if (exists) {
-        updatedPermissions = prev.permissions?.filter((p) => p.type !== type);
+        updatedPermissions = prev.permissions?.filter(
+          (p) => normalizeCapabilityKey(p.type) !== canon && p.type?.toLowerCase() !== type.toLowerCase()
+        );
       } else {
         const defaultPurpose = formatCompliantPurpose(type, '', prev.name);
         updatedPermissions = [...(prev.permissions || []), { type, purpose: defaultPurpose, termsUrl: '' }];
@@ -682,16 +691,18 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     }
   };
 
-  const handlePermissionFieldChange = (type: string, field: string, value: string) => {
+  const handlePermissionFieldChange = (type: string, field: string, value: any) => {
+    const canon = normalizeCapabilityKey(type);
     setFormData((prev) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
       if (nextValidationErrors) {
         Object.keys(nextValidationErrors).forEach((key) => {
           const errVal = nextValidationErrors[key];
           if (
-            key.includes(type) ||
+            key.toLowerCase().includes(type.toLowerCase()) ||
+            key.toLowerCase().includes(canon.toLowerCase()) ||
             (key.includes(field) && (key.startsWith('permissions.') || key.startsWith('permission_') || key.startsWith('permissionRequests.'))) ||
-            (typeof errVal === 'string' && errVal.toLowerCase().includes(type.toLowerCase()))
+            (typeof errVal === 'string' && (errVal.toLowerCase().includes(type.toLowerCase()) || errVal.toLowerCase().includes(canon.toLowerCase())))
           ) {
             delete nextValidationErrors[key];
           }
@@ -700,7 +711,11 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
 
       return {
         ...prev,
-        permissions: prev.permissions?.map((p) => (p.type === type ? { ...p, [field]: value } : p)),
+        permissions: prev.permissions?.map((p) =>
+          normalizeCapabilityKey(p.type) === canon || p.type?.toLowerCase() === type.toLowerCase()
+            ? { ...p, [field]: value }
+            : p
+        ),
         validationErrors: nextValidationErrors,
       };
     });

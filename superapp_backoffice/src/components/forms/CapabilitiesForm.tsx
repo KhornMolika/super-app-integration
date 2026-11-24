@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Input, Label, Button } from '@/components/ui/inputs';
+import { Input, Label, Button, RequiredOptionalToggle } from '@/components/ui/inputs';
 import { miniappsApi } from '@/api';
 import { permissionsApi, Permission, CapabilityItem } from '@/api/permissions.api';
 import {
@@ -625,33 +625,13 @@ export default function CapabilitiesForm({
                 {/* Right controls: Required/Optional segmented pill + Switch */}
                 <div className="shrink-0 flex items-center gap-2.5">
                   {isActive && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                    >
-                      <button
-                        type="button"
-                        disabled={!isEditable}
-                        onClick={() => handleFieldChange(type, 'required', true)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${isRequired
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                          }`}
-                      >
-                        Required
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!isEditable}
-                        onClick={() => handleFieldChange(type, 'required', false)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${!isRequired
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                          }`}
-                      >
-                        Optional
-                      </button>
-                    </div>
+                    <RequiredOptionalToggle
+                      value={isRequired}
+                      onChange={(newRequired) => {
+                        handleFieldChange(activePerm?.type || type, 'required', newRequired);
+                      }}
+                      disabled={!isEditable}
+                    />
                   )}
 
                   <div
@@ -752,27 +732,13 @@ export default function CapabilitiesForm({
                 />
               </div>
 
-              <div className="flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setCustomRequired(true)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${customRequired
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  Required
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomRequired(false)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${!customRequired
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  Optional
-                </button>
+              <div className="flex items-center">
+                <RequiredOptionalToggle
+                  fullWidth
+                  value={customRequired}
+                  onChange={(newRequired) => setCustomRequired(newRequired)}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

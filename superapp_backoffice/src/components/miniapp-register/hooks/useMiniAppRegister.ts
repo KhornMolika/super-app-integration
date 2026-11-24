@@ -748,36 +748,40 @@ export function useMiniAppRegister() {
 
   const togglePermission = (type: string) => {
     const canon = normalizeCapabilityKey(type);
-    const exists = formData.permissions?.find(
-      (p) => normalizeCapabilityKey(p.type) === canon
-    );
-    if (exists) {
-      setFormData({
-        ...formData,
-        permissions: formData.permissions?.filter(
-          (p) => normalizeCapabilityKey(p.type) !== canon
-        ),
-      });
-    } else {
-      const defaultPurpose = formatCompliantPurpose(type, '', formData.name);
-      setFormData({
-        ...formData,
-        permissions: [
-          ...(formData.permissions || []),
-          { type, purpose: defaultPurpose, termsUrl: '' },
-        ],
-      });
-    }
+    setFormData((prev: any) => {
+      const exists = prev.permissions?.find(
+        (p: any) => normalizeCapabilityKey(p.type) === canon || p.type?.toLowerCase() === type.toLowerCase()
+      );
+      if (exists) {
+        return {
+          ...prev,
+          permissions: prev.permissions?.filter(
+            (p: any) => normalizeCapabilityKey(p.type) !== canon && p.type?.toLowerCase() !== type.toLowerCase()
+          ),
+        };
+      } else {
+        const defaultPurpose = formatCompliantPurpose(type, '', prev.name);
+        return {
+          ...prev,
+          permissions: [
+            ...(prev.permissions || []),
+            { type, purpose: defaultPurpose, termsUrl: '' },
+          ],
+        };
+      }
+    });
   };
 
-  const handlePermissionFieldChange = (type: string, field: string, value: string) => {
+  const handlePermissionFieldChange = (type: string, field: string, value: any) => {
     const canon = normalizeCapabilityKey(type);
-    setFormData({
-      ...formData,
-      permissions: formData.permissions?.map((p) =>
-        normalizeCapabilityKey(p.type) === canon ? { ...p, [field]: value } : p
+    setFormData((prev: any) => ({
+      ...prev,
+      permissions: (prev.permissions || []).map((p: any) =>
+        normalizeCapabilityKey(p.type) === canon || p.type?.toLowerCase() === type.toLowerCase()
+          ? { ...p, [field]: value }
+          : p
       ),
-    });
+    }));
   };
 
   const handleDomainVerified = (data: any) => {

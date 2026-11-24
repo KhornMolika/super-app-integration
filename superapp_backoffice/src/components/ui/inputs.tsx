@@ -382,3 +382,6 @@ export const Button = React.forwardRef<any, ButtonProps>(
 );
 Button.displayName = 'Button';
 
+export { RequiredOptionalToggle } from './RequiredOptionalToggle';
+export type { RequiredOptionalToggleProps } from './RequiredOptionalToggle';
+
