@@ -169,9 +169,14 @@ export function generateReviewDiffFiles(
   }
 
   const d = diffData.differences || {};
-  const isFlutter =
-    miniApp?.integrationMethod === 'FLUTTER_PACKAGE' ||
-    diffData.integration?.method?.target === 'FLUTTER_PACKAGE';
+  const method = (
+    d.integration?.method?.target ||
+    miniApp?.integrationMethod ||
+    'WEBVIEW'
+  ).toUpperCase();
+  const isFlutter = method === 'FLUTTER_PACKAGE' || method === 'NATIVE_SDK';
+  const isDeepLink = method === 'DEEP_LINK';
+  const isWebview = !isFlutter && !isDeepLink;
 
   const files: ReviewDiffFile[] = [];
 
@@ -233,7 +238,7 @@ export function generateReviewDiffFiles(
     JSON.stringify(targetManifest, null, 2),
   );
 
-  // 2. Flutter pubspec.yaml (if flutter package)
+  // 2. Flutter pubspec.yaml (if flutter package / native SDK)
   if (isFlutter) {
     const pkgName =
       d.integration?.flutterPackageName?.target ||
@@ -288,7 +293,74 @@ export function generateReviewDiffFiles(
     addFile('pubspec', 'pubspec.yaml', 'pubspec.yaml', 'yaml', basePubspec, targetPubspec);
   }
 
-  // 3. Permissions manifest (config/permissions.json)
+  // 3. Webview Endpoint & Security config (if webview)
+  if (isWebview) {
+    const baseAllowed = [
+      ...(d.integration?.allowedDomains?.unchanged || []),
+      ...(d.integration?.allowedDomains?.removed || []),
+    ];
+    const targetAllowed = [
+      ...(d.integration?.allowedDomains?.unchanged || []),
+      ...(d.integration?.allowedDomains?.added || []),
+    ];
+
+    const baseWebview = {
+      productionUrl: d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
+      stagingUrl: d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
+      allowedDomains: baseAllowed.length > 0 ? baseAllowed : ['api.fintechcenterfsa.com'],
+      enforceHttps: true,
+      domainVerified: Boolean(d.security?.domainVerification?.base),
+      cookiePartitioning: true,
+      jsBridgeEnabled: true,
+    };
+
+    const targetWebview = {
+      productionUrl: d.integration?.productionUrl?.target || d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
+      stagingUrl: d.integration?.stagingUrl?.target || d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
+      allowedDomains: targetAllowed.length > 0 ? targetAllowed : ['api.fintechcenterfsa.com'],
+      enforceHttps: true,
+      domainVerified: Boolean(d.security?.domainVerification?.target),
+      cookiePartitioning: true,
+      jsBridgeEnabled: true,
+    };
+
+    addFile(
+      'webview-config',
+      'webview-endpoints.json',
+      'config/webview-endpoints.json',
+      'json',
+      JSON.stringify(baseWebview, null, 2),
+      JSON.stringify(targetWebview, null, 2),
+    );
+  }
+
+  // 4. Deep Link Intent & Routing config (if deep link)
+  if (isDeepLink) {
+    const baseDeepLink = {
+      urlScheme: d.integration?.urlScheme?.base || miniApp?.integrationConfigDeepLink?.urlScheme || 'fsa-miniapp://',
+      universalLinkDomain: miniApp?.integrationConfigDeepLink?.universalLinkDomain || 'https://links.fintechcenterfsa.com',
+      fallbackWebUrl: miniApp?.integrationConfigDeepLink?.fallbackWebUrl || 'https://fintechcenterfsa.com/miniapp-fallback',
+      allowedPaths: ['/open', '/detail/:id', '/action/checkout'],
+    };
+
+    const targetDeepLink = {
+      urlScheme: d.integration?.urlScheme?.target || d.integration?.urlScheme?.base || miniApp?.integrationConfigDeepLink?.urlScheme || 'fsa-miniapp://',
+      universalLinkDomain: miniApp?.integrationConfigDeepLink?.universalLinkDomain || 'https://links.fintechcenterfsa.com',
+      fallbackWebUrl: miniApp?.integrationConfigDeepLink?.fallbackWebUrl || 'https://fintechcenterfsa.com/miniapp-fallback',
+      allowedPaths: ['/open', '/detail/:id', '/action/checkout', '/auth/callback'],
+    };
+
+    addFile(
+      'deeplink-config',
+      'deeplink-intent.json',
+      'config/deeplink-intent.json',
+      'json',
+      JSON.stringify(baseDeepLink, null, 2),
+      JSON.stringify(targetDeepLink, null, 2),
+    );
+  }
+
+  // 5. Permissions manifest (config/permissions.json)
   const basePerms = [
     ...(d.permissions?.unchanged || []),
     ...(d.permissions?.removed || []),
@@ -318,42 +390,44 @@ export function generateReviewDiffFiles(
     JSON.stringify({ capabilities: targetPerms }, null, 2),
   );
 
-  // 4. Network Security & Endpoints (config/network-security.json)
-  const baseAllowed = [
-    ...(d.integration?.allowedDomains?.unchanged || []),
-    ...(d.integration?.allowedDomains?.removed || []),
-  ];
-  const targetAllowed = [
-    ...(d.integration?.allowedDomains?.unchanged || []),
-    ...(d.integration?.allowedDomains?.added || []),
-  ];
+  // 6. Network Security & Endpoints (for flutter / SDK)
+  if (isFlutter) {
+    const baseAllowed = [
+      ...(d.integration?.allowedDomains?.unchanged || []),
+      ...(d.integration?.allowedDomains?.removed || []),
+    ];
+    const targetAllowed = [
+      ...(d.integration?.allowedDomains?.unchanged || []),
+      ...(d.integration?.allowedDomains?.added || []),
+    ];
 
-  const baseNetwork = {
-    productionUrl: d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
-    stagingUrl: d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
-    allowedDomains: baseAllowed.length > 0 ? baseAllowed : ['api.fintechcenterfsa.com'],
-    enforceHttps: true,
-    domainVerified: Boolean(d.security?.domainVerification?.base),
-  };
+    const baseNetwork = {
+      productionUrl: d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
+      stagingUrl: d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
+      allowedDomains: baseAllowed.length > 0 ? baseAllowed : ['api.fintechcenterfsa.com'],
+      enforceHttps: true,
+      domainVerified: Boolean(d.security?.domainVerification?.base),
+    };
 
-  const targetNetwork = {
-    productionUrl: d.integration?.productionUrl?.target || d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
-    stagingUrl: d.integration?.stagingUrl?.target || d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
-    allowedDomains: targetAllowed.length > 0 ? targetAllowed : ['api.fintechcenterfsa.com'],
-    enforceHttps: true,
-    domainVerified: Boolean(d.security?.domainVerification?.target),
-  };
+    const targetNetwork = {
+      productionUrl: d.integration?.productionUrl?.target || d.integration?.productionUrl?.base || miniApp?.integrationConfig?.productionUrl || 'https://api.fintechcenterfsa.com',
+      stagingUrl: d.integration?.stagingUrl?.target || d.integration?.stagingUrl?.base || miniApp?.integrationConfig?.stagingUrl || 'https://staging.fintechcenterfsa.com',
+      allowedDomains: targetAllowed.length > 0 ? targetAllowed : ['api.fintechcenterfsa.com'],
+      enforceHttps: true,
+      domainVerified: Boolean(d.security?.domainVerification?.target),
+    };
 
-  addFile(
-    'network',
-    'network-security.json',
-    'config/network-security.json',
-    'json',
-    JSON.stringify(baseNetwork, null, 2),
-    JSON.stringify(targetNetwork, null, 2),
-  );
+    addFile(
+      'network',
+      'network-security.json',
+      'config/network-security.json',
+      'json',
+      JSON.stringify(baseNetwork, null, 2),
+      JSON.stringify(targetNetwork, null, 2),
+    );
+  }
 
-  // 5. Legal & Metadata (config/legal-metadata.json)
+  // 7. Legal & Metadata (config/legal-metadata.json)
   const baseLegal = {
     privacyPolicyUrl: d.metadata?.privacyPolicyUrl?.base || miniApp?.privacyPolicyUrl || 'https://fintechcenterfsa.com/privacy',
     termsUrl: d.metadata?.termsUrl?.base || miniApp?.termsUrl || 'https://fintechcenterfsa.com/terms',
