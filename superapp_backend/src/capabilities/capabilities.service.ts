@@ -146,17 +146,26 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     try {
       const rows = await this.capabilityDefinitionRepository
         .createQueryBuilder('cap')
-        .select(['cap.key', 'cap.name'])
+        .select(['cap.key', 'cap.name', 'cap.metadata'])
         .where('cap.isActive = :isActive', { isActive: true })
         .andWhere('cap.isAllowed = :isAllowed', { isAllowed: true })
         .getMany();
 
-      const keys = rows
-        .map((r) => r.key?.toLowerCase()?.trim())
-        .filter(Boolean);
+      const keys: string[] = [];
+      for (const r of rows) {
+        if (r.key) keys.push(r.key.toLowerCase().trim());
+        const reqPerms = r.metadata?.requiredPermissions;
+        if (Array.isArray(reqPerms)) {
+          for (const p of reqPerms) {
+            if (typeof p === 'string' && p.trim()) {
+              keys.push(p.toLowerCase().trim());
+            }
+          }
+        }
+      }
 
       if (keys.length > 0) {
-        return keys;
+        return Array.from(new Set(keys));
       }
     } catch (err: any) {
       this.logger.warn(`Could not query allowed capability keys: ${err.message}`);
@@ -277,22 +286,44 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const now = new Date().toISOString();
     let syncedCount = 0;
 
+    // Map legacy DB permission keys to canonical capability keys to migrate existing rows cleanly
+    const legacyAliases: Record<string, string[]> = {
+      scan_qr_code: ['camera'],
+      take_photo: ['camera_access'],
+      get_location: ['location', 'geolocator'],
+      biometric_auth: ['biometrics', 'local_auth'],
+      secure_storage: ['storage', 'secure_vault'],
+      webview_runtime: ['internet'],
+    };
+
+    const claimedIds = new Set<string>();
+
     for (const cap of detectedCaps) {
       let existing = await this.capabilityDefinitionRepository.findOne({
         where: { key: cap.key },
       });
 
-      if (!existing && cap.requiredPermissions?.[0]) {
-        existing = await this.capabilityDefinitionRepository.findOne({
-          where: { key: cap.requiredPermissions[0] },
-        });
+      // If not found by canonical key, check if an existing legacy row can be migrated
+      if (!existing && legacyAliases[cap.key]) {
+        for (const alias of legacyAliases[cap.key]) {
+          const legacyRow = await this.capabilityDefinitionRepository.findOne({
+            where: { key: alias },
+          });
+          if (legacyRow && !claimedIds.has(legacyRow.id)) {
+            existing = legacyRow;
+            break;
+          }
+        }
       }
 
       if (existing) {
+        existing.key = cap.key; // Crucial: ensure key is migrated to canonical key in PostgreSQL
         existing.name = cap.name;
         existing.category = cap.category;
         existing.description = cap.description;
         existing.isActive = true;
+        existing.isAllowed = existing.isAllowed !== false;
+        existing.isDeprecated = false;
         existing.minSuperAppVersion = superAppVersion;
         existing.metadata = {
           ...(existing.metadata || {}),
@@ -300,8 +331,10 @@ export class CapabilitiesService implements OnApplicationBootstrap {
           commitSha,
           lastSyncedAt: now,
           source: 'gitlab:main',
+          status: 'Active',
         };
-        await this.capabilityDefinitionRepository.save(existing);
+        const saved = await this.capabilityDefinitionRepository.save(existing);
+        claimedIds.add(saved.id);
       } else {
         const created = this.capabilityDefinitionRepository.create({
           key: cap.key,
@@ -309,15 +342,19 @@ export class CapabilitiesService implements OnApplicationBootstrap {
           category: cap.category,
           description: cap.description,
           isActive: true,
+          isAllowed: true,
+          isDeprecated: false,
           minSuperAppVersion: superAppVersion,
           metadata: {
             ...cap,
             commitSha,
             lastSyncedAt: now,
             source: 'gitlab:main',
+            status: 'Active',
           },
         });
-        await this.capabilityDefinitionRepository.save(created);
+        const saved = await this.capabilityDefinitionRepository.save(created);
+        claimedIds.add(saved.id);
       }
       syncedCount++;
     }
@@ -334,6 +371,7 @@ export class CapabilitiesService implements OnApplicationBootstrap {
       const isStillPresent = activeSyncedKeys.has(perm.key.toLowerCase());
       if (!isStillPresent && perm.isActive) {
         perm.isActive = false;
+        perm.isDeprecated = true;
         perm.metadata = {
           ...(perm.metadata || {}),
           status: 'Deprecated',
@@ -376,6 +414,7 @@ export class CapabilitiesService implements OnApplicationBootstrap {
 
     const allActive = await this.capabilityDefinitionRepository.find({
       where: { isActive: true },
+      order: { createdAt: 'ASC' },
     });
 
     const dbDefinitions: CapabilityDefinition[] = [];
