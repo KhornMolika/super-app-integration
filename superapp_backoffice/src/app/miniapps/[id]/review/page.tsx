@@ -381,7 +381,7 @@ function MiniAppReviewPageContent() {
   ];
 
   return (
-    <div className="w-full min-w-0 pb-16 animate-in fade-in duration-300">
+    <div className="w-full min-w-0 pb-16">
       {/* 1. Unified 2-Tier Sticky Command Header */}
       <ReviewDecisionBar
         miniAppId={id}
@@ -413,7 +413,7 @@ function MiniAppReviewPageContent() {
         isHighRiskChange={isHighRisk}
       />
 
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-6 animate-in fade-in duration-300">
         {/* 2. Sub-Tab Panel Content */}
         {diffLoading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-3">
