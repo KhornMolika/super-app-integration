@@ -465,6 +465,32 @@ export class MiniappLifecycleHelper {
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
+    const useLocalScanner =
+      process.env.USE_LOCAL_SECURITY_SCANNER === 'true' ||
+      process.env.LOCAL_SECURITY_SCANNER === 'true';
+
+    if (useLocalScanner) {
+      this.logger.log(
+        `Local Security Engine active (USE_LOCAL_SECURITY_SCANNER=true). Executing in-process scan for ${method} MiniApp ${id}...`,
+      );
+      this.localSecurityScannerService.scanMiniApp(id, method, {
+        fallbackReason: 'Local Security Engine',
+        securityChecks: app.securityChecks,
+      });
+
+      await logActivityFn(
+        id,
+        actorId,
+        'STATUS_CHANGE',
+        'Submitted for Review',
+        'App submitted for review',
+        'SUBMIT_MINI_APP',
+        null,
+        app,
+      );
+      return app;
+    }
+
     this.logger.log(
       `Triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
@@ -644,6 +670,47 @@ export class MiniappLifecycleHelper {
       scanSourceOf(cfg);
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+
+    const useLocalScanner =
+      process.env.USE_LOCAL_SECURITY_SCANNER === 'true' ||
+      process.env.LOCAL_SECURITY_SCANNER === 'true';
+
+    if (useLocalScanner) {
+      this.logger.log(
+        `Local Security Engine active (USE_LOCAL_SECURITY_SCANNER=true). Executing in-process scan for ${method} MiniApp ${id}...`,
+      );
+      this.localSecurityScannerService.scanMiniApp(id, method, {
+        fallbackReason: 'Local Security Engine',
+        securityChecks: activeChecks,
+      });
+
+      await this.notificationsService.createNotification(
+        app.ownerId || '',
+        'Local Security Scan Running',
+        `Automated security audit running via Local Security Engine.`,
+        'SCAN_STARTED',
+        app.id,
+      );
+
+      await logActivityFn(
+        id,
+        actorId,
+        'VALIDATION',
+        'Local Security Engine',
+        `Automated security scan initiated using Local Security Engine.`,
+        'RESCAN_MINI_APP',
+        null,
+        app,
+      );
+
+      return {
+        success: true,
+        engine: 'LOCAL',
+        message: `Automated scan is running via Local Security Engine.`,
+        validationStatus: 'RUNNING',
+        validationStages: initialStages,
+      };
+    }
 
     this.logger.log(
       `Re-triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,

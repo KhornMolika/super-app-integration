@@ -533,9 +533,9 @@ export default function ValidationReportTab({
       });
   }, [miniApp?.id, selectedVersion]);
   
-  // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom' | 'runs'
+  // Active sub-tab inside the unified security command center: 'engines' | 'findings' | 'sbom' | 'runs'
   const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom' | 'runs'>(
-    defaultSubTab || 'findings'
+    defaultSubTab || 'engines'
   );
 
   useEffect(() => {
@@ -1503,6 +1503,28 @@ export default function ValidationReportTab({
             <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mb-px">
               <button
                 type="button"
+                onClick={() => setActiveViewTab('engines')}
+                className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeViewTab === 'engines'
+                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
+                }`}
+              >
+                <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
+                <span>Security Engines & Telemetry</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                    activeViewTab === 'engines'
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {activeStages.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveViewTab('findings')}
                 className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                   activeViewTab === 'findings'
@@ -1524,28 +1546,6 @@ export default function ValidationReportTab({
                   }`}
                 >
                   {allFindings.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveViewTab('engines')}
-                className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
-                  activeViewTab === 'engines'
-                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
-                }`}
-              >
-                <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
-                <span>Security Engines & Telemetry</span>
-                <span
-                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
-                    activeViewTab === 'engines'
-                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
-                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  {activeStages.length}
                 </span>
               </button>
 
@@ -2373,6 +2373,22 @@ export default function ValidationReportTab({
         <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto">
           <button
             type="button"
+            onClick={() => setActiveViewTab('engines')}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+              activeViewTab === 'engines'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
+            <span>Security Engines & Telemetry</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {activeStages.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveViewTab('findings')}
             className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
               activeViewTab === 'findings'
@@ -2388,22 +2404,6 @@ export default function ValidationReportTab({
                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
             }`}>
               {allFindings.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveViewTab('engines')}
-            className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
-              activeViewTab === 'engines'
-                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
-            <span>Security Engines & Telemetry</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-              {activeStages.length}
             </span>
           </button>
 

@@ -678,6 +678,30 @@ export class MiniappValidationHelper {
       const packageName = cfg.packageName || cfg.name || app.name;
       const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
+      const useLocalScanner =
+        process.env.USE_LOCAL_SECURITY_SCANNER === 'true' ||
+        process.env.LOCAL_SECURITY_SCANNER === 'true';
+
+      if (useLocalScanner) {
+        this.logger.log(
+          `Local Security Engine active (USE_LOCAL_SECURITY_SCANNER=true). Executing in-process scan for ${method} MiniApp ${id}...`,
+        );
+        this.localSecurityScannerService.scanMiniApp(id, method, {
+          fallbackReason: 'Local Security Engine',
+          securityChecks: app.securityChecks,
+        });
+
+        await this.notificationsService.createNotification(
+          app.ownerId || '',
+          'Local Security Scan Running',
+          `Automated security audit running via Local Security Engine.`,
+          'SCAN_STARTED',
+          app.id,
+        );
+
+        return app;
+      }
+
       this.logger.log(
         `Triggering universal Jenkins security scan for ${method} MiniApp ${id}...`,
       );
