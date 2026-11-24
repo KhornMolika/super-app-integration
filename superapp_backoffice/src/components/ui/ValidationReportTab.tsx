@@ -515,14 +515,15 @@ export default function ValidationReportTab({
       });
   }, [miniApp?.id, miniApp?.status, miniApp?.activeTestVersion, miniApp?.currentReleaseVersion, urlVersion]);
 
-  // When selectedVersion changes, fetch authoritative version report
+  // When selectedVersion changes or miniApp updates, fetch authoritative version report
   useEffect(() => {
     if (!miniApp?.id || !selectedVersion) return;
     setIsLoadingVersionReport(true);
     miniappsApi
       .getVersionReport(miniApp.id, selectedVersion)
       .then((data: any) => {
-        setVersionReportData(data);
+        const payload = (data && typeof data === 'object' && 'data' in data && data.data) ? data.data : data;
+        setVersionReportData(payload);
       })
       .catch((err) => {
         console.warn('Could not fetch dedicated version report, using parent miniApp state:', err);
@@ -531,7 +532,7 @@ export default function ValidationReportTab({
       .finally(() => {
         setIsLoadingVersionReport(false);
       });
-  }, [miniApp?.id, selectedVersion]);
+  }, [miniApp?.id, miniApp?.updatedAt, miniApp?.validationStatus, selectedVersion]);
   
   // Active sub-tab inside the unified security command center: 'engines' | 'findings' | 'sbom' | 'runs'
   const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom' | 'runs'>(
@@ -570,13 +571,16 @@ export default function ValidationReportTab({
   }, []);
 
   const effectiveData = useMemo(() => {
-    if (!versionReportData) return miniApp;
+    const vReport = (versionReportData && typeof versionReportData === 'object' && 'data' in versionReportData && versionReportData.data)
+      ? versionReportData.data
+      : versionReportData;
+    if (!vReport) return miniApp;
     const isReportEmpty =
-      !versionReportData.validationReport &&
-      (!versionReportData.validationStages || Object.keys(versionReportData.validationStages).length === 0);
+      !vReport.validationReport &&
+      (!vReport.validationStages || Object.keys(vReport.validationStages).length === 0);
     if (isReportEmpty && (miniApp.validationStatus === 'FAILED' || miniApp.validationStatus === 'PASSED')) {
       return {
-        ...versionReportData,
+        ...vReport,
         validationStatus: miniApp.validationStatus,
         validationScore: miniApp.validationScore,
         validationReport: miniApp.validationReport,
@@ -584,7 +588,7 @@ export default function ValidationReportTab({
         validationErrors: miniApp.validationErrors,
       };
     }
-    return versionReportData;
+    return vReport;
   }, [versionReportData, miniApp]);
 
   const report = effectiveData.validationReport || miniApp.validationReport || null;
