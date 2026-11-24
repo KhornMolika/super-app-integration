@@ -82,11 +82,15 @@ export class WebViewSecurityScanner {
       `Starting dynamic WebView security scan for ${miniAppId} with checks: [${activeChecks.join(', ')}]`,
     );
 
-    const targetUrl = (app.integrationConfig?.productionUrl || '').trim();
-    if (!targetUrl) {
-      this.logger.error(`Scan failed: No production URL for ${miniAppId}`);
-      return;
-    }
+    const targetUrl = (
+      app.integrationConfig?.productionUrl ||
+      (app as any).integrationConfigWebView?.productionUrl ||
+      app.integrationConfig?.url ||
+      (app.pendingRevision as any)?.integrationConfig?.productionUrl ||
+      (app.versions?.[0]?.integrationConfig as any)?.productionUrl ||
+      (app.versions?.[0]?.integrationConfig as any)?.url ||
+      ''
+    ).trim();
 
     const envVal = (
       process.env.ENVIRONMENT ||
@@ -104,8 +108,6 @@ export class WebViewSecurityScanner {
     await this.miniappRepository.save(app);
     await this.runs?.syncScan(app);
 
-    await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
-
     const emitUpdate = async (stageId: string) => {
       app.validationStages = stages;
       await this.miniappRepository.save(app);
@@ -116,6 +118,35 @@ export class WebViewSecurityScanner {
         stages,
       });
     };
+
+    if (!targetUrl) {
+      this.logger.error(`Scan failed: No production URL configured for ${miniAppId}`);
+      if (stages.ssrf) {
+        stages.ssrf.status = 'FAILED';
+        stages.ssrf.details = 'Target production URL is missing or unconfigured.';
+        await emitUpdate('ssrf');
+      }
+      await this.scanFinalizer.finalizeScan(
+        app,
+        'WEBVIEW',
+        0,
+        { ssrf: { passed: false, details: 'Target production URL is missing or unconfigured.' } },
+        [
+          {
+            id: 'MISSING_TARGET_URL',
+            severity: 'CRITICAL',
+            category: 'CONFIGURATION',
+            title: 'Missing Production URL',
+            description: 'No production URL configured for WebView MiniApp.',
+            recommendation: 'Configure a valid production URL in WebView Integration settings.',
+          },
+        ],
+        options?.fallbackReason || 'Missing Target URL',
+      );
+      return;
+    }
+
+    await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
 
     let parsedUrl: URL;
     try {
