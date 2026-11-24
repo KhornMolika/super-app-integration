@@ -36,7 +36,15 @@ export interface ReviewDecisionBarProps {
   onRejectRevision: () => void;
   onApproveTest?: () => void;
   onApprovePublish: () => void;
-  // Optional for backward compatibility
+  // Sub-Tabs Navigation & Scope props for Unified Command Header
+  tabs?: Array<{
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge: string;
+  }>;
+  activeTab?: string;
+  onSelectTab?: (tabId: any) => void;
   baseVersion?: string;
   versionsList?: VersionOption[];
   onChangeBaseVersion?: (ver: string) => void;
@@ -60,6 +68,14 @@ export function ReviewDecisionBar({
   onRejectRevision,
   onApproveTest,
   onApprovePublish,
+  tabs,
+  activeTab,
+  onSelectTab,
+  baseVersion,
+  versionsList = [],
+  onChangeBaseVersion,
+  onChangeTargetVersion,
+  isHighRiskChange = false,
 }: ReviewDecisionBarProps) {
   const getMethodBadge = (method: string) => {
     switch (method?.toUpperCase()) {
@@ -92,10 +108,12 @@ export function ReviewDecisionBar({
   };
 
   const methodBadge = getMethodBadge(integrationMethod);
+  const isScoreClean = securityScore >= 80;
 
   return (
-    <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs transition-all mb-4 sm:mb-6">
-      <div className="px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+    <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs transition-all mb-6">
+      {/* Deck 1: Identity & Decision Actions */}
+      <div className="px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap border-b border-slate-100 dark:border-slate-800/70">
         {/* Left: Identity (Back button + Logo + Title + Method + AppId) */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -180,7 +198,7 @@ export function ReviewDecisionBar({
                 title="Reject and discard this revision"
               >
                 <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                <span>Reject</span>
+                <span className="hidden sm:inline">Reject</span>
               </button>
             )}
 
@@ -193,7 +211,7 @@ export function ReviewDecisionBar({
                 title="Send actionable change requests to developer"
               >
                 <Send className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Request Changes</span>
+                <span className="hidden sm:inline">Request Changes</span>
               </button>
             )}
 
@@ -206,7 +224,7 @@ export function ReviewDecisionBar({
                 title={scanFailed ? 'Blocked by failing security validation' : 'Advance revision to test build'}
               >
                 <Zap className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
-                <span>Approve for Test</span>
+                <span className="hidden md:inline">Approve for Test</span>
               </button>
             )}
 
@@ -225,6 +243,114 @@ export function ReviewDecisionBar({
           </div>
         </div>
       </div>
+
+      {/* Deck 2: Sub-Tabs Navigation & Version Comparator (Integrated Seamlessly) */}
+      {tabs && tabs.length > 0 && (
+        <div className="px-4 sm:px-6 lg:px-8 pt-1 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Subnav Tabs */}
+          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mb-px">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isTabActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onSelectTab && onSelectTab(tab.id)}
+                  className={`pb-2.5 pt-2 px-3 border-b-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                    isTabActive
+                      ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      isTabActive
+                        ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Version Scope Comparator & Risk Chip */}
+          {onChangeBaseVersion && onChangeTargetVersion && (
+            <div className="flex items-center gap-2 self-start lg:self-center shrink-0 pb-2 lg:pb-1.5">
+              {/* Comparator capsule */}
+              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                <span className="text-[11px] font-bold text-slate-400 pl-1.5 hidden xl:inline">
+                  Compare:
+                </span>
+
+                {/* Base Version */}
+                <div className="relative">
+                  <select
+                    aria-label="Base Version"
+                    value={baseVersion}
+                    onChange={(e) => onChangeBaseVersion(e.target.value)}
+                    className="appearance-none pl-6 pr-7 py-1 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs focus:outline-none cursor-pointer"
+                  >
+                    {versionsList.map((v) => (
+                      <option key={`base-${v.version}`} value={v.version}>
+                        base: {v.version} {v.type === 'PRODUCTION' ? '(Active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute left-2.5 top-3 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block ring-2 ring-emerald-500/20" />
+                  </div>
+                </div>
+
+                <span className="text-xs font-black text-slate-400 px-0.5">➔</span>
+
+                {/* Target Version */}
+                <div className="relative">
+                  <select
+                    aria-label="Target Version"
+                    value={targetVersion}
+                    onChange={(e) => onChangeTargetVersion(e.target.value)}
+                    className="appearance-none pl-6 pr-7 py-1 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs focus:outline-none cursor-pointer"
+                  >
+                    {versionsList.map((v) => (
+                      <option key={`target-${v.version}`} value={v.version}>
+                        target: {v.version} {v.status ? `[${v.status}]` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute left-2.5 top-3 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block ring-2 ring-amber-500/20" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Delta Risk Level Chip */}
+              {isHighRiskChange ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-2xs shrink-0"
+                  title="This revision declares high-risk capabilities, modified permissions, or network boundaries."
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                  <span className="hidden sm:inline">High-Risk</span>
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs shrink-0"
+                  title="Low-risk revision without elevated permissions or critical boundary changes."
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="hidden sm:inline">Low-Risk</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
