@@ -151,13 +151,20 @@ export default function ChangesRequestedBanner({
 
   const updateResolutionNote = (id: string, note: string) => {
     setChecklistState((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, resolutionNote: note } : item))
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              resolutionNote: note,
+              resolved: note.trim().length > 0 ? true : false,
+            }
+          : item
+      )
     );
   };
 
-  // An item is addressed if marked resolved OR has an explanatory resolution note
-  const isAddressed = (item: StructuredChecklistItem) =>
-    item.resolved || Boolean(item.resolutionNote && item.resolutionNote.trim().length > 0);
+  // Only checked (resolved) items count as addressed and unlock resubmission
+  const isAddressed = (item: StructuredChecklistItem) => Boolean(item.resolved);
 
   const addressedCount = checklistState.filter(isAddressed).length;
   const totalCount = checklistState.length;
