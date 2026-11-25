@@ -22,7 +22,7 @@ import { BannerTable } from '@/components/banners/BannerTable';
 import { BannerModal } from '@/components/banners/BannerModal';
 import { BannerPreviewModal } from '@/components/banners/BannerPreviewModal';
 import { Pagination } from '@/components/ui/Pagination';
-import { CleanDropdown } from '@/components/ui/CleanDropdown';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function BannersPage() {
@@ -239,74 +239,72 @@ export default function BannersPage() {
         />
 
         {/* Filter Bar & View Toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search banners by title or description..."
-              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </div>
-
-          {/* Audience Filter */}
-          <CleanDropdown
-            label="Audience"
-            icon={<Filter className="w-3.5 h-3.5" />}
-            value={audienceFilter}
-            onChange={(val) => setAudienceFilter(val)}
-            options={[
-              { value: 'ALL', label: 'All Audiences' },
-              { value: 'PUBLIC', label: 'Public' },
-              { value: 'ALL_FSA_STAFF', label: 'FSA Staff Only' },
-            ]}
-            dropdownWidth="w-52"
-          />
-
-          {/* Status Filter */}
-          <CleanDropdown
-            label="Status"
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
-            options={[
-              { value: 'ALL', label: 'All Status' },
-              { value: 'ACTIVE', label: 'Active Only' },
-              { value: 'INACTIVE', label: 'Inactive Only' },
-            ]}
-            dropdownWidth="w-48"
-          />
-
-          {/* View Mode Toggle: Grid vs Table */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="Table View"
-            >
-              <TableIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <SearchFilterBar
+          searchValue={searchTerm}
+          onSearchChange={(val) => setSearchTerm(val)}
+          searchPlaceholder="Search banners by title or description..."
+          filters={[
+            {
+              id: 'audience',
+              label: 'Audience',
+              icon: <Filter className="w-3.5 h-3.5" />,
+              value: audienceFilter,
+              onChange: (val) => setAudienceFilter(val),
+              options: [
+                { value: 'ALL', label: 'All Audiences' },
+                { value: 'PUBLIC', label: 'Public' },
+                { value: 'ALL_FSA_STAFF', label: 'FSA Staff Only' },
+              ],
+              dropdownWidth: 'w-52',
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              onChange: (val) => setStatusFilter(val),
+              options: [
+                { value: 'ALL', label: 'All Status' },
+                { value: 'ACTIVE', label: 'Active Only' },
+                { value: 'INACTIVE', label: 'Inactive Only' },
+              ],
+              dropdownWidth: 'w-48',
+            },
+          ]}
+          isFiltered={searchTerm.trim() !== '' || audienceFilter !== 'ALL' || statusFilter !== 'ALL'}
+          onResetFilters={() => {
+            setSearchTerm('');
+            setAudienceFilter('ALL');
+            setStatusFilter('ALL');
+          }}
+          rightSlot={
+            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('grid')}
+                className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="Table View"
+              >
+                <TableIcon className="w-4 h-4" />
+              </button>
+            </div>
+          }
+        />
 
         {/* Content Section */}
         {loading ? (

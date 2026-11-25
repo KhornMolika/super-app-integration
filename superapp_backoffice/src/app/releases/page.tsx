@@ -7,7 +7,7 @@ import { superAppApi, miniappsApi, MiniApp } from '@/api';
 import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppReleaseCompareModal';
 import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
 import { useAuth } from '@/lib/auth';
-import { CleanDropdown } from '@/components/ui/CleanDropdown';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { Pagination } from '@/components/ui/Pagination';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
 import {
@@ -412,57 +412,59 @@ export default function ReleasesPage() {
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="Search by MiniApp name, appId, or package..."
-                className="w-full h-10 pl-9 pr-4 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-              />
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <CleanDropdown
-                label="Method"
-                value={methodFilter}
-                onChange={(val) => {
+          <SearchFilterBar
+            searchValue={searchQuery}
+            onSearchChange={(val) => {
+              setSearchQuery(val);
+              setCurrentPage(1);
+            }}
+            searchPlaceholder="Search by MiniApp name, appId, or package..."
+            filters={[
+              {
+                id: 'method',
+                label: 'Method',
+                value: methodFilter,
+                onChange: (val) => {
                   setMethodFilter(val);
                   setCurrentPage(1);
-                }}
-                options={[
+                },
+                options: [
                   { value: 'ALL', label: 'All Methods' },
                   { value: 'WEBVIEW', label: 'WebView' },
                   { value: 'FLUTTER_PACKAGE', label: 'Flutter Package' },
                   { value: 'NATIVE_SDK', label: 'Native SDK' },
                   { value: 'DEEP_LINK', label: 'Deep Link' },
-                ]}
-                dropdownWidth="w-52"
-                align="right"
-              />
-              <CleanDropdown
-                label="Status"
-                value={statusFilter}
-                onChange={(val) => {
+                ],
+                dropdownWidth: 'w-52',
+                align: 'right',
+              },
+              {
+                id: 'status',
+                label: 'Status',
+                value: statusFilter,
+                onChange: (val) => {
                   setStatusFilter(val);
                   setCurrentPage(1);
-                }}
-                options={[
+                },
+                options: [
                   { value: 'ALL', label: 'All Statuses' },
                   { value: 'LIVE', label: 'Live' },
                   { value: 'APPROVED', label: 'Approved' },
                   { value: 'TESTING', label: 'Testing' },
                   { value: 'TEST_PASSED', label: 'Test Passed' },
-                ]}
-                dropdownWidth="w-48"
-                align="right"
-              />
-            </div>
-          </div>
+                ],
+                dropdownWidth: 'w-48',
+                align: 'right',
+              },
+            ]}
+            isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL' || statusFilter !== 'ALL'}
+            onResetFilters={() => {
+              setSearchQuery('');
+              setMethodFilter('ALL');
+              setStatusFilter('ALL');
+              setCurrentPage(1);
+            }}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">

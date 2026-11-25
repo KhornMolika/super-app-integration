@@ -23,7 +23,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pagination } from '@/components/ui/Pagination';
-import { CleanDropdown } from '@/components/ui/CleanDropdown';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
@@ -205,39 +205,38 @@ function RolesPageContent() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Search roles by identifier or description..."
-            className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <CleanDropdown
-            label="Type"
-            value={typeFilter}
-            onChange={(val) => {
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(val) => {
+          setSearchQuery(val);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder="Search roles by identifier or description..."
+        filters={[
+          {
+            id: 'type',
+            label: 'Type',
+            value: typeFilter,
+            onChange: (val) => {
               setTypeFilter(val as any);
               setCurrentPage(1);
-            }}
-            options={[
+            },
+            options: [
               { value: 'ALL', label: 'All Role Types' },
               { value: 'SYSTEM', label: 'System Roles Only' },
               { value: 'CUSTOM', label: 'Custom Roles Only' },
-            ]}
-            dropdownWidth="w-52"
-            align="right"
-          />
-        </div>
-      </div>
+            ],
+            dropdownWidth: 'w-52',
+            align: 'right',
+          },
+        ]}
+        isFiltered={searchQuery.trim() !== '' || typeFilter !== 'ALL'}
+        onResetFilters={() => {
+          setSearchQuery('');
+          setTypeFilter('ALL');
+          setCurrentPage(1);
+        }}
+      />
 
       {/* Roles Directory Table */}
       <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs overflow-hidden">

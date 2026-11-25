@@ -22,6 +22,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
 import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import {
@@ -390,67 +391,48 @@ export function CapabilitiesTab({
       </div>
 
       {/* Search, Filter & View Toggle Toolbar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by name, key, or method (e.g. .postMessage, .takePhoto)..."
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput('');
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Filters & View Mode Switcher */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 shrink-0">
-          {/* Category Dropdown */}
-          <CleanDropdown
-            label="Category"
-            value={selectedCategory}
-            onChange={(val) => {
+      <SearchFilterBar
+        searchValue={searchInput}
+        onSearchChange={(val) => setSearchInput(val)}
+        searchPlaceholder="Search by name, key, or method (e.g. .postMessage, .takePhoto)..."
+        filters={[
+          {
+            id: 'category',
+            label: 'Category',
+            value: selectedCategory,
+            onChange: (val) => {
               setSelectedCategory(val);
               setCurrentPage(1);
-            }}
-            options={categoryOptions}
-            buttonClassName="py-1.5 text-xs rounded-xl"
-            dropdownWidth="w-52"
-          />
-
-          {/* Integration Method Dropdown */}
-          <CleanDropdown
-            label="Method"
-            value={selectedIntegrationMethod}
-            onChange={(val) => {
+            },
+            options: categoryOptions,
+            dropdownWidth: 'w-52',
+          },
+          {
+            id: 'method',
+            label: 'Method',
+            value: selectedIntegrationMethod,
+            onChange: (val) => {
               setSelectedIntegrationMethod(val as IntegrationMethodOption);
               setCurrentPage(1);
-            }}
-            options={integrationMethodOptions}
-            buttonClassName="py-1.5 text-xs rounded-xl"
-            dropdownWidth="w-56"
-          />
-
-          {/* View Toggle: Table / Grid */}
+            },
+            options: integrationMethodOptions,
+            dropdownWidth: 'w-56',
+          },
+        ]}
+        isFiltered={
+          searchInput.trim() !== '' ||
+          selectedCategory !== 'ALL' ||
+          selectedIntegrationMethod !== 'ALL' ||
+          allowlistFilter !== 'ALL'
+        }
+        onResetFilters={handleResetFilters}
+        rightSlot={
           <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
             <button
               type="button"
               onClick={() => {
                 setViewMode('table');
-                setPageSize(10);
+                setPageSize(5);
                 setCurrentPage(1);
               }}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -481,8 +463,8 @@ export function CapabilitiesTab({
               <span className="hidden sm:inline">Grid</span>
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Capabilities Content */}
       {paginatedItems.length === 0 ? (
