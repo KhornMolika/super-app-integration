@@ -99,7 +99,7 @@ try:
     sdk_warning = None
     if sdk_constraint:
         import re
-        m = re.search(r'[\^>=]?\s*(\d+)\.(\d+)(?:\.(\d+))?', sdk_constraint)
+        m = re.search(r'[\\^>=]?\\s*(\\d+)\\.(\\d+)(?:\\.(\\d+))?', sdk_constraint)
         if m:
             maj = int(m.group(1))
             min_v = int(m.group(2))
