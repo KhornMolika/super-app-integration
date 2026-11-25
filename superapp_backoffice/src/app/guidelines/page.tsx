@@ -18,6 +18,67 @@ import {
   Section09Troubleshooting,
 } from "@/components/guidelines/sections";
 import { copyText } from '@/lib/clipboard';
+import { Copy, Check, ArrowRight } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+
+interface QuickstartStack {
+  id: IntegrationMethodTab;
+  title: string;
+  runtime: string;
+  desc: string;
+  command: string;
+  copyKey: string;
+  cta: string;
+  accentText: string;
+  badgeClass: string;
+}
+
+const QUICKSTART_STACKS: QuickstartStack[] = [
+  {
+    id: 'webview',
+    title: 'Web MiniApp',
+    runtime: 'React / Vue',
+    desc: 'Modern web apps running in secure SuperApp WebViews.',
+    command: 'pnpm add @fsasuperapp/miniapp-web-sdk',
+    copyKey: 'web',
+    cta: 'View Web Contract',
+    accentText: 'text-brand-600 dark:text-brand-400',
+    badgeClass: 'bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border-brand-200/70 dark:border-brand-800/60',
+  },
+  {
+    id: 'flutter',
+    title: 'Flutter MiniApp',
+    runtime: 'Dart / Pub',
+    desc: 'Modular Flutter packages embedded in the SuperApp host shell.',
+    command: 'flutter pub add fsa_superapp_miniapp_flutter_sdk',
+    copyKey: 'flutter',
+    cta: 'View Flutter Contract',
+    accentText: 'text-indigo-600 dark:text-indigo-400',
+    badgeClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200/70 dark:border-indigo-800/60',
+  },
+  {
+    id: 'native',
+    title: 'Native SDK',
+    runtime: 'Android / iOS',
+    desc: 'Compiled AAR & XCFramework libraries with native performance.',
+    command: "implementation 'com.fsasuperapp:miniapp-native-sdk:1.0.0'",
+    copyKey: 'native',
+    cta: 'View Native Contract',
+    accentText: 'text-emerald-600 dark:text-emerald-400',
+    badgeClass: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/60',
+  },
+  {
+    id: 'deeplink',
+    title: 'Deep Link',
+    runtime: 'URI Protocol',
+    desc: 'Seamless app-to-app handoff with cryptographic callbacks.',
+    command: 'pnpm add @fsasuperapp/miniapp-deeplink-sdk',
+    copyKey: 'deeplink',
+    cta: 'View Deep Link Contract',
+    accentText: 'text-amber-600 dark:text-amber-400',
+    badgeClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/60',
+  },
+];
 
 const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
   GENERAL: "Fundamentals",
@@ -256,194 +317,110 @@ export default function GuidelinesPage() {
         {/* Center Content Area */}
         <main className="flex-1 overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-white dark:bg-slate-950 relative scroll-smooth px-6 sm:px-10 lg:px-12 py-10">
           <div className="max-w-4xl mx-auto pb-24">
-            {/* Quickstart Hero Banner */}
-            <div className="mb-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-brand-500/10 via-indigo-500/5 to-slate-100 dark:to-slate-900/60 border border-brand-500/20 shadow-xs">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-mono text-xs font-semibold mb-3 border border-brand-500/20">
-                    <span>⚡ Quickstart Hub</span>
-                    <span>•</span>
-                    <span>v1.0 Production SDKs</span>
-                  </div>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 dark:text-white tracking-tight mb-2">
-                    FSA SuperApp Developer Guidelines
-                  </h1>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                    Build, test in sandbox, and seamlessly integrate your MiniApp. Choose your tech stack below to view immediate installation commands, live code contracts, and UX/UI safe area rules.
-                  </p>
-                </div>
-                <div className="shrink-0 flex items-center gap-3">
+            {/* Quickstart Header & Stack Cards */}
+            <div className="mb-10 space-y-6">
+              <PageHeader
+                title="FSA SuperApp Developer Guidelines"
+                description="Build, test in sandbox, and integrate your MiniApp. Choose your tech stack below for installation commands, live code contracts, and UX/UI rules."
+                actions={
                   <Link
                     href="/miniapps/register"
-                    className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-sm transition inline-flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition inline-flex items-center gap-2 shrink-0"
                   >
                     <span>Register MiniApp</span>
-                    <span>→</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
-                </div>
-              </div>
+                }
+              />
 
-              {/* 4 Interactive Framework Quickstart Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Web */}
-                <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-brand-500/50 transition group">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-brand-600 dark:text-brand-400 font-mono uppercase">
-                        Web MiniApp
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-bold">
-                        React / Vue
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">
-                      Modern web apps running in secure SuperApp WebViews.
-                    </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
-                      <span className="truncate mr-2">pnpm add @fsasuperapp/miniapp-web-sdk</span>
-                      <button
-                        onClick={() => copyCommand("pnpm add @fsasuperapp/miniapp-web-sdk", "web")}
-                        className="text-xs text-slate-400 hover:text-white shrink-0"
-                        title="Copy command"
-                      >
-                        {copiedStack === "web" ? "✓" : "📋"}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => jumpToMethod("webview")}
-                    className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 mt-1"
-                  >
-                    <span>View Web Contract</span>
-                    <span>→</span>
-                  </button>
-                </div>
+              {/* 4 Clean Interactive Framework Quickstart Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {QUICKSTART_STACKS.map((stack) => {
+                  const isActive = activeMethodTab === stack.id;
+                  const isCopied = copiedStack === stack.copyKey;
+                  return (
+                    <div
+                      key={stack.id}
+                      onClick={() => setActiveMethodTab(stack.id)}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-4 ${
+                        isActive
+                          ? 'bg-white dark:bg-slate-900 border-brand-500 ring-1 ring-brand-500/20 shadow-sm'
+                          : 'bg-white/80 dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-sm font-bold ${stack.accentText}`}>
+                            {stack.title}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-md font-semibold border shrink-0 ${stack.badgeClass}`}>
+                            {stack.runtime}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          {stack.desc}
+                        </p>
+                      </div>
 
-                {/* 2. Flutter */}
-                <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-indigo-500/50 transition group">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono uppercase">
-                        Flutter MiniApp
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold">
-                        Dart / Pub
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">
-                      Modular Flutter packages embedded in the SuperApp host shell.
-                    </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
-                      <span className="truncate mr-2">flutter pub add fsa_superapp_miniapp_flutter_sdk</span>
-                      <button
-                        onClick={() => copyCommand("flutter pub add fsa_superapp_miniapp_flutter_sdk", "flutter")}
-                        className="text-xs text-slate-400 hover:text-white shrink-0"
-                        title="Copy command"
-                      >
-                        {copiedStack === "flutter" ? "✓" : "📋"}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => jumpToMethod("flutter")}
-                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mt-1"
-                  >
-                    <span>View Flutter Contract</span>
-                    <span>→</span>
-                  </button>
-                </div>
+                      <div className="space-y-3">
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-mono text-xs flex items-center justify-between gap-2 border border-slate-200/80 dark:border-slate-800"
+                        >
+                          <span className="truncate">{stack.command}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyCommand(stack.command, stack.copyKey)}
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+                            title="Copy command"
+                          >
+                            {isCopied ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
 
-                {/* 3. Native */}
-                <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-emerald-500/50 transition group">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono uppercase">
-                        Native SDK
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold">
-                        AAR / XCFramework
-                      </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            jumpToMethod(stack.id);
+                          }}
+                          className={`text-xs font-semibold ${stack.accentText} hover:underline inline-flex items-center gap-1.5 cursor-pointer`}
+                        >
+                          <span>{stack.cta}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">
-                      Compiled Android &amp; iOS platform libraries with native performance.
-                    </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
-                      <span className="truncate mr-2">FSASuperAppMiniAppNativeSDK</span>
-                      <button
-                        onClick={() => copyCommand("implementation 'com.fsasuperapp:miniapp-native-sdk:1.0.0'", "native")}
-                        className="text-xs text-slate-400 hover:text-white shrink-0"
-                        title="Copy command"
-                      >
-                        {copiedStack === "native" ? "✓" : "📋"}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => jumpToMethod("native")}
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 mt-1"
-                  >
-                    <span>View Native Contract</span>
-                    <span>→</span>
-                  </button>
-                </div>
-
-                {/* 4. Deep Link */}
-                <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-amber-500/50 transition group">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono uppercase">
-                        Deep Link
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-bold">
-                        URI Protocol
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">
-                      Seamless app-to-app handoff with cryptographic return callbacks.
-                    </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
-                      <span className="truncate mr-2">@fsasuperapp/miniapp-deeplink-sdk</span>
-                      <button
-                        onClick={() => copyCommand("pnpm add @fsasuperapp/miniapp-deeplink-sdk", "deeplink")}
-                        className="text-xs text-slate-400 hover:text-white shrink-0"
-                        title="Copy command"
-                      >
-                        {copiedStack === "deeplink" ? "✓" : "📋"}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => jumpToMethod("deeplink")}
-                    className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 mt-1"
-                  >
-                    <span>View Deep Link Contract</span>
-                    <span>→</span>
-                  </button>
-                </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Sticky Global Tech Stack Focus Bar */}
-            <div className="sticky top-0 z-30 mb-10 -mx-2 px-4 py-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between gap-4 flex-wrap">
+            <div className="sticky top-0 z-30 mb-10 px-4 py-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Active Tech Stack:
                 </span>
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 font-mono">
-                  {activeMethodTab === "webview" && "🌐 WebView MiniApp (React / Vue / HTML5)"}
-                  {activeMethodTab === "flutter" && "📦 Flutter Modular Package (Dart)"}
-                  {activeMethodTab === "native" && "⚙️ Native Mobile SDK (Kotlin / Swift)"}
-                  {activeMethodTab === "deeplink" && "🔗 Deep Link Protocol (External App)"}
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {activeMethodTab === "webview" && "WebView MiniApp (React / Vue / HTML5)"}
+                  {activeMethodTab === "flutter" && "Flutter Modular Package (Dart)"}
+                  {activeMethodTab === "native" && "Native Mobile SDK (Kotlin / Swift)"}
+                  {activeMethodTab === "deeplink" && "Deep Link Protocol (External App)"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="inline-flex items-center rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex-wrap">
                 {[
-                  { id: "webview", label: "WebView", badge: "Web" },
-                  { id: "flutter", label: "Flutter", badge: "Dart" },
-                  { id: "native", label: "Native", badge: "Native" },
-                  { id: "deeplink", label: "Deep Link", badge: "URI" },
+                  { id: "webview", label: "WebView" },
+                  { id: "flutter", label: "Flutter" },
+                  { id: "native", label: "Native" },
+                  { id: "deeplink", label: "Deep Link" },
                 ].map((m) => (
                   <button
                     key={m.id}
@@ -451,13 +428,13 @@ export default function GuidelinesPage() {
                     onClick={() => {
                       setActiveMethodTab(m.id as any);
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       activeMethodTab === m.id
-                        ? "bg-brand-600 text-white border-brand-600 shadow-xs"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                     }`}
                   >
-                    <span>{m.label}</span>
+                    {m.label}
                   </button>
                 ))}
               </div>
