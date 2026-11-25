@@ -11,8 +11,12 @@ import {
   ClockIcon,
 } from '@/components/ui/Icons';
 import { copyText } from '@/lib/clipboard';
+import { useAuth } from '@/lib/auth';
 
 export function SystemHealthIndicator() {
+  const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole('SUPER_ADMIN');
+
   const [mounted, setMounted] = useState(false);
   const [health, setHealth] = useState<BackendHealthResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,16 +46,18 @@ export function SystemHealthIndicator() {
 
   useEffect(() => {
     setMounted(true);
-    fetchHealth();
-  }, []);
+    if (isSuperAdmin) {
+      fetchHealth();
+    }
+  }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!isSuperAdmin || !autoRefresh) return;
     const interval = setInterval(() => {
       fetchHealth(false);
     }, 10000);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [isSuperAdmin, autoRefresh]);
 
   // Keyboard shortcut: Close on Escape key
   useEffect(() => {
@@ -87,6 +93,10 @@ export function SystemHealthIndicator() {
   const isDegraded = health?.status === 'degraded';
   const isError = !!error || health?.status === 'error';
   const isHealthy = !isError && !isDegraded && health?.status === 'ok';
+
+  if (!isSuperAdmin) {
+    return null;
+  }
 
   return (
     <>
