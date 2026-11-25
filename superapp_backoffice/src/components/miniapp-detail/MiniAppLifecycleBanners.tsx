@@ -178,8 +178,8 @@ export default function MiniAppLifecycleBanners({
         </div>
       )}
 
-      {/* Draft, rejected or changes requested: the developer submits it */}
-      {actions.phase === 'draft' && (
+      {/* Draft: the developer submits it (not shown for CHANGES_REQUESTED/REJECTED since ChangesRequestedBanner handles those) */}
+      {status === 'DRAFT' && (
         <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 border border-brand-200 dark:border-brand-800">
@@ -189,12 +189,12 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {status === 'REJECTED' ? 'Rejected' : status === 'CHANGES_REQUESTED' ? 'Changes requested' : 'Draft'}
+                Draft
               </h4>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                {status === 'DRAFT'
+                {actions.submit
                   ? 'Not sent for review yet. Finish the details, then submit it.'
-                  : 'Fix what the reviewer asked for (see the Activity tab), then submit it again.'}
+                  : 'Waiting for the MiniApp developer to finish configuration and submit for review.'}
               </p>
             </div>
           </div>

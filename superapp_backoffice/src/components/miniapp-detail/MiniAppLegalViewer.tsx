@@ -121,52 +121,50 @@ export default function MiniAppLegalViewer({
     : 'Latest Revision';
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Banner & Sovereign Compliance Badge */}
-      <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900/60 dark:via-slate-900/40 dark:to-slate-900/60 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200/60 dark:border-brand-800/60 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 shadow-sm">
-            <Scale className="w-6 h-6" />
+    <div className="space-y-4">
+      {/* 1. Clean Flat Header (no extra outer card) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+            <Scale className="w-4.5 h-4.5" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Legal & Regulatory Disclosures
+                Legal &amp; Regulatory Disclosures
               </h2>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/50">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/50">
                 <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 FSA SuperApp Framework
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Official legal policies, terms of service, and privacy disclosures governing{' '}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Official policies governing{' '}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {miniApp.name || miniApp.appId || 'this application'}
               </span>
-              .
             </p>
           </div>
         </div>
 
         {/* Global actions */}
-        <div className="flex flex-wrap items-center gap-2 print:hidden self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 print:hidden self-start sm:self-auto">
           {canEdit && onEditClick && !isStandalonePage && (
             <button
               type="button"
               onClick={onEditClick}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               <Edit3 className="w-3.5 h-3.5 text-brand-500" />
               <span>Edit Policies</span>
             </button>
           )}
 
-
           {!isStandalonePage && (
             <Link
               href={`/miniapps/${miniApp.id}/legal?type=${selectedPolicy}`}
               target="_blank"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/60 hover:bg-brand-100/70 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/60 hover:bg-brand-100/70 dark:hover:bg-brand-900/40 transition-colors"
               title="Open full dedicated page"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -176,10 +174,9 @@ export default function MiniAppLegalViewer({
         </div>
       </div>
 
-      {/* 2. Policy Selection Navigation Tabs & Action Bar */}
+      {/* 2. Policy Tabs & Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3 print:hidden">
-        {/* Policy Tab Pills */}
-        <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 gap-1">
+        <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 gap-1 self-start">
           <button
             type="button"
             role="tab"
@@ -187,7 +184,7 @@ export default function MiniAppLegalViewer({
             onClick={() => setSelectedPolicy('terms')}
             className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               selectedPolicy === 'terms'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
@@ -203,7 +200,7 @@ export default function MiniAppLegalViewer({
             onClick={() => setSelectedPolicy('privacy')}
             className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               selectedPolicy === 'privacy'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
@@ -213,18 +210,17 @@ export default function MiniAppLegalViewer({
           </button>
         </div>
 
-        {/* Tab-specific actions */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {currentUrl && (
             <a
               href={currentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/50 hover:bg-sky-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/50 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>Visit Hosted Link</span>
-              <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
+              <span className="truncate max-w-[220px] font-mono">{currentUrl}</span>
+              <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
             </a>
           )}
 
@@ -232,7 +228,7 @@ export default function MiniAppLegalViewer({
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               title="Copy markdown text to clipboard"
             >
               {copied ? (
@@ -251,46 +247,8 @@ export default function MiniAppLegalViewer({
         </div>
       </div>
 
-      {/* 3. Hosted External URL Banner (if URL provided) */}
-      {currentUrl && (
-        <div className="p-3.5 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-950/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-              <Globe className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-semibold text-sky-900 dark:text-sky-200 flex items-center gap-1.5">
-                <span>Official Hosted {currentTitle} URL</span>
-                {currentUrl.startsWith('https://') && (
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                    • HTTPS Secure
-                  </span>
-                )}
-              </div>
-              <a
-                href={currentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-700 dark:text-sky-300 hover:underline truncate block font-mono"
-              >
-                {currentUrl}
-              </a>
-            </div>
-          </div>
-          <a
-            href={currentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 transition-colors shrink-0 self-start sm:self-auto"
-          >
-            <span>Open Link</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      )}
-
-      {/* 4. Document Content Viewer Card */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm overflow-hidden">
+      {/* 3. Single Unified Document Content Area */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-hidden">
         {/* Document Header Bar */}
         <div className="px-6 py-4 bg-slate-50/70 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

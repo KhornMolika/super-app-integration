@@ -142,7 +142,7 @@ export function getAllowedActions(
     isOwner,
     archiveRequested,
     scanFailed,
-    submit: phase === 'draft' && canUpdate && canMaintain,
+    submit: phase === 'draft' && canUpdate && canMaintain && (!isSuper || isOwner),
     approve: phase === 'review' && canApprove && !scanFailed,
     requestChanges: phase === 'review' && canReject,
     reject: phase === 'review' && canReject,
