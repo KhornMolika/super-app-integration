@@ -121,6 +121,14 @@ export default function ForgotPasswordPage() {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       const res = await authApi.verifyRecoveryOtp(trimmedEmail, code);
+      if (!res?.resetToken) {
+        setOtpError(true);
+        toast.error(
+          res?.message || 'Could not obtain reset session token. Please try again.',
+          'Verification Failed',
+        );
+        return;
+      }
       setResetToken(res.resetToken);
       toast.success('Recovery code verified! Set your new password.', 'Code Verified');
       setStep('new-password');
