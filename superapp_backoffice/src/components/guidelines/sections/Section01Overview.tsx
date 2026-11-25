@@ -1,7 +1,20 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import { UserIcon, ShieldIcon, SettingsIcon } from "@/components/ui/Icons";
+
+const RuntimeMentalModelFlow = dynamic(
+  () => import("@/components/guidelines/RuntimeMentalModelFlow"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[360px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-400">
+        Loading Runtime Architecture Graph...
+      </div>
+    ),
+  },
+);
 
 export function Section01Overview() {
   return (
@@ -55,25 +68,14 @@ export function Section01Overview() {
       </div>
 
       {/* Mental Model Architecture Card */}
-      <div id="overview-mental-model" className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-3 scroll-mt-24">
-        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+      <div id="overview-mental-model" className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-3 scroll-mt-24">
+        <h4 className="text-base font-bold text-slate-900 dark:text-white">
           Runtime Mental Model
         </h4>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Your MiniApp runs inside a protected sandbox. The host SuperApp shell provides hardware access and platform identity through a bidirectional bridge.
         </p>
-        <div className="p-4 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800">
-          <div>┌────────────────────────────────────────────────────────────────────────┐</div>
-          <div>│                   FSA SuperApp Host Container                          │</div>
-          <div>│  (Navigation Bar • Capsule Button [•••|⨀] • Staff Identity &amp; Auth Gateway)   │</div>
-          <div>└───────────────────────────────┬────────────────────────────────────────┘</div>
-          <div className="text-brand-400">                                   │ Bidirectional Bridge</div>
-          <div className="text-brand-400">                                   │ (JS postMessage / Flutter MethodChannel)</div>
-          <div>┌───────────────────────────────▼────────────────────────────────────────┐</div>
-          <div>│                   Your MiniApp Viewport Sandbox                        │</div>
-          <div>│  (Web React/Vue • Flutter Package • Native SDK • Deep Link Protocol)   │</div>
-          <div>└────────────────────────────────────────────────────────────────────────┘</div>
-        </div>
+        <RuntimeMentalModelFlow />
       </div>
 
       {/* Ecosystem Governance Roles */}

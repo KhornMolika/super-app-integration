@@ -2,6 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const CapabilityDecisionFlow = dynamic(
+  () => import("@/components/guidelines/CapabilityDecisionFlow"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[285px] w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-400">
+        Loading Decision Flow Graph...
+      </div>
+    ),
+  },
+);
 import { ShieldIcon, SearchIcon, SparklesIcon, CheckCircleIcon, ArrowRightIcon } from "@/components/ui/Icons";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import { permissionsApi, CapabilityItem } from "@/api/permissions.api";
@@ -318,18 +331,8 @@ export function Section05Capabilities({
           <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
             The Final Decision Rule Flow
           </h5>
-          <div className="p-3.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs leading-relaxed">
-            <div className="text-slate-400">MiniApp requests N capabilities</div>
-            <div className="text-slate-500 pl-4">↓ Compare with SuperApp catalog (M supported)</div>
-            <div className="text-amber-400">Required capability unsupported?</div>
-            <div className="text-rose-400 pl-4">├── Yes → REJECT MiniApp</div>
-            <div className="text-emerald-400 pl-4">└── No  → Continue (Optional features disabled)</div>
-            <div className="text-slate-400 pl-8">↓</div>
-            <div className="text-sky-300 pl-8">M supported capabilities exposed</div>
-            <div className="text-slate-400 pl-8">↓</div>
-            <div className="text-emerald-300 pl-8">Runtime JIT capability consent → Allowed</div>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <CapabilityDecisionFlow />
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
             Unsupported capabilities are <strong>technically inaccessible</strong> in the sandbox, ensuring host stability and zero store policy violations.
           </p>
         </div>
