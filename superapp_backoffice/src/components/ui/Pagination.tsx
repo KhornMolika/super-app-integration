@@ -128,6 +128,10 @@ export function Pagination({
     onPageChange(page);
   };
 
+  if (totalItems !== undefined && totalItems < 5) {
+    return null;
+  }
+
   return (
     <nav
       role="navigation"

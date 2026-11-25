@@ -615,7 +615,7 @@ export function DataTable<T>({
         </div>
 
         {/* 3. Integrated Pagination Footer */}
-        {paginationProps && !loading && sortedData.length > 0 && (
+        {paginationProps && !loading && sortedData.length > 0 && (paginationProps.totalItems ?? sortedData.length) >= 5 && (
           <div className="px-6 py-3.5 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <Pagination {...paginationProps} />
           </div>

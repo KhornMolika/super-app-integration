@@ -401,7 +401,7 @@ function RolesPageContent() {
             </table>
           </div>
         )}
-        {!loading && filteredRoles.length > 0 && (
+        {!loading && filteredRoles.length >= 5 && (
           <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-700/60">
             <Pagination
               currentPage={currentPage}
