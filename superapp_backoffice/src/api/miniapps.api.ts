@@ -286,7 +286,7 @@ export const miniappsApi = {
     apiClient<{ detected: Array<{ type: string; purpose: string; source: string }> }>('/api/mini-apps/detect-permissions', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   generateInviteToken: (id: string, expiresIn: string) =>
     apiClient<{ token: string; expiresAt?: string }>(`/api/mini-apps/${id}/invite-token`, {

@@ -151,6 +151,9 @@ export class PermissionDetectorHelper {
         if (res.ok) {
           const json = await res.json();
           const perms =
+            json.capabilities ||
+            json.requestedCapabilities ||
+            json.requiredCapabilities ||
             json.permissions ||
             json.requestedPermissions ||
             json.requiredPermissions;
