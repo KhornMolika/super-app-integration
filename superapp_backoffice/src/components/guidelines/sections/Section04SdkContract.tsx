@@ -119,7 +119,7 @@ export function Section04SdkContract({
   const currentMeta = methodMetadata[activeMethodTab] || methodMetadata.webview;
 
   return (
-    <div className="space-y-10 text-base text-slate-600 dark:text-slate-300">
+    <div className="space-y-14 text-base text-slate-600 dark:text-slate-300">
       {/* Intro Paragraph */}
       <div className="space-y-3">
         <p className="leading-relaxed">

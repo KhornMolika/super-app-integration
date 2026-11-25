@@ -212,7 +212,7 @@ export function Section05Capabilities({
   }, [capabilities, categoryFilter, searchQuery]);
 
   return (
-    <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
+    <div className="space-y-12 text-base text-slate-600 dark:text-slate-300">
       <p className="leading-relaxed">
         The SuperApp acts as the <strong>central authority for all MiniApp capabilities</strong>. To maintain zero security drift and strict platform governance, capabilities follow a zero-trust runtime access model.
       </p>
@@ -228,7 +228,7 @@ export function Section05Capabilities({
       </blockquote>
 
       {/* Strategy to Maximize App Store & Google Play Approval */}
-      <section id="cap-approval" className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-5 scroll-mt-28">
+      <section id="cap-approval" className="pt-10 border-t border-slate-200 dark:border-slate-800 space-y-6 scroll-mt-28">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
             <ShieldIcon />
@@ -296,44 +296,76 @@ export function Section05Capabilities({
       </section>
 
       {/* Practical Example & Decision Flow */}
-      <section className="pt-6 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8">
+      <section className="pt-10 border-t border-slate-200 dark:border-slate-800 space-y-12">
         {/* Practical Example */}
-        <div className="space-y-3">
-          <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
-            Capability Matching Example
-          </h5>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Evaluating declared capabilities against SuperApp platform support:
-          </p>
-          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <span className="text-xs text-slate-500 font-sans block mb-1.5 font-semibold uppercase">SuperApp Supports</span>
-              <div className="text-emerald-600 dark:text-emerald-400">• Camera [OK]</div>
-              <div className="text-emerald-600 dark:text-emerald-400">• Location [OK]</div>
-              <div className="text-emerald-600 dark:text-emerald-400">• Notification [OK]</div>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <span className="text-xs text-slate-500 font-sans block mb-1.5 font-semibold uppercase">MiniApp Requests</span>
-              <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) [OK]</div>
-              <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) [OK]</div>
-              <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) [OK]</div>
-              <div className="text-rose-500 font-semibold">• Contacts (Opt) [BLOCKED]</div>
-              <div className="text-rose-500 font-semibold">• Mic (Req) [UNSUPPORTED]</div>
-            </div>
+        <div className="space-y-4">
+          <div>
+            <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
+              Capability Matching Example
+            </h5>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Evaluating declared capabilities against SuperApp platform support:
+            </p>
           </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="py-2.5 pr-6">Capability</th>
+                  <th className="py-2.5 pr-6">Host Support</th>
+                  <th className="py-2.5 pr-6">Requested As</th>
+                  <th className="py-2.5">Evaluation Outcome</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/70 font-mono text-xs">
+                <tr>
+                  <td className="py-3 pr-6 font-semibold text-slate-900 dark:text-white">Camera</td>
+                  <td className="py-3 pr-6 text-emerald-600 dark:text-emerald-400">Supported</td>
+                  <td className="py-3 pr-6 text-slate-600 dark:text-slate-300">Required</td>
+                  <td className="py-3 text-emerald-600 dark:text-emerald-400 font-semibold">OK — Active in Sandbox</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-semibold text-slate-900 dark:text-white">Location</td>
+                  <td className="py-3 pr-6 text-emerald-600 dark:text-emerald-400">Supported</td>
+                  <td className="py-3 pr-6 text-slate-600 dark:text-slate-300">Required</td>
+                  <td className="py-3 text-emerald-600 dark:text-emerald-400 font-semibold">OK — Active in Sandbox</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-semibold text-slate-900 dark:text-white">Notification</td>
+                  <td className="py-3 pr-6 text-emerald-600 dark:text-emerald-400">Supported</td>
+                  <td className="py-3 pr-6 text-slate-600 dark:text-slate-300">Optional</td>
+                  <td className="py-3 text-emerald-600 dark:text-emerald-400 font-semibold">OK — Active in Sandbox</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-semibold text-slate-900 dark:text-white">Contacts</td>
+                  <td className="py-3 pr-6 text-slate-500 dark:text-slate-400">Unsupported</td>
+                  <td className="py-3 pr-6 text-slate-600 dark:text-slate-300">Optional</td>
+                  <td className="py-3 text-amber-600 dark:text-amber-400 font-semibold">BLOCKED — Safely Disabled</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-semibold text-slate-900 dark:text-white">Microphone</td>
+                  <td className="py-3 pr-6 text-slate-500 dark:text-slate-400">Unsupported</td>
+                  <td className="py-3 pr-6 text-slate-600 dark:text-slate-300">Required</td>
+                  <td className="py-3 text-rose-600 dark:text-rose-400 font-semibold">UNSUPPORTED — Build Rejected</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Outcome: If Mic is <strong>Required</strong>, the MiniApp is <strong>REJECTED</strong>. If marked <strong>Optional</strong>, it is approved with Camera/Location/Notification active and Contacts/Mic safely disabled.
+            Outcome: If Mic is <strong className="text-slate-900 dark:text-white">Required</strong>, the MiniApp is <strong className="text-rose-600 dark:text-rose-400">REJECTED</strong>. If marked <strong className="text-slate-900 dark:text-white">Optional</strong>, it is approved with Camera/Location/Notification active and Contacts/Mic safely disabled.
           </p>
         </div>
 
-        {/* Decision Flowchart */}
-        <div className="space-y-3">
+        {/* Decision Flowchart (Full Width so nodes never clip) */}
+        <div className="space-y-3 pt-8 border-t border-slate-200/70 dark:border-slate-800/70">
           <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
             The Final Decision Rule Flow
           </h5>
           <CapabilityDecisionFlow />
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Unsupported capabilities are <strong>technically inaccessible</strong> in the sandbox, ensuring host stability and zero store policy violations.
+            Unsupported capabilities are <strong className="text-slate-900 dark:text-white">technically inaccessible</strong> in the sandbox, ensuring host stability and zero store policy violations.
           </p>
         </div>
       </section>

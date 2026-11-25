@@ -442,7 +442,7 @@ export default function GuidelinesPage() {
 
             {/* Sections Content */}
             {filteredSections.map((sec, index) => (
-              <section key={sec.id} id={sec.id} className="scroll-mt-24 mb-16">
+              <section key={sec.id} id={sec.id} className="scroll-mt-24 mb-24">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-mono font-bold text-brand-600 dark:text-brand-400">
                     Section {sec.number}
@@ -461,7 +461,7 @@ export default function GuidelinesPage() {
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
                   {sec.title}
                 </h2>
-                <p className="text-base text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                <p className="text-base text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
                   {sec.summary}
                 </p>
 
@@ -470,7 +470,7 @@ export default function GuidelinesPage() {
 
                 {/* Subtle Divider */}
                 {index !== filteredSections.length - 1 && (
-                  <div className="mt-16 h-px bg-slate-100 dark:bg-slate-800/80 w-full" />
+                  <div className="mt-24 h-px bg-slate-200/80 dark:bg-slate-800 w-full" />
                 )}
               </section>
             ))}
