@@ -292,68 +292,72 @@ export function Section04SdkContract({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
-          {/* Host Shell Responsibility */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <Cpu className="w-4 h-4 text-brand-500 shrink-0" />
-                <span>SuperApp Host Shell</span>
-              </span>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                Host Container
-              </span>
-            </div>
-            <ul className="text-sm space-y-2.5 text-slate-600 dark:text-slate-300">
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Crash-Proof Bridge:</strong> Safely intercepts unsupported or unvetted bridge calls so the host app never crashes.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Introspection API:</strong> Exposes <code className="font-mono text-xs text-brand-600 dark:text-brand-400">canIUse(key)</code> across all platforms for pre-flight verification.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Rejection Envelope:</strong> Returns a uniform <code className="font-mono text-xs text-rose-600 dark:text-rose-400">CAPABILITY_UNSUPPORTED</code> payload when a feature is missing.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Pre-Publish Gate:</strong> Automatically rejects MiniApps requiring capabilities not supported by the host build.</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* MiniApp Developer Responsibility */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <SparklesIcon />
-                <span>MiniApp Developer</span>
-              </span>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                Partner Codebase
-              </span>
-            </div>
-            <ul className="text-sm space-y-2.5 text-slate-600 dark:text-slate-300">
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Feature Gating:</strong> Call <code className="font-mono text-xs text-brand-600 dark:text-brand-400">canIUse()</code> before rendering native hardware triggers.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Fallback UI:</strong> Render alternative flows (e.g., manual input if camera is absent; cached data if offline).</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Error Trapping:</strong> Wrap bridge calls in <code className="font-mono text-xs">try / catch</code> to handle denials or timeouts gracefully.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span><strong className="text-slate-900 dark:text-white">Scope Transparency:</strong> Register permissions accurately as <code className="font-mono text-xs">Required</code> or <code className="font-mono text-xs">Optional</code>.</span>
-              </li>
-            </ul>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th className="py-3 pr-6 w-40">Layer</th>
+                <th className="py-3 pr-6">
+                  <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                    <Cpu className="w-3.5 h-3.5 text-brand-500" />
+                    SuperApp Host Shell
+                  </span>
+                </th>
+                <th className="py-3">
+                  <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                    <SparklesIcon />
+                    MiniApp Developer
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/70 text-slate-600 dark:text-slate-300">
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Bridge Safety
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Safely intercepts unsupported or unvetted bridge calls so the host app never crashes.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Wrap bridge calls in <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">try / catch</code> to handle denials or timeouts gracefully.
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Feature Discovery
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Exposes <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-brand-700 dark:text-brand-300">canIUse(key)</code> across all platforms for pre-flight verification.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Call <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-brand-700 dark:text-brand-300">canIUse()</code> before rendering native hardware action triggers.
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Degradation
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Returns a uniform <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400">CAPABILITY_UNSUPPORTED</code> envelope when a feature is missing.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Render fallback UI (e.g., manual input when camera is absent; cached data when offline).
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Review Gate
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Automatically rejects builds requesting required capabilities not supported by the shell.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Register permissions accurately as <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Required</code> or <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Optional</code>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
