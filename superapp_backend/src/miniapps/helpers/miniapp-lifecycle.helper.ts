@@ -980,7 +980,7 @@ export class MiniappLifecycleHelper {
       !app.pendingRevision &&
       ['DRAFT', 'SUBMITTED'].includes((app.lifecycleStatus || '').toUpperCase())
     ) {
-      app.lifecycleStatus = MiniAppLifecycleStatus.IN_REVIEW;
+      app.lifecycleStatus = 'IN_REVIEW';
     } else if (app.pendingRevision) {
       app.pendingRevision = {
         ...app.pendingRevision,
