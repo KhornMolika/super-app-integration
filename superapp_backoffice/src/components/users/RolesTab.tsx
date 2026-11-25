@@ -351,39 +351,36 @@ export function RolesTab({
                       key={role.id}
                       type="button"
                       onClick={() => setSelectedRoleId(role.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer space-y-2 ${
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer space-y-2.5 ${
                         isSelected
-                          ? 'bg-brand-50/50 dark:bg-brand-950/30 border-brand-500 shadow-2xs ring-1 ring-brand-500/20'
+                          ? 'bg-emerald-50/50 dark:bg-emerald-950/25 border-emerald-500 shadow-2xs ring-1 ring-emerald-500/20'
                           : 'bg-white dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border truncate ${theme.badge}`}>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {theme.label || role.name}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/70 shrink-0">
                             {role.name}
                           </span>
                           {isSys && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/50 shrink-0">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/50 shrink-0 hidden xl:inline-block">
                               System
                             </span>
                           )}
                         </div>
                         <span className="text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 shrink-0">
-                          {permCount}/{TOTAL_PERMISSIONS_COUNT}
+                          {permCount} / {TOTAL_PERMISSIONS_COUNT} scopes
                         </span>
                       </div>
-
-                      {role.description && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                          {role.description}
-                        </p>
-                      )}
 
                       {/* Progress Bar */}
                       <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
-                            isSelected ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'
+                            isSelected ? 'bg-emerald-500' : 'bg-emerald-500/60 dark:bg-emerald-500/50'
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -669,36 +666,55 @@ export function RolesTab({
                               return (
                                 <div
                                   key={perm.key}
-                                  className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                                  className="px-5 py-3.5 grid grid-cols-1 md:grid-cols-12 items-start md:items-center gap-2.5 md:gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
                                 >
-                                  <div className="space-y-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                        {perm.label}
-                                      </span>
-                                      {getSensitivityBadge(perm.level)}
-                                      <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
-                                        {perm.key}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                  {/* Column 1: Permission Name */}
+                                  <div className="md:col-span-3 min-w-0">
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white block truncate" title={perm.label}>
+                                      {perm.label}
+                                    </span>
+                                  </div>
+
+                                  {/* Column 2: Sensitivity Pill */}
+                                  <div className="md:col-span-2 flex items-center">
+                                    {getSensitivityBadge(perm.level)}
+                                  </div>
+
+                                  {/* Column 3: Monospace Scope Key */}
+                                  <div className="md:col-span-2 min-w-0">
+                                    <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200/70 dark:border-slate-700/70 inline-block truncate max-w-full" title={perm.key}>
+                                      {perm.key}
+                                    </span>
+                                  </div>
+
+                                  {/* Column 4: Description */}
+                                  <div className="md:col-span-3 min-w-0">
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={perm.desc}>
                                       {perm.desc}
                                     </p>
                                   </div>
 
-                                  <div className="shrink-0">
-                                    {isGranted ? (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Granted
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700/80">
-                                        — Not Granted
-                                      </span>
-                                    )}
+                                  {/* Column 5: Toggle Indicator + Granted/Not Granted Pill */}
+                                  <div className="md:col-span-2 flex items-center md:justify-end gap-2 shrink-0">
+                                    <div
+                                      aria-hidden="true"
+                                      className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center ${
+                                        isGranted
+                                          ? 'bg-emerald-500 justify-end'
+                                          : 'bg-slate-200 dark:bg-slate-700 justify-start'
+                                      }`}
+                                    >
+                                      <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs" />
+                                    </div>
+                                    <span
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap ${
+                                        isGranted
+                                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200/80 dark:border-slate-700/80'
+                                      }`}
+                                    >
+                                      {isGranted ? 'Granted' : 'Not Granted'}
+                                    </span>
                                   </div>
                                 </div>
                               );
