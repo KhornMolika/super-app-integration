@@ -303,9 +303,9 @@ export function RolesTab({
       {/* ========================================================= */}
       {viewMode === 'inspector' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Pane (4 of 12): Searchable Vertical Roles Directory */}
-          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
-            <div className="p-3.5 border-b border-slate-100 dark:border-slate-800">
+          {/* Left Pane (4 of 12): Sticky Searchable Vertical Roles Directory */}
+          <div className="lg:col-span-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+            <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="relative">
                 <svg
                   className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -333,7 +333,7 @@ export function RolesTab({
               </div>
             </div>
 
-            <div className="p-2.5 space-y-1.5 max-h-[680px] overflow-y-auto">
+            <div className="p-2.5 space-y-1.5 flex-1 overflow-y-auto">
               {filteredRolesList.length === 0 ? (
                 <div className="py-10 text-center text-xs text-slate-400">
                   No roles matching &ldquo;{roleListQuery}&rdquo;
@@ -666,7 +666,7 @@ export function RolesTab({
                               return (
                                 <div
                                   key={perm.key}
-                                  className="px-5 py-3.5 grid grid-cols-1 md:grid-cols-12 items-start md:items-center gap-2.5 md:gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                                  className="px-5 py-2.5 grid grid-cols-1 md:grid-cols-12 items-start md:items-center gap-2 md:gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
                                 >
                                   {/* Column 1: Permission Name */}
                                   <div className="md:col-span-3 min-w-0">
