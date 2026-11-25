@@ -224,6 +224,23 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         }),
       );
     });
+
+    it('should fall back to roleNames if roleId is empty string', async () => {
+      const reviewerRole = { id: 'role-reviewer-id', name: 'APP_REVIEWER', permissions: [] };
+      mockRoleRepo.findBy.mockResolvedValueOnce([reviewerRole]);
+
+      await service.updateUser('user-uuid-1', {
+        roleId: '',
+        roleNames: ['APP_REVIEWER'],
+      });
+
+      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          roleId: 'role-reviewer-id',
+          role: reviewerRole,
+        }),
+      );
+    });
   });
 
   describe('createUser', () => {

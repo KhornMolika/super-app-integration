@@ -915,23 +915,17 @@ export class AccessControlService {
         throw new ForbiddenException('Users cannot change their own roles');
       }
       let newRoles: Role[] = [];
-      if (dto.roleId !== undefined) {
-        if (dto.roleId.trim()) {
-          const singleRole = await this.roleRepository.findOne({
-            where: { id: dto.roleId.trim() },
-          });
-          if (singleRole) newRoles = [singleRole];
-        }
-      } else if (dto.roleIds !== undefined) {
-        newRoles =
-          dto.roleIds.length > 0
-            ? await this.roleRepository.findBy({ id: In(dto.roleIds) })
-            : [];
-      } else if (dto.roleNames !== undefined) {
-        newRoles =
-          dto.roleNames.length > 0
-            ? await this.roleRepository.findBy({ name: In(dto.roleNames) })
-            : [];
+      if (dto.roleId?.trim()) {
+        const singleRole = await this.roleRepository.findOne({
+          where: { id: dto.roleId.trim() },
+        });
+        if (singleRole) newRoles = [singleRole];
+      } else if (dto.roleIds && dto.roleIds.length > 0) {
+        newRoles = await this.roleRepository.findBy({ id: In(dto.roleIds) });
+      } else if (dto.roleNames && dto.roleNames.length > 0) {
+        newRoles = await this.roleRepository.findBy({
+          name: In(dto.roleNames),
+        });
       }
 
       if (
