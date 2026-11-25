@@ -23,7 +23,7 @@ export function MiniAppDetailBottomBar({
   onSaveDraft,
   onSaveAndSubmit,
 }: MiniAppDetailBottomBarProps) {
-  if (!canEdit || activeTab === 'activity' || activeTab === 'versions') {
+  if (!canEdit || !isEditingUnlocked || activeTab === 'activity' || activeTab === 'versions') {
     return null;
   }
 

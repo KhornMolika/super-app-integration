@@ -128,13 +128,54 @@ export default function MiniAppDetailHeader({
         </div>
       </div>
       {/* Header Actions */}
-      <div className="flex items-center space-x-2.5">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
+        {actions.sandbox && onOpenSandbox && (
+          <button
+            type="button"
+            onClick={onOpenSandbox}
+            disabled={isSubmitting}
+            className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span>Sandbox Preview</span>
+          </button>
+        )}
+
+        {actions.edit && (
+          <button
+            type="button"
+            onClick={onToggleEditing}
+            disabled={isSubmitting}
+            className={`h-9 px-3.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50 ${
+              isEditingUnlocked
+                ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d={
+                  isEditingUnlocked
+                    ? 'M6 18L18 6M6 6l12 12'
+                    : 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+                }
+              />
+            </svg>
+            <span>{isEditingUnlocked ? 'Cancel Edit' : 'Edit Configuration'}</span>
+          </button>
+        )}
+
         {/* More Actions Dropdown (...) */}
         <div className="relative" ref={actionsMenuRef}>
           <button
             type="button"
             onClick={() => setShowActionsMenu(!showActionsMenu)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm focus:ring-2 focus:ring-brand-500/20"
+            className="w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs focus:ring-2 focus:ring-brand-500/20"
             aria-label="More actions"
             title="More Actions"
           >
