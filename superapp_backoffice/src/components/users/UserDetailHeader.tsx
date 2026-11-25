@@ -162,78 +162,71 @@ export function UserDetailHeader({
             </div>
 
             {/* Action Buttons */}
-            {canManage && (
-              <div className="w-full flex items-center gap-2 pt-2">
-                {canEditTarget ? (
-                  <Link
-                    href={`/users/${user.id}/edit`}
-                    className="w-full text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl justify-center shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span>Edit Profile</span>
-                  </Link>
-                ) : (
-                  <div className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 select-none">
-                    <LockIcon className="w-4 h-4 text-slate-400" />
-                    <span>Protected Account</span>
-                  </div>
-                )}
+            {canManage && (() => {
+              const actionItems = [
+                ...(canEditTarget && !isConsumer && !(isSelf && !hasRole('SUPER_ADMIN'))
+                  ? [
+                      {
+                        label: 'Assign Role',
+                        onClick: () => setIsAssignRoleOpen(true),
+                        icon: <ShieldCheckIcon className="w-4 h-4 text-brand-500" />,
+                      },
+                    ]
+                  : []),
+                ...(!isTargetSuperAdmin
+                  ? [
+                      {
+                        label: isActive ? 'Deactivate Account' : 'Activate Account',
+                        onClick: onToggleStatus,
+                        icon: isActive ? (
+                          <XIcon className="w-4 h-4 text-amber-500" />
+                        ) : (
+                          <CheckIcon className="w-4 h-4 text-emerald-500" />
+                        ),
+                      },
+                      {
+                        label: 'Delete Account',
+                        variant: 'danger' as const,
+                        divider: true,
+                        onClick: onDelete,
+                        icon: (
+                          <svg className="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        ),
+                      },
+                    ]
+                  : []),
+              ];
 
-                <ActionMenu
-                  ariaLabel="More account actions"
-                  items={[
-                    ...(canEditTarget
-                      ? [
-                          {
-                            label: 'Edit Profile',
-                            href: `/users/${user.id}/edit`,
-                            icon: (
-                              <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            ),
-                          },
-                        ]
-                      : []),
-                    ...(canEditTarget && !isConsumer && !(isSelf && !hasRole('SUPER_ADMIN'))
-                      ? [
-                          {
-                            label: 'Assign Role',
-                            onClick: () => setIsAssignRoleOpen(true),
-                            icon: <ShieldCheckIcon className="w-4 h-4 text-brand-500" />,
-                          },
-                        ]
-                      : []),
-                    ...(!isTargetSuperAdmin
-                      ? [
-                          {
-                            label: isActive ? 'Deactivate Account' : 'Activate Account',
-                            onClick: onToggleStatus,
-                            icon: isActive ? (
-                              <XIcon className="w-4 h-4 text-amber-500" />
-                            ) : (
-                              <CheckIcon className="w-4 h-4 text-emerald-500" />
-                            ),
-                          },
-                          {
-                            label: 'Delete Account',
-                            variant: 'danger' as const,
-                            divider: true,
-                            onClick: onDelete,
-                            icon: (
-                              <svg className="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            ),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </div>
-            )}
+              return (
+                <div className="w-full flex items-center gap-2 pt-2">
+                  {canEditTarget ? (
+                    <Link
+                      href={`/users/${user.id}/edit`}
+                      className="w-full text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl justify-center shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Edit Profile</span>
+                    </Link>
+                  ) : (
+                    <div className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 select-none">
+                      <LockIcon className="w-4 h-4 text-slate-400" />
+                      <span>Protected Account</span>
+                    </div>
+                  )}
+
+                  {actionItems.length > 0 && (
+                    <ActionMenu
+                      ariaLabel="More account actions"
+                      items={actionItems}
+                    />
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Right Details Area: Separated User Information & Organization Information */}
