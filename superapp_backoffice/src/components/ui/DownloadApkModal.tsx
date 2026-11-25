@@ -230,8 +230,12 @@ export default function DownloadApkModal({
   const activeFilename = `superapp-test-${normVer}.apk`;
 
   const isCloud = isProduction || targetEnv === 'cloud';
+  const cloudOrigin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://app.fintechcenterfsa.com';
   const effectiveDownloadUrl = isCloud
-    ? `https://app.fintechcenterfsa.com/api/download-apk?version=${encodeURIComponent(
+    ? `${cloudOrigin}/api/download-apk?version=${encodeURIComponent(
         normVer,
       )}&type=test&appName=superapp`
     : `http://${selectedIp}:${backofficePort}/api/download-apk?version=${encodeURIComponent(

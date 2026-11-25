@@ -214,12 +214,21 @@ function generateMatrix(text: string): { matrix: boolean[][]; size: number } {
   addFinder(0, size - 7);
   addFinder(size - 7, 0);
 
-  // 2. Alignment patterns
+  // 2. Alignment patterns (skip if any cell in the 5x5 block overlaps a finder pattern)
   if (v.alignmentPatterns.length > 0) {
     const coords = v.alignmentPatterns;
     for (const r of coords) {
       for (const c of coords) {
-        if (isFunction[r][c]) continue;
+        let overlaps = false;
+        for (let dr = -2; dr <= 2 && !overlaps; dr++) {
+          for (let dc = -2; dc <= 2; dc++) {
+            if (isFunction[r + dr]?.[c + dc]) {
+              overlaps = true;
+              break;
+            }
+          }
+        }
+        if (overlaps) continue;
         for (let dr = -2; dr <= 2; dr++) {
           for (let dc = -2; dc <= 2; dc++) {
             const isBorder = Math.abs(dr) === 2 || Math.abs(dc) === 2;
@@ -239,6 +248,40 @@ function generateMatrix(text: string): { matrix: boolean[][]; size: number } {
 
   // Dark module
   mark(size - 8, 8, true);
+
+  // Reserve Format Info cells BEFORE placing data bits so data never overlaps format info
+  const formatBits = [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0]; // EC=L, Mask=0
+  for (let i = 0; i < 6; i++) {
+    mark(8, i, formatBits[i] === 1);
+    mark(i, 8, formatBits[formatBits.length - 1 - i] === 1);
+  }
+  mark(8, 7, formatBits[6] === 1);
+  mark(8, 8, formatBits[7] === 1);
+  mark(7, 8, formatBits[8] === 1);
+  for (let i = 0; i < 7; i++) {
+    mark(size - 1 - i, 8, formatBits[i] === 1);
+  }
+  for (let i = 0; i < 8; i++) {
+    mark(8, size - 8 + i, formatBits[7 + i] === 1);
+  }
+
+  // Version Info (required for Version >= 7)
+  if (v.version >= 7) {
+    const VERSION_INFO_BITS: Record<number, number> = {
+      7: 0x07c94,
+      8: 0x085bc,
+      9: 0x09a99,
+      10: 0x0a4d3,
+    };
+    const vBits = VERSION_INFO_BITS[v.version] ?? 0;
+    for (let i = 0; i < 18; i++) {
+      const bit = ((vBits >> i) & 1) === 1;
+      const r = Math.floor(i / 3);
+      const c = (i % 3) + size - 11;
+      mark(r, c, bit);
+      mark(c, r, bit);
+    }
+  }
 
   // 4. Encode data and ECC
   const dataBytes = encodeData(text, v);
@@ -298,21 +341,6 @@ function generateMatrix(text: string): { matrix: boolean[][]; size: number } {
     }
     dir = -dir;
     c -= 2;
-  }
-
-  // Format info (Error Correction Level L + Mask 0 = 0b111011111000100)
-  const formatBits = [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0];
-  for (let i = 0; i < 6; i++) {
-    mark(8, i, formatBits[i] === 1);
-    mark(i, 8, formatBits[formatBits.length - 1 - i] === 1);
-  }
-  mark(8, 7, formatBits[6] === 1);
-  mark(8, 8, formatBits[7] === 1);
-  mark(7, 8, formatBits[8] === 1);
-
-  for (let i = 0; i < 7; i++) {
-    mark(8, size - 1 - i, formatBits[formatBits.length - 1 - i] === 1);
-    mark(size - 7 + i, 8, formatBits[i] === 1);
   }
 
   const cleanMatrix: boolean[][] = matrix.map((row) =>
