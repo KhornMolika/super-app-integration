@@ -99,12 +99,12 @@ export default function ChangesRequestedBanner({
 }: ChangesRequestedBannerProps) {
   const isRejected = status === 'REJECTED';
   const isReviewOrHistory = status !== 'CHANGES_REQUESTED' && status !== 'REJECTED';
-  const rawList = structuredFeedback?.checklist || [];
 
   const [checklistState, setChecklistState] = useState<StructuredChecklistItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(!compact || isStandalonePage);
 
   useEffect(() => {
+    const rawList = structuredFeedback?.checklist || [];
     if (rawList.length > 0) {
       setChecklistState(
         rawList.map((item) => ({

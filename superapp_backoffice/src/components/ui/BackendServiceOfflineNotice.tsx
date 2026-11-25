@@ -382,7 +382,7 @@ export function BackendServiceOfflineNotice({
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs space-y-1.5 overflow-x-auto">
-                    <div className="text-slate-400">// Quick terminal checks:</div>
+                    <div className="text-slate-400">{'// Quick terminal checks:'}</div>
                     <div className="text-emerald-400"># Verify backend dev server is active:</div>
                     <div className="text-slate-100">cd d:\Projects\fintect\superapp-poc\superapp_backend && pnpm run start:dev</div>
                     <div className="text-emerald-400 mt-1"># Test endpoint directly:</div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { miniappsApi } from '@/api';
@@ -22,7 +22,7 @@ function MiniAppActivityPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchApp = async () => {
+  const fetchApp = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
@@ -35,11 +35,11 @@ function MiniAppActivityPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchApp();
-  }, [id]);
+  }, [fetchApp]);
 
   if (loading) {
     return (

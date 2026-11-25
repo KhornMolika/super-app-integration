@@ -514,7 +514,14 @@ export default function ValidationReportTab({
         console.warn('Could not load versions list for report, using default:', err);
         setSelectedVersion(miniApp.currentReleaseVersion || miniApp.activeTestVersion || 'v1.0.0');
       });
-  }, [miniApp?.id, miniApp?.status, miniApp?.activeTestVersion, miniApp?.currentReleaseVersion, urlVersion]);
+  }, [
+    miniApp?.id,
+    miniApp?.status,
+    miniApp?.activeTestVersion,
+    miniApp?.currentReleaseVersion,
+    miniApp?.pendingRevision?.version,
+    urlVersion,
+  ]);
 
   // When selectedVersion changes or miniApp updates, fetch authoritative version report
   useEffect(() => {
@@ -593,11 +600,15 @@ export default function ValidationReportTab({
   }, [versionReportData, miniApp]);
 
   const report = effectiveData.validationReport || miniApp.validationReport || null;
-  const stages = (effectiveData.validationStages && Object.keys(effectiveData.validationStages).length > 0)
-    ? effectiveData.validationStages
-    : miniApp.validationStages || {};
-  const issues = miniApp.issues || [];
-  const findings = report?.findings || [];
+  const stages = useMemo(
+    () =>
+      effectiveData.validationStages && Object.keys(effectiveData.validationStages).length > 0
+        ? effectiveData.validationStages
+        : miniApp.validationStages || {},
+    [effectiveData.validationStages, miniApp.validationStages],
+  );
+  const issues = useMemo(() => miniApp.issues || [], [miniApp.issues]);
+  const findings = useMemo(() => report?.findings || [], [report?.findings]);
   const sbom = report?.sbom || effectiveData.validationReport?.sbom || miniApp.validationReport?.sbom || null;
   const valStatus = (
     effectiveData.validationStatus && effectiveData.validationStatus !== 'PENDING'
@@ -722,7 +733,7 @@ export default function ValidationReportTab({
     }
 
     return list;
-  }, [findings, issues]);
+  }, [findings, issues, effectiveData.validationErrors]);
 
   // Stage aliases mapping
   const checkAliases: Record<string, string[]> = useMemo(() => ({
@@ -919,8 +930,11 @@ export default function ValidationReportTab({
   // Supply Chain Pipeline Stepper calculations (for Flutter & Native SDK)
   const rev = miniApp?.pendingRevision;
   const inRevision = Boolean(rev?.integrationConfig);
-  const conf: Record<string, any> =
-    (inRevision ? rev.integrationConfig : miniApp?.integrationConfigFlutter || miniApp?.integrationConfig) || {};
+  const conf: Record<string, any> = useMemo(
+    () =>
+      (inRevision ? rev.integrationConfig : miniApp?.integrationConfigFlutter || miniApp?.integrationConfig) || {},
+    [inRevision, rev?.integrationConfig, miniApp?.integrationConfigFlutter, miniApp?.integrationConfig],
+  );
   const storagePath: string | undefined = conf.packageStoragePath || conf.minioKey;
   const published = Boolean(conf.nexusPublishedVersion) && !conf.nexusPublishError;
   const publishError: string | undefined = conf.nexusPublishError || undefined;

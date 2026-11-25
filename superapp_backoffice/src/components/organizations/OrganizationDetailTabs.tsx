@@ -25,10 +25,13 @@ export function OrganizationDetailTabs({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const parseTab = (val: string | null | undefined): TabType => {
-    if (val === 'miniapps' || val === 'subordinates') return val;
-    return defaultTab;
-  };
+  const parseTab = React.useCallback(
+    (val: string | null | undefined): TabType => {
+      if (val === 'miniapps' || val === 'subordinates') return val;
+      return defaultTab;
+    },
+    [defaultTab],
+  );
 
   // Local state enables instant 0ms tab transitions
   const [activeTab, setActiveTab] = useState<TabType>(() => parseTab(searchParams?.get('tab')));
@@ -36,10 +39,8 @@ export function OrganizationDetailTabs({
   // Sync state if URL changes externally (e.g. browser back/forward or deep links)
   useEffect(() => {
     const fromUrl = parseTab(searchParams?.get('tab'));
-    if (fromUrl !== activeTab) {
-      setActiveTab(fromUrl);
-    }
-  }, [searchParams]);
+    setActiveTab((prev) => (prev !== fromUrl ? fromUrl : prev));
+  }, [searchParams, parseTab]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -48,7 +49,7 @@ export function OrganizationDetailTabs({
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [parseTab]);
 
   const handleTabChange = (tab: TabType) => {
     if (tab === activeTab) return;

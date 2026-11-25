@@ -93,12 +93,13 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
   const method = String((inRevision && rev.integrationMethod) || formData?.integrationMethod || '').toUpperCase();
   const conf: Record<string, any> =
     (inRevision ? rev.integrationConfig : formData?.integrationConfigFlutter || formData?.integrationConfig) || {};
-  if (method !== 'FLUTTER_PACKAGE' || !isFlutterArtifact(conf)) return null;
-
   const scan = String((inRevision && rev.validationStatus) || formData?.validationStatus || '').toUpperCase();
   const storagePath: string | undefined = conf.packageStoragePath || conf.minioKey;
   const published = Boolean(conf.nexusPublishedVersion) && !conf.nexusPublishError;
   const publishError: string | undefined = conf.nexusPublishError || undefined;
+  const initialExpanded = Boolean(publishError || !storagePath || scan === 'FAILED');
+  const [isExpanded, setIsExpanded] = useState<boolean>(initialExpanded);
+  if (method !== 'FLUTTER_PACKAGE' || !isFlutterArtifact(conf)) return null;
 
   const archiveStep: Step = {
     key: 'minio',
@@ -173,7 +174,6 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
   const steps = [archiveStep, scanStep, nexusStep];
   const hasError = Boolean(publishError || steps.some((s) => s.state === 'failed'));
   const allDone = steps.every((s) => s.state === 'done');
-  const [isExpanded, setIsExpanded] = useState<boolean>(() => hasError);
 
   // If the SuperApp Fastlane CI build is actively in progress, MiniAppLifecycleBanners already displays the build steps
   if (

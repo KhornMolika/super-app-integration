@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import { miniappsApi, superAppApi, unwrapItem } from '@/api';
@@ -148,12 +148,17 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     hasAccess(toAccessLevel((formData as any).myAccess), 'EDIT') &&
     isEditingUnlocked;
 
+  const formDataIdRef = useRef(formData?.id);
+  useEffect(() => {
+    formDataIdRef.current = formData?.id;
+  }, [formData?.id]);
+
   // Fetch MiniApp Configuration
   const fetchApp = useCallback(async (isRetry = false, isSilent = false) => {
     if (!id || id === 'superapp') return;
     // If formData already has an id (data has already been loaded), always treat background fetches as silent
     // to prevent unmounting the page / triggering full-screen loading spinners.
-    const silent = isSilent || Boolean(formData?.id);
+    const silent = isSilent || Boolean(formDataIdRef.current);
     if (!silent) setIsLoading(true);
     if (!isRetry && !silent) setFetchError(null);
 
@@ -339,7 +344,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     }, 20000); // 20s watchdog fallback; real-time updates arrive instantly via WebSocket
 
     return () => clearInterval(pollInterval);
-  }, [formData.status, formData.buildStatus, buildModalState.isOpen, isSubmitting, id]);
+  }, [formData.status, formData.buildStatus, buildModalState.isOpen, buildModalState.status, isSubmitting, id]);
 
   // Real-time WebSocket listener for immediate build and stage failure/completion updates
   useEffect(() => {

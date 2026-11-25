@@ -67,9 +67,7 @@ export default function CapabilityDetailPage({
 
   useEffect(() => {
     const fromUrl = searchParams.get('tab') || 'specs';
-    if (fromUrl !== activeTab) {
-      setActiveTab(fromUrl);
-    }
+    setActiveTab((prev) => (prev !== fromUrl ? fromUrl : prev));
   }, [searchParams]);
 
   useEffect(() => {

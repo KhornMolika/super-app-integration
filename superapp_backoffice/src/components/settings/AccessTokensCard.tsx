@@ -193,7 +193,7 @@ export function AccessTokensCard() {
               <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
                 <div className="text-slate-400 text-xs mb-1 font-sans font-semibold">Web MiniApps (.npmrc):</div>
                 <div className="text-emerald-400 overflow-x-auto whitespace-nowrap">
-                  //app.fintechcenterfsa.com/api/sdk/:_authToken=&quot;&lt;YOUR_TOKEN&gt;&quot;
+                  {'//app.fintechcenterfsa.com/api/sdk/:_authToken="<YOUR_TOKEN>"'}
                 </div>
               </div>
 

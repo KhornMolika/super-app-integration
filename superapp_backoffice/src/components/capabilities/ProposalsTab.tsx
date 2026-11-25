@@ -206,7 +206,8 @@ export function ProposalsTab({
       setSearchQuery(q);
       setMineOnly(params.get('mine') === 'true');
       const f = params.get('filter') as FilterKey;
-      if (validFilters.includes(f)) setFilter(f);
+      const allowedFilters: FilterKey[] = ['ALL', 'pending', 'accepted', 'code_ready', 'needs_work', 'code_failed', 'rejected'];
+      if (allowedFilters.includes(f)) setFilter(f);
       setCurrentPage(Math.max(1, parseInt(params.get('page') || '1', 10)));
       setPageSize(Math.max(5, parseInt(params.get('limit') || '10', 10)));
     };

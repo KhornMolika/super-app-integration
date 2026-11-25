@@ -370,7 +370,7 @@ export function ProposalReviewModal({
     return () => {
       cancelled = true;
     };
-  }, [proposal]);
+  }, [proposal, mayApprove]);
 
   if (!proposal || !mounted) return null;
 

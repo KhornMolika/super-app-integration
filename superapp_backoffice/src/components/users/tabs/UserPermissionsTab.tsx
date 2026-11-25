@@ -96,10 +96,13 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
     return set;
   }, [user, isSuperAdmin, matchedRole, primaryRole]);
 
-  const hasPermission = (key: string) => {
-    if (isSuperAdmin) return true;
-    return grantedPermissionKeys.has('*') || grantedPermissionKeys.has(key);
-  };
+  const hasPermission = React.useCallback(
+    (key: string) => {
+      if (isSuperAdmin) return true;
+      return grantedPermissionKeys.has('*') || grantedPermissionKeys.has(key);
+    },
+    [isSuperAdmin, grantedPermissionKeys],
+  );
 
   // Calculate granted total
   const allPermissionsFlat = useMemo(() => {
@@ -109,7 +112,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
   const totalGrantedCount = useMemo(() => {
     if (isSuperAdmin) return TOTAL_PERMISSIONS_COUNT;
     return allPermissionsFlat.filter((p) => hasPermission(p.key)).length;
-  }, [isSuperAdmin, allPermissionsFlat, grantedPermissionKeys]);
+  }, [isSuperAdmin, allPermissionsFlat, hasPermission]);
 
   // Filter groups according to filterMode and search
   const filteredGroups = useMemo(() => {
@@ -135,7 +138,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
         filteredPermissions,
       };
     }).filter((g) => g.filteredPermissions.length > 0);
-  }, [filterMode, permissionSearch, isSuperAdmin, grantedPermissionKeys]);
+  }, [filterMode, permissionSearch, hasPermission]);
 
   return (
     <div className="space-y-6">

@@ -172,19 +172,11 @@ function OrganizationsContent() {
     const searchFromUrl = searchParams.get('search') || '';
     const statusFromUrl = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
 
-    if (pageFromUrl !== currentPage) {
-      setCurrentPage(pageFromUrl);
-    }
-    if (limitFromUrl !== pageSize) {
-      setPageSize(limitFromUrl);
-    }
-    if (statusFromUrl !== statusFilter) {
-      setStatusFilter(statusFromUrl);
-    }
-    if (searchFromUrl !== searchQuery) {
-      setSearchQuery(searchFromUrl);
-      setDebouncedSearch(searchFromUrl);
-    }
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
+    setSearchQuery((prev) => (prev !== searchFromUrl ? searchFromUrl : prev));
+    setDebouncedSearch((prev) => (prev !== searchFromUrl ? searchFromUrl : prev));
   }, [searchParams]);
 
   // Handle browser back/forward navigation smoothly via popstate

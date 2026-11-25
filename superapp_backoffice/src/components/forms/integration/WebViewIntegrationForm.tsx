@@ -382,6 +382,16 @@ export default function WebViewIntegrationForm({
     }
   };
 
+  const prodUrlInput = (formData.integrationConfigWebView?.productionUrl || '').trim();
+  const isVerified =
+    domainVerificationSuccess === true ||
+    Boolean(
+      formData.isDomainVerified &&
+        domainVerificationSuccess !== false &&
+        verifiedUrl &&
+        verifiedUrl.trim() === prodUrlInput,
+    );
+
   // Real-time Production URL format and reachability check
   useEffect(() => {
     const prodUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
@@ -461,19 +471,9 @@ export default function WebViewIntegrationForm({
         clearTimeout(prodUrlDebounceRef.current);
       }
     };
-  }, [formData.integrationConfigWebView?.productionUrl]);
+  }, [formData.integrationConfigWebView?.productionUrl, isVerified]);
 
   // ---------- view model ----------
-  const prodUrlInput = (formData.integrationConfigWebView?.productionUrl || '').trim();
-  const isVerified =
-    domainVerificationSuccess === true ||
-    Boolean(
-      formData.isDomainVerified &&
-        domainVerificationSuccess !== false &&
-        verifiedUrl &&
-        verifiedUrl.trim() === prodUrlInput,
-    );
-
   const host = (() => {
     if (!prodUrlInput) return '';
     try {

@@ -170,7 +170,7 @@ export function useMiniAppLifecycle({
       return;
     }
 
-    let reason = explicitReason || '';
+    const reason = explicitReason || '';
     if (!explicitReason) {
       const isTestBuild = action === 'start-testing';
       const isPublishRev = action === 'publish-revision';

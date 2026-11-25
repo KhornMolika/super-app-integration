@@ -12,6 +12,7 @@ const googleSans = Google_Sans({
   subsets: ['latin', 'khmer'],
   variable: '--font-google-sans',
   display: 'swap',
+  adjustFontFallback: false,
 });
 
 const jetbrainsMono = JetBrains_Mono({

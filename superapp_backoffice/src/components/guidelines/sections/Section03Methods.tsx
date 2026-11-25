@@ -215,7 +215,7 @@ export function Section03Methods({
                 Upload your compiled <code>.aar</code> binary. In the registration form, specify the Android Package Name (e.g. <code>com.fsa.enterprise.hr</code>) and Plugin Entry Class (e.g. <code>MiniAppPlugin</code>).
               </p>
               <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
-                <p className="text-slate-400">// Kotlin Implementation</p>
+                <p className="text-slate-400">{'// Kotlin Implementation'}</p>
                 <p className="text-brand-300">class MiniAppPlugin : FSAMiniAppNativePlugin &#123;</p>
                 <p className="text-slate-300 pl-4">override fun initialize(context: Context, appCtx: MiniAppNativeContext) &#123; ... &#125;</p>
                 <p className="text-brand-300">&#125;</p>
@@ -236,7 +236,7 @@ export function Section03Methods({
                 Upload a <code>.zip</code> archive containing your compiled <code>.xcframework</code> or <code>.framework</code>. Specify the iOS Module Name (e.g. <code>FsaHrMiniApp</code>) and Entry Type (e.g. <code>MiniAppPlugin</code>).
               </p>
               <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
-                <p className="text-slate-400">// Swift Implementation</p>
+                <p className="text-slate-400">{'// Swift Implementation'}</p>
                 <p className="text-brand-300">@objc public class MiniAppPlugin: NSObject, FSASuperAppMiniAppNativeProtocol &#123;</p>
                 <p className="text-slate-300 pl-4">public static func initialize(with context: MiniAppNativeContext) &#123; ... &#125;</p>
                 <p className="text-brand-300">&#125;</p>

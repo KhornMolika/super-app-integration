@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
@@ -58,12 +58,8 @@ function CapabilitiesContent() {
     const tabFromUrl = parseTab(searchParams?.get('tab'));
     const filterFromUrl = parseFilter(searchParams?.get('filter'));
 
-    if (tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-    if (filterFromUrl !== proposalSubFilter) {
-      setProposalSubFilter(filterFromUrl);
-    }
+    setActiveTab((prev) => (prev !== tabFromUrl ? tabFromUrl : prev));
+    setProposalSubFilter((prev) => (prev !== filterFromUrl ? filterFromUrl : prev));
   }, [searchParams]);
 
   useEffect(() => {
@@ -127,7 +123,7 @@ function CapabilitiesContent() {
   const [isSyncingGitLab, setIsSyncingGitLab] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [capData, propData] = await Promise.all([
@@ -141,7 +137,7 @@ function CapabilitiesContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [view.canSeeRequests]);
 
   const handleSyncGitLab = async () => {
     try {
@@ -165,7 +161,7 @@ function CapabilitiesContent() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const pendingProposalsCount = proposals.filter((p) => p.status === 'PENDING_REVIEW').length;
 

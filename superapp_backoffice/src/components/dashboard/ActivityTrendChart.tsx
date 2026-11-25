@@ -48,7 +48,7 @@ export default function ActivityTrendChart({
 
   const svgWidth = 600;
   const svgHeight = 210;
-  const padding = { top: 22, right: 20, bottom: 35, left: 35 };
+  const padding = useMemo(() => ({ top: 22, right: 20, bottom: 35, left: 35 }), []);
   const chartWidth = svgWidth - padding.left - padding.right;
   const chartHeight = svgHeight - padding.top - padding.bottom;
 

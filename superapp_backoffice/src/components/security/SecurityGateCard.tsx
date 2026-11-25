@@ -157,11 +157,16 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
     }
   };
 
+  const runGate1Ref = React.useRef(runGate1);
+  useEffect(() => {
+    runGate1Ref.current = runGate1;
+  });
+
   useEffect(() => {
     if (!gate1Report && miniApp) {
-      runGate1();
+      runGate1Ref.current();
     }
-  }, [miniApp?.id, miniApp?.status, miniApp?.integrationMethod]);
+  }, [gate1Report, miniApp]);
 
   const gate1Passed = gate1Report?.status === 'PASSED';
 

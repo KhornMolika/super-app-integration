@@ -106,8 +106,8 @@ export function GuidelinesTableOfContents({
   const currentIndex = sections.findIndex((s) => s.id === activeSection);
   const currentSection = sections[currentIndex] || sections[0];
   
-  const rawSubTopics = SECTION_SUBTOPICS[currentSection.id] || [];
   const subTopics = React.useMemo(() => {
+    const rawSubTopics = SECTION_SUBTOPICS[currentSection.id] || [];
     if (currentSection.id === "methods") {
       return METHOD_SPECIFIC_SUBTOPICS[activeMethodTab] || METHOD_SPECIFIC_SUBTOPICS.webview;
     }
@@ -126,7 +126,7 @@ export function GuidelinesTableOfContents({
       );
     }
     return rawSubTopics;
-  }, [currentSection.id, rawSubTopics, activeMethodTab]);
+  }, [currentSection.id, activeMethodTab]);
 
   const prevSection = currentIndex > 0 ? sections[currentIndex - 1] : null;
   const nextSection = currentIndex < sections.length - 1 ? sections[currentIndex + 1] : null;

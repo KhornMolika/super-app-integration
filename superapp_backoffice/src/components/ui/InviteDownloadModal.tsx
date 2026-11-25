@@ -54,9 +54,14 @@ export default function InviteDownloadModal({
     }
   };
 
+  const generateTokenRef = React.useRef(generateToken);
+  useEffect(() => {
+    generateTokenRef.current = generateToken;
+  });
+
   useEffect(() => {
     if (isOpen && miniAppId) {
-      generateToken(expiresIn);
+      generateTokenRef.current(expiresIn);
     }
   }, [isOpen, miniAppId, expiresIn]);
 

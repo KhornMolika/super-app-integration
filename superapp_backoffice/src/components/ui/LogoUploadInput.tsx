@@ -226,7 +226,6 @@ export function LogoUploadInput({
                 title="Click to preview logo"
                 className="group/thumb relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={normalizeAssetUrl(value) || value}
                   alt="Logo preview"
                   className="w-full h-full object-cover transition-transform group-hover/thumb:scale-110"
@@ -436,7 +435,6 @@ export function LogoUploadInput({
                         : 'rounded-none'
                     }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={normalizeAssetUrl(value) || value}
                     alt="Full Logo Preview"
                     style={{
@@ -500,7 +498,6 @@ export function LogoUploadInput({
               {/* Store App Icon Simulation */}
               <div className="flex items-center gap-3.5 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full shadow-xs">
                 <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 shadow-xs flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={normalizeAssetUrl(value) || value}
                     alt="App icon simulator"
                     className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}

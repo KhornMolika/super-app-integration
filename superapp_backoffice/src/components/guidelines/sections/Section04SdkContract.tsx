@@ -1104,8 +1104,8 @@ dependencies:
                   Launch your HR Activity or UIViewController from the presenter view passed by host:
                 </p>
                 <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-sky-300">// Android: activity.startActivity(Intent(activity, StaffPortalActivity::class.java))</p>
-                  <p className="text-sky-300">// iOS: presenter.present(navController, animated: true)</p>
+                  <p className="text-sky-300">{'// Android: activity.startActivity(Intent(activity, StaffPortalActivity::class.java))'}</p>
+                  <p className="text-sky-300">{'// iOS: presenter.present(navController, animated: true)'}</p>
                 </div>
               </div>
 

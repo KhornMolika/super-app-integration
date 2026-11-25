@@ -278,7 +278,7 @@ function generateMatrix(text: string): { matrix: boolean[][]; size: number } {
   // 5. Place data in matrix (2 columns at a time, moving right to left)
   let bitIdx = 0;
   let dir = -1; // Moving upwards first
-  let r = size - 1;
+  const r = size - 1;
   let c = size - 1;
 
   while (c > 0) {

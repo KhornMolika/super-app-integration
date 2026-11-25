@@ -222,7 +222,7 @@ function UsersContent() {
     } finally {
       setLoadingUsers(false);
     }
-  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter]);
+  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter, toast]);
 
   // Fetch Roles and Organizations from Database via Next.js BFF proxy
   const fetchRoles = useCallback(async () => {
@@ -786,7 +786,7 @@ function UsersContent() {
         );
       },
     },
-  ], [roleFilter, statusFilter, canManageUsers, handleOpenEditUser, handleToggleUserStatus, handleDeleteUser]);
+  ], [roleFilter, statusFilter, canManageUsers, currentUser, fetchUsers, fetchGlobalCounts, toast, handleToggleUserStatus, handleDeleteUser]);
   // Server-Driven Pagination Props for DataTable
   const paginationProps: PaginationProps = {
     currentPage: paginationMeta.page || currentPage,

@@ -53,7 +53,7 @@ export function RevisionReviewModal({
     placeholder: string;
   } | null>(null);
 
-  const fetchDiff = async () => {
+  const fetchDiff = React.useCallback(async () => {
     if (!miniAppId) return;
     setLoading(true);
     try {
@@ -64,13 +64,13 @@ export function RevisionReviewModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [miniAppId, baseVersion, targetVersion]);
 
   useEffect(() => {
     if (isOpen && miniAppId) {
       fetchDiff();
     }
-  }, [isOpen, miniAppId, baseVersion, targetVersion]);
+  }, [isOpen, miniAppId, fetchDiff]);
 
   if (!isOpen) return null;
 

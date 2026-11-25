@@ -129,32 +129,31 @@ export function useMiniAppRegister() {
   const [maxVisitedStep, setMaxVisitedStep] = useState(initialStep);
 
   const setStep = (newStep: number | ((prev: number) => number)) => {
-    setStepState((prev) => {
-      const resolved = typeof newStep === 'function' ? newStep(prev) : newStep;
-      const clamped = Math.max(1, Math.min(TOTAL_STEPS, resolved));
+    const resolved = typeof newStep === 'function' ? newStep(step) : newStep;
+    const clamped = Math.max(1, Math.min(TOTAL_STEPS, resolved));
 
-      // Guard: do not allow advancing if any previous step is incomplete
-      if (clamped > 1) {
-        for (let s = 1; s < clamped; s++) {
-          if (!isWizardStepComplete(s, formData, pendingArchiveFile)) {
-            toast.warning(`Finish step ${s} first.`, 'Missing information');
-            router.replace(`/miniapps/register?step=${s}`, { scroll: false });
-            return s;
-          }
+    // Guard: do not allow advancing if any previous step is incomplete
+    if (clamped > 1) {
+      for (let s = 1; s < clamped; s++) {
+        if (!isWizardStepComplete(s, formData, pendingArchiveFile)) {
+          toast.warning(`Finish step ${s} first.`, 'Missing information');
+          setStepState(s);
+          router.replace(`/miniapps/register?step=${s}`, { scroll: false });
+          return;
         }
       }
+    }
 
-      setMaxVisitedStep((oldMax) => Math.max(oldMax, clamped));
-      router.replace(`/miniapps/register?step=${clamped}`, { scroll: false });
-      return clamped;
-    });
+    setStepState(clamped);
+    setMaxVisitedStep((oldMax) => Math.max(oldMax, clamped));
+    router.replace(`/miniapps/register?step=${clamped}`, { scroll: false });
   };
 
   useEffect(() => {
     if (stepQuery) {
       const p = parseInt(stepQuery, 10);
-      if (!isNaN(p) && p >= 1 && p <= TOTAL_STEPS && p !== step) {
-        setStepState(p);
+      if (!isNaN(p) && p >= 1 && p <= TOTAL_STEPS) {
+        setStepState((prev) => (prev !== p ? p : prev));
         setMaxVisitedStep((oldMax) => Math.max(oldMax, p));
       }
     }
@@ -361,11 +360,15 @@ export function useMiniAppRegister() {
       }
     }
 
-    if (detectedId && detectedId !== formData.appId) {
-      setFormData((prev) => ({
-        ...prev,
-        appId: detectedId,
-      }));
+    if (detectedId) {
+      setFormData((prev) =>
+        prev.appId !== detectedId
+          ? {
+              ...prev,
+              appId: detectedId,
+            }
+          : prev,
+      );
     }
   }, [
     formData.integrationMethod,
@@ -476,6 +479,8 @@ export function useMiniAppRegister() {
     formData.logo,
     formData.termsUrl,
     formData.privacyPolicyUrl,
+    formData.integrationMethod,
+    formData.integrationConfigWebView?.productionUrl,
   ]);
 
   // Aggregate errors based on active integration method

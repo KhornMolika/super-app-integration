@@ -89,7 +89,7 @@ export default function FlutterGitConfigSection({
     }
   };
 
-  const handleGenerateDedicatedKey = async () => {
+  const handleGenerateDedicatedKey = React.useCallback(async () => {
     try {
       setIsGeneratingKey(true);
       setKeyError("");
@@ -114,7 +114,7 @@ export default function FlutterGitConfigSection({
     } finally {
       setIsGeneratingKey(false);
     }
-  };
+  }, [flutterConfig?.packageName, flutterConfig?.appName, onUpdateFlutterConfig]);
 
   const [copyFailed, setCopyFailed] = useState(false);
   const publicKeyRef = React.useRef<HTMLPreElement>(null);
@@ -154,7 +154,16 @@ export default function FlutterGitConfigSection({
     ) {
       handleGenerateDedicatedKey();
     }
-  }, [isPrivateRepo, authMethod, flutterConfig?.deployPublicKey, flutterConfig?.hasDeployKey]);
+  }, [
+    isPrivateRepo,
+    authMethod,
+    flutterConfig?.deployPublicKey,
+    flutterConfig?.hasDeployKey,
+    handleGenerateDedicatedKey,
+    isEditable,
+    isGeneratingKey,
+    keyError,
+  ]);
 
   const urlError = allErrors["integrationConfigFlutter.gitUrl"];
   const tokenError = allErrors["integrationConfigFlutter.gitAccessToken"];

@@ -139,7 +139,10 @@ export function CapabilitiesTab({
     setLocalCaps(capabilities);
   }, [capabilities]);
 
-  const safeCapabilities = Array.isArray(localCaps) ? localCaps : [];
+  const safeCapabilities = useMemo(
+    () => (Array.isArray(localCaps) ? localCaps : []),
+    [localCaps],
+  );
 
   const handleToggleAllowed = async (capId: string, currentAllowed: boolean) => {
     const next = !currentAllowed;

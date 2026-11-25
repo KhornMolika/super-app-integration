@@ -260,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (typeof window !== 'undefined') {
               const currentPath = window.location.pathname;
               const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.href = `/login${redirectParam}`;
             }
           }
@@ -285,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentUser(null);
           setRoleState('STAFF');
           if (!window.location.pathname.startsWith('/login')) {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
             window.location.href = '/login';
           }
         } else if (event?.data?.type === 'LOGIN') {
@@ -357,6 +359,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ch.postMessage({ type: 'LOGOUT' });
         ch.close();
       }
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/login';
     }
   };

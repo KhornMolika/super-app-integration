@@ -139,9 +139,14 @@ export default function DownloadApkModal({
     }
   };
 
+  const fetchNetworkInfoRef = React.useRef(fetchNetworkInfo);
+  useEffect(() => {
+    fetchNetworkInfoRef.current = fetchNetworkInfo;
+  });
+
   useEffect(() => {
     if (isOpen) {
-      fetchNetworkInfo();
+      fetchNetworkInfoRef.current();
     }
   }, [isOpen]);
 

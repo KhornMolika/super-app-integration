@@ -140,10 +140,28 @@ export default function NativeSdkIntegrationForm({
     formData.teamName,
   ]);
 
+  const latestNativeSdkAutoFillRef = React.useRef({
+    nativeSdkConfig: formData.integrationConfigNativeSdk,
+    onUpdateNativeSdkConfig,
+    handleNativeSdkChange,
+  });
+  useEffect(() => {
+    latestNativeSdkAutoFillRef.current = {
+      nativeSdkConfig: formData.integrationConfigNativeSdk,
+      onUpdateNativeSdkConfig,
+      handleNativeSdkChange,
+    };
+  });
+
   // Seamless auto-detection and auto-fill on mount / profile updates
   useEffect(() => {
     if (!isEditable) return;
-    const current = formData.integrationConfigNativeSdk || {};
+    const {
+      nativeSdkConfig,
+      onUpdateNativeSdkConfig: updateNativeSdk,
+      handleNativeSdkChange: changeNativeSdk,
+    } = latestNativeSdkAutoFillRef.current;
+    const current = nativeSdkConfig || {};
     const hasExistingIos = Boolean(current.iosArtifactFilename || current.iosStoragePath);
     const needsAutoFill =
       !current.androidPackageName ||
@@ -169,11 +187,11 @@ export default function NativeSdkIntegrationForm({
         if (!current.iosTypeName) updates.iosTypeName = derivedDefaults.iosTypeName;
       }
 
-      if (onUpdateNativeSdkConfig) {
-        onUpdateNativeSdkConfig(updates);
-      } else if (handleNativeSdkChange) {
+      if (updateNativeSdk) {
+        updateNativeSdk(updates);
+      } else if (changeNativeSdk) {
         Object.entries(updates).forEach(([name, value]) => {
-          handleNativeSdkChange({ target: { name, value } } as any);
+          changeNativeSdk({ target: { name, value } } as any);
         });
       }
     }

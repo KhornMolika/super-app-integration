@@ -421,19 +421,23 @@ export default function CapabilitiesForm({
     formData.integrationConfigFlutter?.packagePath,
     formData.integrationConfig?.gitUrl,
     formData.integrationConfig?.repoUrl,
-    formData.category,
+    formData.integrationConfig?.gitBranch,
+    formData.integrationConfig?.gitPath,
+    formData.integrationConfig?.packagePath,
     formData.name,
     formData.appId,
     formData.permissions,
     setFormData,
   ]);
 
+  const autoDetectedOnceRef = React.useRef(false);
   // Auto-run once on initial visit if empty
   useEffect(() => {
-    if (!formData.permissions || formData.permissions.length === 0) {
+    if (!autoDetectedOnceRef.current && (!formData.permissions || formData.permissions.length === 0)) {
+      autoDetectedOnceRef.current = true;
       handleAutoDetect();
     }
-  }, []);
+  }, [formData.permissions, handleAutoDetect]);
 
   // Dynamically compute host-supported whitelisted capabilities synced directly with SuperApp container
   const liveWhitelistedSet = useMemo(() => {

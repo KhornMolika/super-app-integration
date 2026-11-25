@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { miniappsApi } from '@/api';
@@ -17,13 +17,15 @@ function MiniAppSecurityPageContent() {
   const [miniApp, setMiniApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
-  const fetchApp = async (silent = false) => {
+  const fetchApp = useCallback(async (silent = false) => {
     if (!id) return;
     try {
-      if (!silent && !miniApp) setLoading(true);
+      if (!silent && !hasLoadedRef.current) setLoading(true);
       setError(null);
       const data = await miniappsApi.getById(id);
+      hasLoadedRef.current = true;
       setMiniApp(data);
     } catch (err: any) {
       console.error('Failed to load MiniApp for security report:', err);
@@ -31,11 +33,11 @@ function MiniAppSecurityPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchApp();
-  }, [id]);
+  }, [fetchApp]);
 
   if (loading) {
     return (
