@@ -348,11 +348,23 @@ export default function CapabilitiesForm({
         formData.integrationConfig?.packagePath ||
         '';
 
+      const androidStoragePath =
+        formData.integrationConfigNativeSdk?.androidStoragePath ||
+        formData.integrationConfig?.androidStoragePath ||
+        '';
+
+      const iosStoragePath =
+        formData.integrationConfigNativeSdk?.iosStoragePath ||
+        formData.integrationConfig?.iosStoragePath ||
+        '';
+
       const data = await miniappsApi.detectPermissions({
         productionUrl: prodUrl,
         gitUrl,
         gitBranch,
         gitPath,
+        androidStoragePath,
+        iosStoragePath,
         name: formData.name,
         appId: formData.appId,
       });
@@ -424,6 +436,10 @@ export default function CapabilitiesForm({
     formData.integrationConfig?.gitBranch,
     formData.integrationConfig?.gitPath,
     formData.integrationConfig?.packagePath,
+    formData.integrationConfigNativeSdk?.androidStoragePath,
+    formData.integrationConfigNativeSdk?.iosStoragePath,
+    formData.integrationConfig?.androidStoragePath,
+    formData.integrationConfig?.iosStoragePath,
     formData.name,
     formData.appId,
     formData.permissions,

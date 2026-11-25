@@ -280,6 +280,8 @@ export const miniappsApi = {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
+    androidStoragePath?: string;
+    iosStoragePath?: string;
     name?: string;
     appId?: string;
   }) =>

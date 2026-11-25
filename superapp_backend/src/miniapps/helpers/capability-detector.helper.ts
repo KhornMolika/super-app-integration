@@ -1,6 +1,8 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import AdmZip from 'adm-zip';
 import { GitIntegrationService } from '../../integrations/git/git-integration.service';
 import { GitLabProvider } from '../../integrations/git/providers/gitlab.provider';
+import { StorageService } from '../../storage/storage.service';
 import * as YAML from 'yaml';
 
 export interface DetectedPermissionResult {
@@ -17,12 +19,13 @@ export class CapabilityDetectorHelper {
   constructor(
     @Optional() private readonly gitIntegrationService?: GitIntegrationService,
     @Optional() private readonly gitlabProvider?: GitLabProvider,
+    @Optional() private readonly storageService?: StorageService,
   ) {}
 
   /**
    * Automatically discovers required native permissions from MiniApp endpoint,
    * GitLab repository (branch main or specified branch), association file (.well-known),
-   * and script ASTs.
+   * uploaded Native SDK artifacts (.aar / .xcframework), and script ASTs.
    */
   async detect(body: {
     productionUrl?: string;
@@ -31,6 +34,8 @@ export class CapabilityDetectorHelper {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
+    androidStoragePath?: string;
+    iosStoragePath?: string;
   }): Promise<{
     success: boolean;
     detected: DetectedPermissionResult[];
@@ -363,11 +368,111 @@ export class CapabilityDetectorHelper {
       }
     }
 
+    // 3. Scan uploaded Native SDK binaries (.aar AndroidManifest.xml / iOS Info.plist)
+    if (
+      this.storageService &&
+      (body.androidStoragePath?.trim() || body.iosStoragePath?.trim())
+    ) {
+      await this.detectFromNativeArtifacts(
+        body.androidStoragePath?.trim(),
+        body.iosStoragePath?.trim(),
+        addPerm,
+      );
+    }
+
     return {
       success: true,
       detected,
       count: detected.length,
     };
+  }
+
+  /**
+   * Inspects uploaded Native SDK archives (.aar / .xcframework) in MinIO
+   * for AndroidManifest.xml <uses-permission> and iOS Info.plist NS*UsageDescription keys.
+   */
+  private async detectFromNativeArtifacts(
+    androidStoragePath: string | undefined,
+    iosStoragePath: string | undefined,
+    addPerm: (
+      type: string,
+      purpose: string,
+      source: string,
+      confidence?: 'HIGH' | 'MEDIUM',
+    ) => void,
+  ): Promise<void> {
+    if (!this.storageService) return;
+
+    const androidMap: Array<{ key: string; type: string; purpose: string }> = [
+      { key: 'android.permission.CAMERA', type: 'Camera', purpose: 'To scan codes and capture verification photos' },
+      { key: 'android.permission.RECORD_AUDIO', type: 'Microphone', purpose: 'To record voice notes and audio input' },
+      { key: 'android.permission.ACCESS_FINE_LOCATION', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
+      { key: 'android.permission.ACCESS_COARSE_LOCATION', type: 'Location', purpose: 'To verify approximate location for localized services' },
+      { key: 'android.permission.USE_BIOMETRIC', type: 'Biometrics', purpose: 'To authenticate user identity and authorize operations securely' },
+      { key: 'android.permission.USE_FINGERPRINT', type: 'Biometrics', purpose: 'To authenticate user identity via fingerprint' },
+      { key: 'android.permission.NFC', type: 'NFC', purpose: 'To scan contactless NFC tags and identity chips' },
+      { key: 'android.permission.BLUETOOTH', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
+      { key: 'android.permission.BLUETOOTH_CONNECT', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
+      { key: 'android.permission.READ_CONTACTS', type: 'Contacts', purpose: 'To select recipients and contacts from the address book' },
+    ];
+
+    const iosMap: Array<{ key: string; type: string; purpose: string }> = [
+      { key: 'NSCameraUsageDescription', type: 'Camera', purpose: 'To scan codes and capture verification photos' },
+      { key: 'NSMicrophoneUsageDescription', type: 'Microphone', purpose: 'To record voice notes and audio input' },
+      { key: 'NSLocationWhenInUseUsageDescription', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
+      { key: 'NSLocationAlwaysUsageDescription', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
+      { key: 'NSFaceIDUsageDescription', type: 'Biometrics', purpose: 'To authenticate user identity via Face ID' },
+      { key: 'NFCReaderUsageDescription', type: 'NFC', purpose: 'To scan contactless NFC tags and identity chips' },
+      { key: 'NSBluetoothAlwaysUsageDescription', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
+      { key: 'NSContactsUsageDescription', type: 'Contacts', purpose: 'To select recipients and contacts from the address book' },
+    ];
+
+    const paths = [androidStoragePath, iosStoragePath].filter(
+      (p): p is string => Boolean(p),
+    );
+
+    for (const storagePath of paths) {
+      try {
+        const buffer = await this.storageService.getObjectBuffer(
+          this.storageService.packageSubmissionsBucket,
+          storagePath,
+        );
+        const zip = new AdmZip(buffer);
+        for (const entry of zip.getEntries()) {
+          if (entry.isDirectory) continue;
+          const name = entry.entryName.toLowerCase();
+          if (name.endsWith('androidmanifest.xml')) {
+            const xml = entry.getData().toString('utf8');
+            for (const rule of androidMap) {
+              if (xml.includes(rule.key)) {
+                addPerm(
+                  rule.type,
+                  rule.purpose,
+                  `Native AndroidManifest (${rule.key})`,
+                  'HIGH',
+                );
+              }
+            }
+          } else if (name.endsWith('info.plist')) {
+            const plist = entry.getData().toString('utf8');
+            for (const rule of iosMap) {
+              if (plist.includes(rule.key)) {
+                addPerm(
+                  rule.type,
+                  rule.purpose,
+                  `Native iOS Info.plist (${rule.key})`,
+                  'HIGH',
+                );
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `Could not auto-detect capabilities from native artifact (${storagePath}): ${err?.message || err}`,
+        );
+      }
+    }
   }
 
   /**

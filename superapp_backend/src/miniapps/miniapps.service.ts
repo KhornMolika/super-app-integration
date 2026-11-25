@@ -1286,8 +1286,16 @@ export class MiniappsService implements OnApplicationBootstrap {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
+    androidStoragePath?: string;
+    iosStoragePath?: string;
   }) {
-    if (!body.gitUrl && body.appId && body.appId !== 'draft') {
+    if (
+      !body.gitUrl &&
+      !body.androidStoragePath &&
+      !body.iosStoragePath &&
+      body.appId &&
+      body.appId !== 'draft'
+    ) {
       try {
         const app = await this.findOne(body.appId);
         if (app?.integrationConfig) {
@@ -1295,6 +1303,8 @@ export class MiniappsService implements OnApplicationBootstrap {
           body.gitUrl = cfg.gitUrl || cfg.repoUrl;
           body.gitBranch = cfg.gitBranch || cfg.ref || 'main';
           body.gitPath = cfg.gitPath || cfg.packagePath;
+          body.androidStoragePath = cfg.androidStoragePath;
+          body.iosStoragePath = cfg.iosStoragePath;
         }
       } catch {
         // App might not exist yet during initial draft creation

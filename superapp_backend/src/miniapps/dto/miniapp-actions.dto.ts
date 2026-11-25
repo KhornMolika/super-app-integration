@@ -113,6 +113,14 @@ export class DetectPermissionsDto {
   @IsString()
   @IsOptional()
   gitPath?: string;
+
+  @IsString()
+  @IsOptional()
+  androidStoragePath?: string;
+
+  @IsString()
+  @IsOptional()
+  iosStoragePath?: string;
 }
 
 export class AddCollaboratorDto {
