@@ -273,26 +273,18 @@ export function Section04SdkContract({
       </div>
 
       {/* PILLAR 1: Shared Responsibility Model */}
-      <div id="contract-shared-model" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-6 space-y-5 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-                  Pillar 1
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  Shared Responsibility Model: Zero-Crash Architecture
-                </h4>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Division of responsibilities guaranteeing host shell stability and graceful user degradation.
-              </p>
-            </div>
+      <section id="contract-shared-model" className="space-y-5 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Pillar 1 • Architecture
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              Shared Responsibility Model: Zero-Crash Architecture
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Division of responsibilities guaranteeing host shell stability and graceful user degradation.
+            </p>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold flex items-center gap-1.5 shrink-0">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
@@ -300,32 +292,32 @@ export function Section04SdkContract({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
           {/* Host Shell Responsibility */}
-          <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 space-y-3">
-            <div className="flex items-center justify-between gap-2">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <Cpu className="w-4 h-4 text-brand-500 shrink-0" />
                 <span>SuperApp Host Shell</span>
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 Host Container
               </span>
             </div>
             <ul className="text-sm space-y-2.5 text-slate-600 dark:text-slate-300">
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Crash-Proof Bridge:</strong> Safely intercepts unsupported or unvetted bridge calls so the host app never crashes.</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Introspection API:</strong> Exposes <code className="font-mono text-xs text-brand-600 dark:text-brand-400">canIUse(key)</code> across all platforms for pre-flight verification.</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Rejection Envelope:</strong> Returns a uniform <code className="font-mono text-xs text-rose-600 dark:text-rose-400">CAPABILITY_UNSUPPORTED</code> payload when a feature is missing.</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Pre-Publish Gate:</strong> Automatically rejects MiniApps requiring capabilities not supported by the host build.</span>
               </li>
@@ -333,91 +325,83 @@ export function Section04SdkContract({
           </div>
 
           {/* MiniApp Developer Responsibility */}
-          <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 space-y-3">
-            <div className="flex items-center justify-between gap-2">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <SparklesIcon />
                 <span>MiniApp Developer</span>
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 Partner Codebase
               </span>
             </div>
             <ul className="text-sm space-y-2.5 text-slate-600 dark:text-slate-300">
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Feature Gating:</strong> Call <code className="font-mono text-xs text-brand-600 dark:text-brand-400">canIUse()</code> before rendering native hardware triggers.</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Fallback UI:</strong> Render alternative flows (e.g., manual input if camera is absent; cached data if offline).</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Error Trapping:</strong> Wrap bridge calls in <code className="font-mono text-xs">try / catch</code> to handle denials or timeouts gracefully.</span>
               </li>
-              <li className="flex items-start gap-2">
+              <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                 <span><strong className="text-slate-900 dark:text-white">Scope Transparency:</strong> Register permissions accurately as <code className="font-mono text-xs">Required</code> or <code className="font-mono text-xs">Optional</code>.</span>
               </li>
             </ul>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 2: canIUse() Introspection Protocol */}
-      <div id="contract-can-i-use" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-6 space-y-5 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-              <Terminal className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-                  Pillar 2
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  canIUse() Introspection Protocol &amp; Rejection Contract
-                </h4>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Runtime capability discovery protocol guaranteeing backward compatibility across device versions.
-              </p>
-            </div>
+      <section id="contract-can-i-use" className="space-y-5 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Pillar 2 • Protocol
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              canIUse() Introspection Protocol &amp; Rejection Contract
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Runtime capability discovery protocol guaranteeing backward compatibility across device versions.
+            </p>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold shrink-0">
             Pre-flight Gate Pattern
           </span>
         </div>
 
-        {/* 3-Step Flow Diagram */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2 min-w-0">
-            <div className="flex items-center justify-between gap-2">
+        {/* 3-Step Flow (Clean Borderless Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1 text-sm">
+          <div className="border-l-2 border-slate-300 dark:border-slate-700 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 dark:text-white">1. Introspect</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold shrink-0">Pre-flight</span>
+              <span className="text-xs text-slate-400 font-medium">• Pre-flight</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed break-words">
               Call <code className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400 break-all">FSASuperApp.canIUse(&apos;biometric_auth&apos;)</code> before triggering native sensors.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2 min-w-0">
-            <div className="flex items-center justify-between gap-2">
+          <div className="border-l-2 border-emerald-500 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 dark:text-white">2. Branch Path</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60 font-semibold shrink-0">True / False</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">• True / False</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               If <code className="font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">true</code>, invoke the native bridge. If <code className="font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">false</code>, render fallback UI immediately.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2 min-w-0">
-            <div className="flex items-center justify-between gap-2">
+          <div className="border-l-2 border-rose-500 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 dark:text-white">3. Safe Rejection</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/70 dark:border-rose-800/60 font-semibold shrink-0">Fallback</span>
+              <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">• Fallback</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               If an unsupported method is called directly, the host intercepts it safely and emits the standard rejection envelope.
@@ -426,7 +410,7 @@ export function Section04SdkContract({
         </div>
 
         {/* Rejection Schema Box */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
@@ -434,7 +418,7 @@ export function Section04SdkContract({
             </span>
             <button
               onClick={() => handleCopy(rejectionJsonExample, "rejection-json")}
-              className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-mono transition"
+              className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-mono transition cursor-pointer"
             >
               {copiedSnippet === "rejection-json" ? (
                 <>
@@ -450,11 +434,11 @@ export function Section04SdkContract({
           <div className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto border border-slate-800">
             <pre>{rejectionJsonExample}</pre>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             All SuperApp host versions guarantee this structured JSON error format. Handling this code ensures your MiniApp will never experience a white screen or crash.
           </p>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 3: Focused Implementation Guide for Active Method (HR MiniApp Codebase) */}
       <div id="contract-code-examples" className="space-y-6 scroll-mt-24">
