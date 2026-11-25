@@ -65,6 +65,32 @@ export class ScanFinalizerService {
       type: 'SECURITY_CHECK',
     });
 
+    if (checks?.capability_gate?.passed === true) {
+      await this.issueRepository
+        .createQueryBuilder()
+        .delete()
+        .from(MiniAppIssue)
+        .where('"miniAppId" = :appId', { appId: app.id })
+        .andWhere(
+          '(LOWER(description) LIKE :capNotRec OR LOWER(description) LIKE :capNotSup)',
+          {
+            capNotRec: '%capability%not recognized%',
+            capNotSup: '%capability%not supported%',
+          },
+        )
+        .execute();
+
+      if (app.validationErrors && typeof app.validationErrors === 'object') {
+        const cleanedErrors: Record<string, any> = {};
+        for (const [k, v] of Object.entries(app.validationErrors)) {
+          if (!k.startsWith('permissions.')) {
+            cleanedErrors[k] = v;
+          }
+        }
+        app.validationErrors = cleanedErrors;
+      }
+    }
+
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
     );
