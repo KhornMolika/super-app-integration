@@ -21,7 +21,7 @@ import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
 import { NotificationsService, MailService } from '../../notifications';
 import { MiniappValidationHelper } from './miniapp-validation.helper';
-import { PermissionDetectorHelper } from './permission-detector.helper';
+import { CapabilityDetectorHelper } from './capability-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
 import { resolveOrganizationDetails } from '../../organizations/helpers/organization-resolver.helper';
@@ -101,7 +101,7 @@ export class MiniappMutationHelper {
     private mailService: MailService,
     private notificationsService: NotificationsService,
     private validationHelper: MiniappValidationHelper,
-    private permissionDetectorHelper: PermissionDetectorHelper,
+    private permissionDetectorHelper: CapabilityDetectorHelper,
     @Optional()
     @InjectRepository(Organization)
     private organizationRepository?: Repository<Organization> | any,

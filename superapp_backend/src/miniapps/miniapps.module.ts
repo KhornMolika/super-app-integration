@@ -25,7 +25,7 @@ import { NativeSdkCodegenModule } from '../native-sdk-codegen/native-sdk-codegen
 import { SdkArtifactsModule } from '../sdk-artifacts/sdk-artifacts.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 
-import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
+import { CapabilityDetectorHelper } from './helpers/capability-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
 import { MiniappRetirementHelper } from './helpers/miniapp-retirement.helper';
@@ -64,7 +64,7 @@ import { MiniAppAccessModule } from './access/miniapp-access.module';
   controllers: [MiniappsController, ApkDownloadController],
   providers: [
     MiniappsService,
-    PermissionDetectorHelper,
+    CapabilityDetectorHelper,
     MiniappValidationHelper,
     MiniappLifecycleHelper,
     MiniappRetirementHelper,
@@ -75,7 +75,7 @@ import { MiniAppAccessModule } from './access/miniapp-access.module';
   ],
   exports: [
     MiniappsService,
-    PermissionDetectorHelper,
+    CapabilityDetectorHelper,
     MiniappValidationHelper,
     MiniappLifecycleHelper,
     ArtifactDistributionHelper,

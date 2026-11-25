@@ -11,8 +11,8 @@ export interface DetectedPermissionResult {
 }
 
 @Injectable()
-export class PermissionDetectorHelper {
-  private readonly logger = new Logger(PermissionDetectorHelper.name);
+export class CapabilityDetectorHelper {
+  private readonly logger = new Logger(CapabilityDetectorHelper.name);
 
   constructor(
     @Optional() private readonly gitIntegrationService?: GitIntegrationService,

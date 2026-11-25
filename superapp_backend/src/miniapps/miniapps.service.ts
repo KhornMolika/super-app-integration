@@ -22,7 +22,7 @@ import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
 import { Identity } from '../identities/entities/identity.entity';
 import { AuditService } from '../audit/audit.service';
-import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
+import { CapabilityDetectorHelper } from './helpers/capability-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { nativeEntryClassProblems } from './helpers/native-sdk-config.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
@@ -89,7 +89,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     private issueRepository: Repository<MiniAppIssue>,
 
     private auditService: AuditService,
-    private permissionDetectorHelper: PermissionDetectorHelper,
+    private permissionDetectorHelper: CapabilityDetectorHelper,
     private validationHelper: MiniappValidationHelper,
     private lifecycleHelper: MiniappLifecycleHelper,
     private artifactDistributionHelper: ArtifactDistributionHelper,
