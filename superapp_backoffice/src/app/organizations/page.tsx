@@ -42,7 +42,6 @@ function OrganizationsContent() {
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
   const lastPushedUrlRef = useRef<string>('');
 
   // Server-Driven Pagination & Filter State
@@ -212,7 +211,7 @@ function OrganizationsContent() {
   const fetchOrganizations = useCallback(async () => {
     if (!isSuperOrAdmin) return;
     try {
-      setIsFetching(true);
+      setLoading(true);
       const queryParams: Record<string, any> = {
         page: currentPage,
         limit: pageSize,
@@ -245,7 +244,6 @@ function OrganizationsContent() {
       console.error('Failed to fetch organizations:', err);
       toast.error('Failed to load organizations from database.');
     } finally {
-      setIsFetching(false);
       setLoading(false);
     }
   }, [isSuperOrAdmin, currentPage, pageSize, debouncedSearch, statusFilter]);
@@ -704,13 +702,12 @@ function OrganizationsContent() {
         activeCount={globalCounts.isLoaded ? globalCounts.active : (statusFilter === 'ACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.active)}
         inactiveCount={globalCounts.isLoaded ? globalCounts.inactive : (statusFilter === 'INACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.inactive)}
         onAddClick={handleOpenCreate}
-        isSearching={(!loading && isFetching) || searchQuery !== debouncedSearch}
       />
 
       {/* Organizations Table with Server-Driven Pagination */}
       <OrganizationsTable
         organizations={organizations}
-        loading={(isAuthLoading || loading) && organizations.length === 0}
+        loading={loading}
         onView={handleOpenView}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
