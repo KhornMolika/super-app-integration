@@ -976,6 +976,18 @@ export class MiniappLifecycleHelper {
     }
 
     app.validationStatus = 'PASSED';
+    if (
+      !app.pendingRevision &&
+      ['DRAFT', 'SUBMITTED'].includes((app.lifecycleStatus || '').toUpperCase())
+    ) {
+      app.lifecycleStatus = MiniAppLifecycleStatus.IN_REVIEW;
+    } else if (app.pendingRevision) {
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        validationStatus: 'PASSED',
+        revisionStatus: 'IN_REVIEW',
+      };
+    }
     app.validationStages = stages;
     app.validationReport = {
       score: 100,
