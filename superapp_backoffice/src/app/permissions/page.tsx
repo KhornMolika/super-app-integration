@@ -129,7 +129,7 @@ function PermissionsPageContent() {
             <SlidersHorizontal className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             <span>Roles &amp; Permissions</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Inspect granted security scopes by role or switch to Matrix View for side-by-side comparison.
           </p>
         </div>
@@ -167,9 +167,9 @@ function PermissionsPageContent() {
 
       {/* KPI Shelf */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Total Scopes
             </span>
             <SlidersHorizontal className="w-4 h-4 text-brand-500" />
@@ -180,9 +180,9 @@ function PermissionsPageContent() {
           <span className="text-xs text-slate-400">Across 4 categories</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Critical Actions
             </span>
             <AlertTriangle className="w-4 h-4 text-rose-500" />
@@ -195,9 +195,9 @@ function PermissionsPageContent() {
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               System Scopes
             </span>
             <Lock className="w-4 h-4 text-violet-500" />
@@ -210,9 +210,9 @@ function PermissionsPageContent() {
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Configured Roles
             </span>
             <Layers className="w-4 h-4 text-sky-500" />

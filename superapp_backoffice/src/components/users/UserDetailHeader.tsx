@@ -147,14 +147,14 @@ export function UserDetailHeader({
 
               {/* Name & Email */}
               <div className="space-y-1 min-w-0 w-full px-1">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate" title={user.name}>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 truncate" title={user.name}>
                   {user.name}
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate" title={user.email}>
+                <p className="text-sm text-slate-500 dark:text-slate-400 truncate" title={user.email}>
                   {user.email}
                 </p>
                 {user.position && (
-                  <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 truncate pt-0.5" title={user.position}>
+                  <p className="text-sm font-semibold text-brand-600 dark:text-brand-400 truncate pt-0.5" title={user.position}>
                     {user.position}
                   </p>
                 )}

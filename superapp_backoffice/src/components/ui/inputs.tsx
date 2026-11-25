@@ -3,7 +3,7 @@
 import React from 'react';
 
 export const Label = ({ className = '', children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label className={`block text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-1.5 transition-colors ${className}`} {...props}>
+  <label className={`block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1.5 transition-colors ${className}`} {...props}>
     {children}
   </label>
 );
@@ -13,7 +13,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
+      className={`text-sm text-slate-800 dark:text-slate-100 w-full px-4 py-2.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -25,7 +25,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
+      className={`text-sm text-slate-800 dark:text-slate-100 w-full px-4 py-2.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -356,9 +356,9 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<any, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', as: Component = 'button', children, ...props }, ref) => {
     const sizeStyles: Record<string, string> = {
-      sm: "px-3.5 py-1.5 text-xs rounded-lg",
-      md: "px-6 py-3 text-sm rounded-xl",
-      lg: "px-8 py-4 text-base rounded-2xl",
+      sm: "px-3.5 py-2 text-sm rounded-xl",
+      md: "px-5 py-2.5 text-sm rounded-xl",
+      lg: "px-7 py-3.5 text-base rounded-2xl",
     };
     const baseStyles = "transition-all font-semibold flex items-center justify-center disabled:opacity-50 cursor-pointer";
     const variants: Record<string, string> = {

@@ -234,13 +234,13 @@ export function RolesTab({
       {/* ========================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>Roles &amp; Permission Scopes</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
               {roles.length} Roles
             </span>
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {viewMode === 'inspector'
               ? 'Select any role on the left to inspect its granted permissions cleanly, or switch to Matrix View to compare side-by-side.'
               : 'Side-by-side permission comparison across all configured RBAC roles.'}
@@ -359,7 +359,7 @@ export function RolesTab({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
                             {theme.label || role.name}
                           </span>
                           <span className="px-1.5 py-0.5 rounded font-mono text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/70 shrink-0">
@@ -401,7 +401,7 @@ export function RolesTab({
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2.5 flex-wrap">
-                        <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white">
                           {getRoleTheme(activeRole.name).label || activeRole.name}
                         </h4>
                         <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border ${getRoleTheme(activeRole.name).badge}`}>
@@ -411,7 +411,7 @@ export function RolesTab({
                           {activeRoleGrantCounts.granted} / {activeRoleGrantCounts.total} scopes granted
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                         {activeRole.description || 'Configure permission scopes and access boundaries for this role.'}
                       </p>
                     </div>
@@ -670,7 +670,7 @@ export function RolesTab({
                                 >
                                   {/* Column 1: Permission Name */}
                                   <div className="md:col-span-3 min-w-0">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white block truncate" title={perm.label}>
+                                    <span className="text-sm font-semibold text-slate-900 dark:text-white block truncate" title={perm.label}>
                                       {perm.label}
                                     </span>
                                   </div>

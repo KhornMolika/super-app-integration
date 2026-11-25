@@ -67,7 +67,7 @@ export default function IntegrationForm({
   return (
     <div className="space-y-6">
       <fieldset>
-        <legend className="block text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-2">How it runs</legend>
+        <legend className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">How it runs</legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
           {METHOD_OPTIONS.map(({ value, title, hint, Icon }) => {
             const selected = formData.integrationMethod === value;
