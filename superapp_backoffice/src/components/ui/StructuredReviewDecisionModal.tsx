@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   RotateCcw,
   ExternalLink,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/inputs';
 
@@ -308,35 +309,47 @@ export default function StructuredReviewDecisionModal({
     >
       <div className="fixed inset-0" onClick={!isLoading ? onClose : undefined} />
 
-      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150 z-10">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-[#0B1120] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150 z-10">
+        {/* Top Accent Strip */}
+        <div
+          className={`h-1 w-full shrink-0 ${
+            isReject
+              ? 'bg-gradient-to-r from-rose-500 via-rose-600 to-red-500'
+              : 'bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500'
+          }`}
+        />
+
         {/* Header */}
-        <div className="flex items-start justify-between p-6 sm:p-7 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40">
-          <div className="flex items-center gap-3.5">
+        <div className="flex items-start justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
+          <div className="flex items-center gap-3.5 min-w-0">
             <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
                 isReject
-                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'
               }`}
             >
-              {isReject ? <ShieldAlert className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+              {isReject ? <ShieldAlert className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                  className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
                     isReject
-                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900'
-                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
+                      ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80'
+                      : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/80'
                   }`}
                 >
                   {isReject ? 'Formal Rejection' : 'Action Required'}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate max-w-[200px]">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[220px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800/80">
                   {appId}
                 </span>
               </div>
-              <h3 id="structured-decision-title" className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+              <h3
+                id="structured-decision-title"
+                className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1 truncate"
+              >
                 {isReject ? `Reject MiniApp: ${appName}` : `Request Changes: ${appName}`}
               </h3>
             </div>
@@ -346,23 +359,23 @@ export default function StructuredReviewDecisionModal({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Scrollable Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Step 1: Categorical Root Cause Pills */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                 <span>1. Root-Cause Category</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 Helps developers prioritize remediation
               </span>
             </div>
@@ -376,22 +389,37 @@ export default function StructuredReviewDecisionModal({
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                    className={`group flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
                       isSelected
-                        ? 'border-brand-500 bg-brand-50/80 dark:bg-brand-950/40 text-brand-900 dark:text-brand-100 ring-2 ring-brand-500/20 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
+                        ? isReject
+                          ? 'border-rose-500/70 bg-rose-50/70 dark:bg-rose-950/35 text-rose-900 dark:text-rose-100 ring-1 ring-rose-500/30 shadow-xs'
+                          : 'border-brand-500/70 bg-brand-50/70 dark:bg-brand-950/35 text-brand-900 dark:text-brand-100 ring-1 ring-brand-500/30 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
                     }`}
                   >
-                    <div
-                      className={`p-1.5 rounded-lg shrink-0 ${
-                        isSelected
-                          ? 'bg-brand-600 text-white'
-                          : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      <IconComponent className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`p-1.5 rounded-lg shrink-0 transition-colors ${
+                          isSelected
+                            ? isReject
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-brand-600 text-white'
+                            : 'bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                        }`}
+                      >
+                        <IconComponent className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="truncate">{cat.shortLabel}</span>
                     </div>
-                    <span className="truncate">{cat.shortLabel}</span>
+                    {isSelected && (
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                          isReject ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400' : 'bg-brand-500/20 text-brand-600 dark:text-brand-400'
+                        }`}
+                      >
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -400,21 +428,22 @@ export default function StructuredReviewDecisionModal({
 
           {/* Quick Template Snippets for Selected Category */}
           {categoryDef.templates.length > 0 && (
-            <div className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-slate-50/70 dark:bg-slate-900/40 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                   <FileText className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                  <span>Quick Suggestion Templates (Click to insert)</span>
+                  <span>Quick Templates</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-normal">(Click to insert note &amp; checklist item)</span>
                 </div>
                 {selectedCategory === 'LEGAL_COMPLIANCE' && appId && (
                   <a
                     href={`/miniapps/${appId}/legal`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline shrink-0"
                     title="Open app's legal terms & privacy policy page in a new tab"
                   >
-                    <span>View App Legal Documents</span>
+                    <span>View Legal Docs</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
@@ -425,7 +454,7 @@ export default function StructuredReviewDecisionModal({
                     key={i}
                     type="button"
                     onClick={() => handleApplyTemplate(tpl)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 text-xs font-medium hover:border-brand-400 dark:hover:border-brand-500/70 hover:text-brand-600 dark:hover:text-brand-400 transition-all"
                   >
                     <Plus className="w-3 h-3 text-slate-400" />
                     <span>{tpl.title}</span>
@@ -436,25 +465,25 @@ export default function StructuredReviewDecisionModal({
           )}
 
           {/* Step 2: Itemized Actionable Remediation Checklist */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <CheckSquare className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
                 <span>2. Required Remediation Checklist</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Gated: Developer must address every item before resubmission
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Developer must resolve every item before resubmission
               </span>
             </div>
 
-            <div className="space-y-2 mb-2.5">
+            <div className="space-y-2">
               {checklist.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-2 p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-2xs group"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 focus-within:border-brand-500/70 focus-within:ring-1 focus-within:ring-brand-500/20 transition-all group"
                 >
-                  <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                  <span className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">
                     {idx + 1}
                   </span>
                   <input
@@ -467,7 +496,7 @@ export default function StructuredReviewDecisionModal({
                   <button
                     type="button"
                     onClick={() => handleRemoveChecklistItem(item.id)}
-                    className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors opacity-80 group-hover:opacity-100"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors opacity-70 group-hover:opacity-100"
                     title="Remove item"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -489,14 +518,14 @@ export default function StructuredReviewDecisionModal({
                   }
                 }}
                 placeholder="Add another required checklist item..."
-                className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:outline-none transition-colors"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 focus:outline-none transition-all"
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleAddChecklistItem()}
                 disabled={!newItemText.trim()}
-                className="text-xs px-3 py-2 rounded-xl flex items-center gap-1 shrink-0"
+                className="text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Item</span>
@@ -505,14 +534,14 @@ export default function StructuredReviewDecisionModal({
           </div>
 
           {/* Step 3: Detailed Feedback & Notes */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <span>3. Detailed Reviewer Notes & Explanation</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <span>3. Detailed Reviewer Notes &amp; Explanation</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Visible to developer in detail view & activity log
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Visible in detail view &amp; activity log
               </span>
             </div>
             <textarea
@@ -523,46 +552,58 @@ export default function StructuredReviewDecisionModal({
                 setValidationError(null);
               }}
               placeholder="Provide clear technical rationale, reproduction steps, or compliance guidance..."
-              className="w-full px-3.5 py-3 text-xs leading-relaxed rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all font-sans"
+              className="w-full px-3.5 py-2.5 text-xs leading-relaxed rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all font-sans"
             />
           </div>
 
           {/* Optional: Affected Files / Modules */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                 Target Files or Modules (Optional)
               </label>
-              <span className="text-xs text-slate-500 dark:text-slate-400">Comma-separated</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Comma-separated</span>
             </div>
             <input
               type="text"
               value={targetFileText}
               onChange={(e) => setTargetFileText(e.target.value)}
               placeholder="e.g. pubspec.yaml, lib/main.dart, privacy-policy.html"
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500"
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
           </div>
 
-          {/* Notification Checkbox */}
-          <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
-            <input
-              id="notify-dev"
-              type="checkbox"
-              checked={notifyDev}
-              onChange={(e) => setNotifyDev(e.target.checked)}
-              className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500"
-            />
-            <label htmlFor="notify-dev" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
-              <div className="font-semibold flex items-center gap-1.5">
-                <Bell className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          {/* Custom Notification Checkbox Card (no native default checkbox) */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={notifyDev}
+            onClick={() => setNotifyDev((prev) => !prev)}
+            className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+              notifyDev
+                ? 'border-brand-500/50 bg-brand-50/40 dark:bg-brand-950/20'
+                : 'border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 hover:border-slate-300 dark:hover:border-slate-700'
+            }`}
+          >
+            <span
+              className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                notifyDev
+                  ? 'bg-brand-600 border-brand-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent'
+              }`}
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <Bell className={`w-3.5 h-3.5 ${notifyDev ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400'}`} />
                 <span>Notify Developer Immediately</span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                 Dispatches real-time WebSocket alert, Telegram group notification, and email to registered maintainers.
               </p>
-            </label>
-          </div>
+            </div>
+          </button>
 
           {/* Validation Error Message */}
           {validationError && (
@@ -574,44 +615,49 @@ export default function StructuredReviewDecisionModal({
         </form>
 
         {/* Modal Footer Actions */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/80 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/80 dark:bg-slate-900/60">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
-            className="text-xs px-4 py-2.5 rounded-xl"
+            className="text-xs px-4 py-2 rounded-xl"
           >
             Cancel
           </Button>
 
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className={`text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-white shadow-sm transition-all ${
-              isReject
-                ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
-                : 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
-            }`}
-          >
-            {isLoading ? (
-              <>
-                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                <span>Submitting Decision...</span>
-              </>
-            ) : isReject ? (
-              <>
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Confirm Rejection</span>
-              </>
-            ) : (
-              <>
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>Send Changes Request</span>
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-[11px] text-slate-500 dark:text-slate-400">
+              {checklist.length} {checklist.length === 1 ? 'item' : 'items'} in checklist
+            </span>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className={`text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-white shadow-sm transition-all ${
+                isReject
+                  ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
+                  : 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Submitting Decision...</span>
+                </>
+              ) : isReject ? (
+                <>
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Confirm Rejection</span>
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>Send Changes Request</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
