@@ -94,7 +94,16 @@ export function AppShell({ children }: AppShellProps) {
 
   // Guard against flash of protected dashboard content before redirect completes
   if (!isAuthenticated) {
-    return <div className="h-screen w-full bg-slate-950" />;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center animate-pulse">
+            <span className="font-bold text-brand-400 text-sm">FSA</span>
+          </div>
+          <span className="text-xs text-slate-400 font-medium">Redirecting to sign in...</span>
+        </div>
+      </div>
+    );
   }
 
   // Authenticated Dashboard Layout with Sidebar and Navigation Header
