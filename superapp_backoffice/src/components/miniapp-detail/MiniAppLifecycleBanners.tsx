@@ -373,12 +373,11 @@ export default function MiniAppLifecycleBanners({
             {actions.requestChanges && (
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => onLifecycleAction('request-changes')}
                 disabled={isSubmitting}
-                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap border-amber-300 dark:border-amber-700/80 text-amber-800 dark:text-amber-200 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 shadow-2xs inline-flex items-center gap-1.5 transition-all"
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-sm shadow-amber-500/15 inline-flex items-center gap-1.5 transition-all"
               >
-                <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <span>Request Changes</span>
@@ -387,12 +386,11 @@ export default function MiniAppLifecycleBanners({
             {actions.reject && (
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => onLifecycleAction('reject')}
                 disabled={isSubmitting}
-                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 shadow-2xs inline-flex items-center gap-1.5 transition-all"
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/15 inline-flex items-center gap-1.5 transition-all"
               >
-                <svg className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 <span>Reject</span>
