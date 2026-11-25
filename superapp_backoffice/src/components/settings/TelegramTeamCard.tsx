@@ -67,6 +67,7 @@ export function TelegramTeamCard({
   onCleanupInactive,
 }: TelegramTeamCardProps) {
   const hasTeamChat = Boolean(telegramStatus?.user?.teamTelegramChatId);
+  const [revealTeamChatId, setRevealTeamChatId] = useState(false);
   const [testingGroupId, setTestingGroupId] = useState<string | null>(null);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [migratingGroupId, setMigratingGroupId] = useState<string | null>(null);
@@ -260,13 +261,22 @@ export function TelegramTeamCard({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2.5 mt-2">
-            <Input
-              type="text"
-              value={teamChatIdInput}
-              onChange={(e) => setTeamChatIdInput(e.target.value)}
-              placeholder="e.g. -5542396469 or -1002345678901"
-              className="font-mono text-xs sm:text-sm flex-1 rounded-xl"
-            />
+            <div className="relative flex-1">
+              <Input
+                type={revealTeamChatId ? 'text' : 'password'}
+                value={teamChatIdInput}
+                onChange={(e) => setTeamChatIdInput(e.target.value)}
+                placeholder="e.g. -5542396469 or -1002345678901"
+                className="font-mono text-xs sm:text-sm w-full pr-14 rounded-xl"
+              />
+              <button
+                type="button"
+                onClick={() => setRevealTeamChatId((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                {revealTeamChatId ? 'Hide' : 'Show'}
+              </button>
+            </div>
             <Button
               type="submit"
               disabled={savingTeamChat}
