@@ -82,7 +82,11 @@ async function verifyDomainViaBrowser(
           ? payload.allowedDomains
           : [hostname];
 
-      const perms = Array.isArray(payload.permissions) ? payload.permissions : [];
+      const perms = Array.isArray(payload.capabilities)
+        ? payload.capabilities
+        : Array.isArray(payload.permissions)
+          ? payload.permissions
+          : [];
 
       return {
         success: true,
@@ -508,7 +512,7 @@ export default function WebViewIntegrationForm({
       verificationToken: token,
       environment: formData.environment || (process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? 'DEV' : 'PROD'),
       allowedDomains: allowed,
-      permissions: Array.isArray(formData.permissions) ? formData.permissions.map((p: any) => p.type || p) : [],
+      capabilities: Array.isArray(formData.permissions) ? formData.permissions.map((p: any) => p.type || p) : [],
     },
     null,
     2,
