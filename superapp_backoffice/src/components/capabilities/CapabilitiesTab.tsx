@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Search,
   X,
+  Plus,
   Table as TableIcon,
   LayoutGrid,
   Shield,
@@ -36,6 +37,7 @@ interface CapabilitiesTabProps {
   loading?: boolean;
   onSyncGitLab?: () => void;
   isSyncingGitLab?: boolean;
+  onCapabilityCreated?: () => void;
   getPermissionIcon?: (key?: string) => React.ReactNode;
 }
 
@@ -44,6 +46,7 @@ export function CapabilitiesTab({
   loading = false,
   onSyncGitLab,
   isSyncingGitLab = false,
+  onCapabilityCreated,
 }: CapabilitiesTabProps) {
   const view = useCapabilityView();
   const canManageAllowlist = view.canEditCatalog;
@@ -60,6 +63,26 @@ export function CapabilitiesTab({
   const initialView = searchParams?.get('view') === 'grid' ? 'grid' : 'table';
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingCap, setCreatingCap] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    key: '',
+    name: '',
+    description: '',
+    category: 'PLATFORM',
+    minSuperAppVersion: '1.0.0',
+    isActive: true,
+    isAllowed: true,
+    aliasesText: '',
+    pubspecText: '',
+    androidPermsText: '',
+    iosPlistText: '',
+    jsKeywordsText: '',
+    defaultPurpose: '',
+    iosKey: '',
+    androidPermission: '',
+    defaultAction: '',
+  });
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
@@ -391,6 +414,17 @@ export function CapabilitiesTab({
             <span>Disallowed ({disallowedCount})</span>
           </button>
         </div>
+
+        {canManageAllowlist && (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors cursor-pointer shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Capability</span>
+          </button>
+        )}
       </div>
 
       {/* Search, Filter & View Toggle Toolbar */}
@@ -865,6 +899,305 @@ export function CapabilitiesTab({
             pageSizeOptions={viewMode === 'table' ? [5, 10, 20, 50] : [3, 6, 9, 12]}
             showTotal={true}
           />
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Create Dynamic Capability
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Stored in PostgreSQL and immediately used by detection, alias resolution, and gates.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              className="space-y-4 text-xs"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!createForm.key.trim() || !createForm.name.trim()) {
+                  toast.error('Key and Display Name are required.');
+                  return;
+                }
+                const splitCsv = (v: string) =>
+                  v
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                try {
+                  setCreatingCap(true);
+                  await permissionsApi.create({
+                    key: createForm.key.trim().toLowerCase().replace(/\s+/g, '_'),
+                    name: createForm.name.trim(),
+                    description: createForm.description.trim() || undefined,
+                    category: createForm.category.trim() || 'PLATFORM',
+                    minSuperAppVersion: createForm.minSuperAppVersion.trim() || '1.0.0',
+                    isActive: createForm.isActive,
+                    isAllowed: createForm.isAllowed,
+                    aliases: splitCsv(createForm.aliasesText),
+                    detectionRules: {
+                      pubspecPackages: splitCsv(createForm.pubspecText),
+                      androidPermissions: splitCsv(createForm.androidPermsText),
+                      iosPlistKeys: splitCsv(createForm.iosPlistText),
+                      jsBridgeKeywords: splitCsv(createForm.jsKeywordsText),
+                      defaultPurpose: createForm.defaultPurpose.trim() || undefined,
+                    },
+                    storeMapping: {
+                      iosKey: createForm.iosKey.trim() || undefined,
+                      androidPermission: createForm.androidPermission.trim() || undefined,
+                      defaultAction: createForm.defaultAction.trim() || undefined,
+                    },
+                  });
+                  toast.success(`Capability "${createForm.name.trim()}" created.`);
+                  setShowCreateModal(false);
+                  setCreateForm({
+                    key: '',
+                    name: '',
+                    description: '',
+                    category: 'PLATFORM',
+                    minSuperAppVersion: '1.0.0',
+                    isActive: true,
+                    isAllowed: true,
+                    aliasesText: '',
+                    pubspecText: '',
+                    androidPermsText: '',
+                    iosPlistText: '',
+                    jsKeywordsText: '',
+                    defaultPurpose: '',
+                    iosKey: '',
+                    androidPermission: '',
+                    defaultAction: '',
+                  });
+                  onCapabilityCreated?.();
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to create capability.');
+                } finally {
+                  setCreatingCap(false);
+                }
+              }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Capability Key *
+                  </label>
+                  <input
+                    required
+                    value={createForm.key}
+                    onChange={(e) => setCreateForm({ ...createForm, key: e.target.value })}
+                    placeholder="e.g. nfc_reader"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Display Name *
+                  </label>
+                  <input
+                    required
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                    placeholder="e.g. NFC Smart Card Reader"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Category
+                  </label>
+                  <input
+                    value={createForm.category}
+                    onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
+                    placeholder="e.g. HARDWARE"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Min SuperApp Version
+                  </label>
+                  <input
+                    value={createForm.minSuperAppVersion}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, minSuperAppVersion: e.target.value })
+                    }
+                    placeholder="1.0.0"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Description
+                  </label>
+                  <input
+                    value={createForm.description}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, description: e.target.value })
+                    }
+                    placeholder="Short description of what this capability enables"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Aliases (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.aliasesText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, aliasesText: e.target.value })
+                    }
+                    placeholder="e.g. nfc, contactless, smart_card"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Pubspec Packages (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.pubspecText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, pubspecText: e.target.value })
+                    }
+                    placeholder="e.g. nfc_manager"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    JS Bridge Keywords (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.jsKeywordsText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, jsKeywordsText: e.target.value })
+                    }
+                    placeholder="e.g. nfcScan, readNfc"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Android Permissions (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.androidPermsText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, androidPermsText: e.target.value })
+                    }
+                    placeholder="e.g. android.permission.NFC"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    iOS Info.plist Keys (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.iosPlistText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, iosPlistText: e.target.value })
+                    }
+                    placeholder="e.g. NFCReaderUsageDescription"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Store Mapping: iOS Key
+                  </label>
+                  <input
+                    value={createForm.iosKey}
+                    onChange={(e) => setCreateForm({ ...createForm, iosKey: e.target.value })}
+                    placeholder="NFCReaderUsageDescription"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Store Mapping: Android Permission
+                  </label>
+                  <input
+                    value={createForm.androidPermission}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, androidPermission: e.target.value })
+                    }
+                    placeholder="android.permission.NFC"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Default Purpose / Action
+                  </label>
+                  <input
+                    value={createForm.defaultPurpose}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        defaultPurpose: e.target.value,
+                        defaultAction: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. scan contactless NFC tags and identity cards"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-6 pt-1">
+                  <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.isActive}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, isActive: e.target.checked })
+                      }
+                    />
+                    <span>Active in Host Shell</span>
+                  </label>
+                  <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.isAllowed}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, isAllowed: e.target.checked })
+                      }
+                    />
+                    <span>Allowed by Host Policy</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingCap}
+                  className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold disabled:opacity-50"
+                >
+                  {creatingCap ? 'Creating...' : 'Create Capability'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

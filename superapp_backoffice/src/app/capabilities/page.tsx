@@ -348,6 +348,7 @@ function CapabilitiesContent() {
               loading={loading}
               onSyncGitLab={view.canSync ? handleSyncGitLab : undefined}
               isSyncingGitLab={isSyncingGitLab}
+              onCapabilityCreated={loadData}
               getPermissionIcon={getPermissionIcon}
             />
           )}

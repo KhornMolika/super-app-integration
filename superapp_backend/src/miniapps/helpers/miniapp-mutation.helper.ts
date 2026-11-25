@@ -1140,7 +1140,7 @@ export class MiniappMutationHelper {
   async inspectPackageArtifact(file: Express.Multer.File) {
     const res = this.storageService.inspectPackageArchive(file);
     const detected =
-      this.permissionDetectorHelper.detectFromPubspecDependencies(
+      await this.permissionDetectorHelper.detectFromPubspecDependencies(
         res.pubspec?.dependencies || {},
         res.pubspec?.name,
       );
@@ -1203,7 +1203,7 @@ export class MiniappMutationHelper {
     }
     this.logger.log(`Package archive uploaded to MinIO: ${label} -> ${res?.packageStoragePath || res?.minioKey || '?'}`);
     const detected =
-      this.permissionDetectorHelper.detectFromPubspecDependencies(
+      await this.permissionDetectorHelper.detectFromPubspecDependencies(
         res.pubspec?.dependencies || {},
         res.pubspec?.name,
       );

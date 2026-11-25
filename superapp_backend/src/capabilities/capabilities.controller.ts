@@ -12,7 +12,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CapabilitiesService } from './capabilities.service';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
-import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
+import {
+  CreateCapabilityDefinitionDto,
+  UpdateCapabilityDefinitionDto,
+} from './dto/update-capability-definition.dto';
 import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 
 @Controller(['capabilities', 'permissions', 'api/capabilities', 'api/permissions'])
@@ -23,6 +26,13 @@ export class CapabilitiesController {
   @UseGuards(JwtAuthGuard)
   async findAll(@Query() query: QueryCapabilitiesDto) {
     return this.capabilitiesService.findAll(query);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('permission:manage')
+  async create(@Body() data: CreateCapabilityDefinitionDto) {
+    return this.capabilitiesService.create(data);
   }
 
   /**

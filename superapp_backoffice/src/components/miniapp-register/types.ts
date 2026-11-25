@@ -65,4 +65,5 @@ export interface RegisterModalsProps {
   setModalState: React.Dispatch<React.SetStateAction<SubmissionModalState>>;
   onConfirmUnsupported: () => Promise<void>;
   onFixLater: () => Promise<void>;
+  allowedCapabilityKeys?: string[];
 }

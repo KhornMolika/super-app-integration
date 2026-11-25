@@ -10,13 +10,19 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as YAML from 'yaml';
 import { CapabilityDefinition } from './entities/capability-definition.entity';
-import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
+import {
+  CreateCapabilityDefinitionDto,
+  UpdateCapabilityDefinitionDto,
+} from './dto/update-capability-definition.dto';
 import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
 import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { createPaginatedResponse } from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
-import { resolveCapabilityAliases } from './capability-aliases';
+import {
+  collectDefinitionKeys,
+  findMatchingDefinition,
+} from './capability-aliases';
 
 @Injectable()
 export class CapabilitiesService implements OnApplicationBootstrap {
@@ -99,6 +105,14 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
+  /** Returns all active CapabilityDefinition rows (including dynamic rules & aliases). */
+  async getActiveDefinitions(): Promise<CapabilityDefinition[]> {
+    return this.capabilityDefinitionRepository.find({
+      where: { isActive: true },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
   /** Keys and names of the active catalog, for "did you mean" suggestions. */
   async listCatalogKeys(): Promise<Array<{ key: string; name: string }>> {
     return this.capabilityDefinitionRepository
@@ -110,12 +124,38 @@ export class CapabilitiesService implements OnApplicationBootstrap {
 
   async findByKey(key: string): Promise<CapabilityDefinition | null> {
     if (!key) return null;
-    const candidates = resolveCapabilityAliases(key);
-    return this.capabilityDefinitionRepository
+    const direct = await this.capabilityDefinitionRepository
       .createQueryBuilder('perm')
-      .where('LOWER(perm.key) IN (:...candidates)', { candidates })
-      .orWhere('LOWER(perm.name) IN (:...candidates)', { candidates })
+      .where('LOWER(perm.key) = LOWER(:key)', { key })
+      .orWhere('LOWER(perm.name) = LOWER(:key)', { key })
       .getOne();
+    if (direct) return direct;
+
+    // Fallback to DB-stored aliases / metadata.requiredPermissions
+    const all = await this.capabilityDefinitionRepository.find();
+    return findMatchingDefinition(key, all);
+  }
+
+  async create(
+    data: CreateCapabilityDefinitionDto,
+  ): Promise<CapabilityDefinition> {
+    const cleanKey = data.key.trim().toLowerCase().replace(/\s+/g, '_');
+    const existing = await this.capabilityDefinitionRepository.findOne({
+      where: { key: cleanKey },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Capability with key "${cleanKey}" already exists.`,
+      );
+    }
+    const entity = this.capabilityDefinitionRepository.create({
+      ...data,
+      key: cleanKey,
+      aliases: Array.isArray(data.aliases) ? data.aliases : [],
+      detectionRules: data.detectionRules || {},
+      storeMapping: data.storeMapping || {},
+    });
+    return this.capabilityDefinitionRepository.save(entity);
   }
 
   async findOne(id: string): Promise<CapabilityDefinition> {
@@ -148,33 +188,26 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     try {
       const rows = await this.capabilityDefinitionRepository
         .createQueryBuilder('cap')
-        .select(['cap.key', 'cap.name', 'cap.metadata'])
+        .select([
+          'cap.key',
+          'cap.name',
+          'cap.aliases',
+          'cap.metadata',
+        ])
         .where('cap.isActive = :isActive', { isActive: true })
         .andWhere('cap.isAllowed = :isAllowed', { isAllowed: true })
         .getMany();
 
       const keys: string[] = [];
       for (const r of rows) {
-        if (r.key) keys.push(r.key.toLowerCase().trim());
-        const reqPerms = r.metadata?.requiredPermissions;
-        if (Array.isArray(reqPerms)) {
-          for (const p of reqPerms) {
-            if (typeof p === 'string' && p.trim()) {
-              keys.push(p.toLowerCase().trim());
-            }
-          }
-        }
+        keys.push(...collectDefinitionKeys(r));
       }
 
-      if (keys.length > 0) {
-        return Array.from(new Set(keys));
-      }
+      return Array.from(new Set(keys));
     } catch (err: any) {
       this.logger.warn(`Could not query allowed capability keys: ${err.message}`);
+      return [];
     }
-
-    // Default safe baseline whitelist if database catalog has not been synchronized yet
-    return ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
   }
 
   /**
@@ -467,12 +500,17 @@ export class CapabilitiesService implements OnApplicationBootstrap {
         description: perm.description,
         category: perm.category || 'PLATFORM',
         requiredPermissions: meta.requiredPermissions || [perm.key],
+        aliases: Array.isArray(perm.aliases) ? perm.aliases : [],
+        detectionRules: perm.detectionRules || {},
+        storeMapping: perm.storeMapping || {},
         platform: meta.platform || 'Cross-Platform',
         implementationType: meta.implementationType || 'FLUTTER_PLUGIN',
         providerPackage: meta.providerPackage || perm.key,
         jsBridgeMethod: meta.jsBridgeMethod || `FSASuperApp.${perm.key}()`,
         status: perm.isActive ? 'Active' : 'Deprecated',
+        isActive: perm.isActive !== false,
         isAllowed: perm.isAllowed !== false,
+        isDeprecated: Boolean(perm.isDeprecated),
         source: meta.source || 'database-registry (synced from gitlab:main)',
         minSuperAppVersion: perm.minSuperAppVersion || '1.0.0',
         lastSyncedAt: meta.lastSyncedAt,
@@ -497,13 +535,8 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const activeKeySet = new Set(activeRegistryKeys);
 
     for (const cap of realCapabilities) {
-      if (Array.isArray(cap.requiredPermissions)) {
-        for (const rp of cap.requiredPermissions) {
-          activeKeySet.add(rp.toLowerCase());
-        }
-      }
-      if (cap.name) {
-        activeKeySet.add(cap.name.toLowerCase());
+      for (const k of collectDefinitionKeys(cap)) {
+        activeKeySet.add(k);
       }
     }
 
@@ -533,13 +566,7 @@ export class CapabilitiesService implements OnApplicationBootstrap {
       const lowerKey = rawKey.toLowerCase();
       const isRequired = typeof perm === 'object' && perm.required !== false;
 
-      const isSupported =
-        activeKeySet.has(lowerKey) ||
-        (lowerKey === 'camera' && (activeKeySet.has('take_photo') || activeKeySet.has('scan_qr_code'))) ||
-        (lowerKey === 'scan_qr_code' && activeKeySet.has('take_photo')) ||
-        (lowerKey === 'location' && (activeKeySet.has('get_location') || activeKeySet.has('high_precision_gps'))) ||
-        (lowerKey === 'biometrics' && activeKeySet.has('biometric_auth')) ||
-        (lowerKey === 'storage' && activeKeySet.has('secure_storage'));
+      const isSupported = activeKeySet.has(lowerKey);
 
       if (!isSupported) {
         if (isRequired) {

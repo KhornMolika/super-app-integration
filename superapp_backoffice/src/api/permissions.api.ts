@@ -1,5 +1,19 @@
 import { apiClient, unwrapData, unwrapItem, PaginatedResponse } from './client';
 
+export interface CapabilityDetectionRules {
+  pubspecPackages?: string[];
+  androidPermissions?: string[];
+  iosPlistKeys?: string[];
+  jsBridgeKeywords?: string[];
+  defaultPurpose?: string;
+}
+
+export interface CapabilityStoreMapping {
+  iosKey?: string;
+  androidPermission?: string;
+  defaultAction?: string;
+}
+
 export interface Permission {
   id: string;
   key?: string;
@@ -13,6 +27,9 @@ export interface Permission {
   deprecatedInVersion?: string;
   minSuperAppVersion?: string;
   maxSuperAppVersion?: string;
+  aliases?: string[];
+  detectionRules?: CapabilityDetectionRules;
+  storeMapping?: CapabilityStoreMapping;
   metadata?: {
     androidPermission?: string;
     iosPlistKey?: string;
@@ -39,7 +56,13 @@ export interface CapabilityItem {
   providerPackage?: string;
   jsBridgeMethod?: string;
   status: 'Active' | 'Beta' | 'Proposed';
+  isActive?: boolean;
   isAllowed?: boolean;
+  isDeprecated?: boolean;
+  minSuperAppVersion?: string;
+  aliases?: string[];
+  detectionRules?: CapabilityDetectionRules;
+  storeMapping?: CapabilityStoreMapping;
   associatedMiniAppsCount?: number;
 }
 
@@ -191,6 +214,24 @@ export const permissionsApi = {
     apiClient<{ allowedKeys: string[] }>('/api/permissions/allowed-keys').then((res) =>
       unwrapItem<{ allowedKeys: string[] }>(res)?.allowedKeys ?? []
     ),
+
+  create: (data: {
+    key: string;
+    name: string;
+    description?: string;
+    category?: string;
+    isActive?: boolean;
+    isAllowed?: boolean;
+    minSuperAppVersion?: string;
+    aliases?: string[];
+    detectionRules?: CapabilityDetectionRules;
+    storeMapping?: CapabilityStoreMapping;
+    metadata?: Record<string, any>;
+  }) =>
+    apiClient<Permission>('/api/capabilities', {
+      method: 'POST',
+      body: data,
+    }).then((res) => unwrapItem<Permission>(res)),
 
   update: (id: string, data: Partial<Permission>) =>
     apiClient<Permission>(`/api/permissions/${id}`, {

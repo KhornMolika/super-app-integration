@@ -7,7 +7,6 @@ import SubmissionModal from '@/components/ui/SubmissionModal';
 import UnsupportedCapabilitiesModal from '@/components/forms/UnsupportedCapabilitiesModal';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import {
-  WHITELISTED_HOST_CAPABILITIES,
   normalizeCapabilityKey,
 } from '@/components/forms/CapabilitiesForm';
 import { RegisterModalsProps } from './types';
@@ -23,6 +22,7 @@ export function RegisterModals({
   setModalState,
   onConfirmUnsupported,
   onFixLater,
+  allowedCapabilityKeys = [],
 }: RegisterModalsProps) {
   const router = useRouter();
 
@@ -53,7 +53,7 @@ export function RegisterModals({
         isOpen={showUnsupportedModal}
         unsupportedPermissions={(formData.permissions || []).filter(
           (p: any) =>
-            !WHITELISTED_HOST_CAPABILITIES.includes(normalizeCapabilityKey(p.type || ''))
+            !allowedCapabilityKeys.includes(normalizeCapabilityKey(p.type || ''))
         )}
         onConfirm={onConfirmUnsupported}
         onCancel={() => setShowUnsupportedModal(false)}

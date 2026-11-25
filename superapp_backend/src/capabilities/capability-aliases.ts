@@ -1,63 +1,65 @@
-/**
- * Canonical capability alias groups so UI/scanner keys (e.g. "Camera", "Location",
- * "Biometrics") resolve cleanly to database CapabilityDefinition keys (e.g.
- * "take_photo", "scan_qr_code", "get_location", "biometric_auth").
- */
-const CAPABILITY_ALIAS_GROUPS: string[][] = [
-  [
-    'camera',
-    'take_photo',
-    'scan_qr_code',
-    'qr_scanner',
-    'scan_qr',
-    'photo',
-    'camera & document capture',
-    'camera & imaging',
-  ],
-  [
-    'location',
-    'get_location',
-    'gps',
-    'geolocation',
-    'geolocation services',
-    'location services',
-  ],
-  [
-    'biometrics',
-    'biometric',
-    'biometric_auth',
-    'face_id',
-    'fingerprint',
-    'biometric authentication',
-  ],
-  [
-    'storage',
-    'secure_storage',
-    'get_secure_storage',
-    'secure vault storage',
-  ],
-  [
-    'microphone',
-    'record',
-    'audio',
-    'microphone & audio',
-  ],
-  [
-    'webview_runtime',
-    'webview',
-    'internet',
-    'sandboxed webview runtime',
-  ],
-];
+import type { CapabilityDefinition } from './entities/capability-definition.entity';
 
-/** Returns all lowercase alias keys (including the normalized input) for lookup. */
-export function resolveCapabilityAliases(rawKey: string): string[] {
-  const lower = (rawKey || '').toLowerCase().trim();
-  if (!lower) return [];
-  for (const group of CAPABILITY_ALIAS_GROUPS) {
-    if (group.includes(lower)) {
-      return group;
+/**
+ * Collects all normalized lookup keys for a DB CapabilityDefinition row:
+ * its primary key, display name, configured aliases, and metadata.requiredPermissions.
+ */
+export function collectDefinitionKeys(
+  def: Pick<CapabilityDefinition, 'key' | 'name'> & {
+    aliases?: string[];
+    metadata?: any;
+  },
+): string[] {
+  const keys = new Set<string>();
+  if (def.key) keys.add(def.key.toLowerCase().trim());
+  if (def.name) keys.add(def.name.toLowerCase().trim());
+  if (Array.isArray(def.aliases)) {
+    for (const alias of def.aliases) {
+      if (typeof alias === 'string' && alias.trim()) {
+        keys.add(alias.toLowerCase().trim());
+      }
     }
   }
-  return [lower];
+  const reqPerms = def.metadata?.requiredPermissions;
+  if (Array.isArray(reqPerms)) {
+    for (const p of reqPerms) {
+      if (typeof p === 'string' && p.trim()) {
+        keys.add(p.toLowerCase().trim());
+      }
+    }
+  }
+  return Array.from(keys);
+}
+
+/**
+ * Finds the best matching CapabilityDefinition from a DB-loaded list using
+ * exact key/name match first, then DB-stored aliases/requiredPermissions.
+ */
+export function findMatchingDefinition<
+  T extends Pick<CapabilityDefinition, 'key' | 'name'> & {
+    aliases?: string[];
+    metadata?: any;
+    isActive?: boolean;
+    isAllowed?: boolean;
+  },
+>(rawKey: string, definitions: T[]): T | null {
+  const lower = (rawKey || '').toLowerCase().trim();
+  if (!lower) return null;
+
+  const exact = definitions.find(
+    (d) =>
+      d.key?.toLowerCase().trim() === lower ||
+      d.name?.toLowerCase().trim() === lower,
+  );
+  if (exact) return exact;
+
+  const byAlias = definitions.filter((d) =>
+    collectDefinitionKeys(d).includes(lower),
+  );
+  if (byAlias.length === 0) return null;
+
+  return (
+    byAlias.find((d) => d.isActive !== false && d.isAllowed !== false) ||
+    byAlias[0]
+  );
 }

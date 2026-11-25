@@ -1,9 +1,12 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import AdmZip from 'adm-zip';
+import * as YAML from 'yaml';
 import { GitIntegrationService } from '../../integrations/git/git-integration.service';
 import { GitLabProvider } from '../../integrations/git/providers/gitlab.provider';
 import { StorageService } from '../../storage/storage.service';
-import * as YAML from 'yaml';
+import { CapabilitiesService } from '../../capabilities/capabilities.service';
+import { CapabilityDefinition } from '../../capabilities/entities/capability-definition.entity';
+import { findMatchingDefinition } from '../../capabilities/capability-aliases';
 
 export interface DetectedPermissionResult {
   type: string;
@@ -20,12 +23,14 @@ export class CapabilityDetectorHelper {
     @Optional() private readonly gitIntegrationService?: GitIntegrationService,
     @Optional() private readonly gitlabProvider?: GitLabProvider,
     @Optional() private readonly storageService?: StorageService,
+    @Optional() private readonly capabilitiesService?: CapabilitiesService,
   ) {}
 
   /**
-   * Automatically discovers required native permissions from MiniApp endpoint,
-   * GitLab repository (branch main or specified branch), association file (.well-known),
-   * uploaded Native SDK artifacts (.aar / .xcframework), and script ASTs.
+   * Automatically discovers required capabilities from MiniApp endpoint,
+   * Git repository (pubspec.yaml), association file (.well-known),
+   * uploaded Native SDK binaries (.aar / .xcframework), and JS bundle scan,
+   * using dynamic rules stored in PostgreSQL `capability_definitions`.
    */
   async detect(body: {
     productionUrl?: string;
@@ -42,16 +47,20 @@ export class CapabilityDetectorHelper {
     count: number;
   }> {
     const detected: DetectedPermissionResult[] = [];
-    const addedTypes = new Set<string>();
+    const addedKeys = new Set<string>();
     const appLabel = body.name?.trim() || '$(PRODUCT_NAME)';
 
+    const definitions = this.capabilitiesService
+      ? await this.capabilitiesService.getActiveDefinitions()
+      : [];
+
     const formatCompliantPurpose = (
-      type: string,
+      label: string,
       rawPurpose: string,
     ): string => {
       const trimmed = (rawPurpose || '').trim();
       if (!trimmed) {
-        return `${appLabel} requires access to your ${type.toLowerCase()} to provide core mini application features.`;
+        return `${appLabel} requires access to your ${label.toLowerCase()} to provide core mini application features.`;
       }
       if (
         trimmed.toLowerCase().includes('requires') &&
@@ -68,32 +77,36 @@ export class CapabilityDetectorHelper {
       if (cleaned.endsWith('.')) {
         cleaned = cleaned.slice(0, -1);
       }
-      return `${appLabel} requires access to your ${type.toLowerCase()} to ${cleaned}.`;
+      return `${appLabel} requires access to your ${label.toLowerCase()} to ${cleaned}.`;
     };
 
-    const addPerm = (
+    const addCapability = (
       type: string,
       purpose: string,
       source: string,
       confidence: 'HIGH' | 'MEDIUM' = 'HIGH',
     ) => {
-      const normalizedType = type.charAt(0).toUpperCase() + type.slice(1);
-      if (!addedTypes.has(normalizedType.toLowerCase())) {
-        addedTypes.add(normalizedType.toLowerCase());
-        const compliantPurpose = formatCompliantPurpose(
-          normalizedType,
-          purpose,
-        );
+      const cleanType = (type || '').trim();
+      if (!cleanType) return;
+      const dedupeKey = cleanType.toLowerCase();
+      if (!addedKeys.has(dedupeKey)) {
+        addedKeys.add(dedupeKey);
+        const def = findMatchingDefinition(cleanType, definitions);
+        const label = def?.name || cleanType;
+        const resolvedPurpose =
+          purpose ||
+          def?.detectionRules?.defaultPurpose ||
+          `support ${label.toLowerCase()} features`;
         detected.push({
-          type: normalizedType,
-          purpose: compliantPurpose,
+          type: cleanType,
+          purpose: formatCompliantPurpose(label, resolvedPurpose),
           source,
           confidence,
         });
       }
     };
 
-    // 0. Check Git repository if gitUrl is provided (fetches pubspec.yaml from Git repository)
+    // 0. Check Git repository if gitUrl is provided (fetches pubspec.yaml)
     if (
       body.gitUrl &&
       body.gitUrl.trim() &&
@@ -105,7 +118,7 @@ export class CapabilityDetectorHelper {
           ? `${body.gitPath.trim().replace(/^\/+|\/+$/g, '')}/pubspec.yaml`
           : 'pubspec.yaml';
         this.logger.log(
-          `Auto-detecting permissions from Git repository '${body.gitUrl}' (branch: ${branch}, file: ${targetPath})`,
+          `Auto-detecting capabilities from Git repository '${body.gitUrl}' (branch: ${branch}, file: ${targetPath})`,
         );
         const pubspecRaw = this.gitIntegrationService
           ? await this.gitIntegrationService.getFileContent(
@@ -121,25 +134,26 @@ export class CapabilityDetectorHelper {
         if (pubspecRaw) {
           const parsed = YAML.parse(pubspecRaw);
           const pkgDeps = parsed?.dependencies || {};
-          const detectedFromGit = this.detectFromPubspecDependencies(
+          const detectedFromGit = await this.detectFromPubspecDependencies(
             pkgDeps,
             body.name || parsed?.name,
+            definitions,
           );
           const providerLabel = body.gitUrl.toLowerCase().includes('github')
             ? 'GitHub'
             : 'GitLab';
           for (const item of detectedFromGit) {
-            addPerm(
+            addCapability(
               item.type,
               item.purpose,
               `${providerLabel} (${branch}): ${item.source}`,
-              'HIGH',
+              item.confidence,
             );
           }
         }
       } catch (err: any) {
         this.logger.warn(
-          `Could not auto-detect permissions from Git repository (${body.gitUrl}): ${err.message}`,
+          `Could not auto-detect capabilities from Git repository (${body.gitUrl}): ${err.message}`,
         );
       }
     }
@@ -155,36 +169,37 @@ export class CapabilityDetectorHelper {
         clearTimeout(tid);
         if (res.ok) {
           const json = await res.json();
-          const perms =
+          const caps =
             json.capabilities ||
             json.requestedCapabilities ||
             json.requiredCapabilities ||
             json.permissions ||
             json.requestedPermissions ||
             json.requiredPermissions;
-          if (Array.isArray(perms)) {
-            for (const p of perms) {
-              const pType = typeof p === 'string' ? p : p.type;
-              const pPurpose =
-                typeof p === 'object' && p.purpose
-                  ? p.purpose
-                  : `support features declared in MiniApp association configuration`;
-              if (pType) {
-                addPerm(
-                  pType,
-                  pPurpose,
-                  'Association File (.well-known)',
-                  'HIGH',
-                );
-              }
+          if (Array.isArray(caps)) {
+            for (const c of caps) {
+              const rawType = typeof c === 'string' ? c : c.type || c.key;
+              if (!rawType) continue;
+              const matched = findMatchingDefinition(rawType, definitions);
+              const resolvedType = matched?.key || rawType;
+              const resolvedPurpose =
+                (typeof c === 'object' && c.purpose) ||
+                matched?.detectionRules?.defaultPurpose ||
+                'support features declared in MiniApp association configuration';
+              addCapability(
+                resolvedType,
+                resolvedPurpose,
+                'Association File (.well-known)',
+                'HIGH',
+              );
             }
           }
         }
       } catch {
-        // Association file might not be reachable or not contain perms
+        // Association file might not be reachable or not contain capabilities
       }
 
-      // 2. Scan remote HTML & JS scripts for SuperApp JS Bridge invocations
+      // 2. Scan remote HTML & JS scripts using DB-stored jsBridgeKeywords
       try {
         const parsed = new URL(body.productionUrl.trim());
         const ctrl = new AbortController();
@@ -195,7 +210,6 @@ export class CapabilityDetectorHelper {
           const html = await res.text();
           let combinedCode = html;
 
-          // Find script tags to scan JavaScript bundles
           const scriptSrcMatches = Array.from(
             html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi),
           );
@@ -227,140 +241,20 @@ export class CapabilityDetectorHelper {
           }
 
           const lower = combinedCode.toLowerCase();
-
-          // Scan SuperApp JS Bridge (FSASuperApp / @fsasuperapp/sdk / legacy SuperAppJSBridge)
-          const hasBridge =
-            lower.includes('fsasuperapp') ||
-            lower.includes('superappjsbridge') ||
-            lower.includes('@fsasuperapp/sdk');
-
-          if (
-            lower.includes('scanqrcode') ||
-            lower.includes('opencamera') ||
-            lower.includes('capturephoto') ||
-            lower.includes('takephoto') ||
-            lower.includes('pickimage') ||
-            lower.includes('chooseimage') ||
-            lower.includes('scanqr') ||
-            lower.includes('barcode') ||
-            lower.includes('getusermedia')
-          ) {
-            const isPhoto =
-              lower.includes('takephoto') ||
-              lower.includes('capturephoto') ||
-              lower.includes('pickimage') ||
-              lower.includes('chooseimage');
-            addPerm(
-              'Camera',
-              'To scan QR codes and capture verification photos',
-              hasBridge
-                ? isPhoto
-                  ? 'JS Bridge: FSASuperApp.takePhoto()'
-                  : 'JS Bridge: FSASuperApp.scanQRCode()'
-                : 'Code Scan (Camera / Photo API)',
-              'HIGH',
+          for (const def of definitions) {
+            const keywords = def.detectionRules?.jsBridgeKeywords;
+            if (!Array.isArray(keywords) || keywords.length === 0) continue;
+            const matchedKw = keywords.find(
+              (kw) => typeof kw === 'string' && kw.trim() && lower.includes(kw.toLowerCase().trim()),
             );
-          }
-
-          if (
-            lower.includes('getlocation') ||
-            lower.includes('geolocation') ||
-            lower.includes('getcurrentposition') ||
-            lower.includes('watchposition')
-          ) {
-            addPerm(
-              'Location',
-              'To provide location-based services and map features',
-              hasBridge
-                ? 'JS Bridge: FSASuperApp.getLocation()'
-                : 'Code Scan (Geolocation API)',
-              'HIGH',
-            );
-          }
-
-          if (
-            lower.includes('authenticatebiometric') ||
-            lower.includes('authenticate') ||
-            lower.includes('publickeycredential') ||
-            lower.includes('webauthn') ||
-            lower.includes('biometric') ||
-            lower.includes('faceid')
-          ) {
-            addPerm(
-              'Biometrics',
-              'To authenticate user identity and authorize transactions securely',
-              hasBridge
-                ? 'JS Bridge: FSASuperApp.authenticateBiometric()'
-                : 'Code Scan (WebAuthn / Biometrics)',
-              'HIGH',
-            );
-          }
-
-          if (
-            lower.includes('requestpayment') ||
-            lower.includes('paymentrequest') ||
-            lower.includes('makepayment')
-          ) {
-            addPerm(
-              'Payment',
-              'To process secure in-app payments and transfers',
-              hasBridge
-                ? 'JS Bridge: FSASuperApp.requestPayment()'
-                : 'Code Scan (Payment API)',
-              'HIGH',
-            );
-          }
-
-          if (
-            lower.includes('openmicrophone') ||
-            lower.includes('recordaudio') ||
-            lower.includes('speechrecognition') ||
-            lower.includes('audiocontext')
-          ) {
-            addPerm(
-              'Microphone',
-              'To record voice notes and enable speech input',
-              hasBridge
-                ? 'JS Bridge: FSASuperApp (openMicrophone)'
-                : 'Code Scan (Audio / Microphone)',
-              'HIGH',
-            );
-          }
-
-          if (
-            lower.includes('nfcscan') ||
-            lower.includes('readnfc') ||
-            lower.includes('ndeffilter')
-          ) {
-            addPerm(
-              'NFC',
-              'To scan contactless NFC tags and identity chips',
-              'JS Bridge: FSASuperApp (nfcScan)',
-              'HIGH',
-            );
-          }
-
-          if (lower.includes('openbluetooth') || lower.includes('bluetooth')) {
-            addPerm(
-              'Bluetooth',
-              'To communicate with nearby Bluetooth devices',
-              hasBridge
-                ? 'JS Bridge: FSASuperApp (openBluetooth)'
-                : 'Code Scan (Bluetooth)',
-              'MEDIUM',
-            );
-          }
-
-          if (
-            lower.includes('getcontacts') ||
-            lower.includes('navigator.contacts')
-          ) {
-            addPerm(
-              'Contacts',
-              'To select recipients and contacts from the address book',
-              'JS Bridge: FSASuperApp (getContacts)',
-              'MEDIUM',
-            );
+            if (matchedKw) {
+              addCapability(
+                def.key,
+                def.detectionRules?.defaultPurpose || def.description || '',
+                `Code Scan (${matchedKw})`,
+                'HIGH',
+              );
+            }
           }
         }
       } catch {
@@ -376,7 +270,8 @@ export class CapabilityDetectorHelper {
       await this.detectFromNativeArtifacts(
         body.androidStoragePath?.trim(),
         body.iosStoragePath?.trim(),
-        addPerm,
+        definitions,
+        addCapability,
       );
     }
 
@@ -389,43 +284,20 @@ export class CapabilityDetectorHelper {
 
   /**
    * Inspects uploaded Native SDK archives (.aar / .xcframework) in MinIO
-   * for AndroidManifest.xml <uses-permission> and iOS Info.plist NS*UsageDescription keys.
+   * against DB-configured `detectionRules.androidPermissions` and `detectionRules.iosPlistKeys`.
    */
   private async detectFromNativeArtifacts(
     androidStoragePath: string | undefined,
     iosStoragePath: string | undefined,
-    addPerm: (
+    definitions: CapabilityDefinition[],
+    addCapability: (
       type: string,
       purpose: string,
       source: string,
       confidence?: 'HIGH' | 'MEDIUM',
     ) => void,
   ): Promise<void> {
-    if (!this.storageService) return;
-
-    const androidMap: Array<{ key: string; type: string; purpose: string }> = [
-      { key: 'android.permission.CAMERA', type: 'Camera', purpose: 'To scan codes and capture verification photos' },
-      { key: 'android.permission.RECORD_AUDIO', type: 'Microphone', purpose: 'To record voice notes and audio input' },
-      { key: 'android.permission.ACCESS_FINE_LOCATION', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
-      { key: 'android.permission.ACCESS_COARSE_LOCATION', type: 'Location', purpose: 'To verify approximate location for localized services' },
-      { key: 'android.permission.USE_BIOMETRIC', type: 'Biometrics', purpose: 'To authenticate user identity and authorize operations securely' },
-      { key: 'android.permission.USE_FINGERPRINT', type: 'Biometrics', purpose: 'To authenticate user identity via fingerprint' },
-      { key: 'android.permission.NFC', type: 'NFC', purpose: 'To scan contactless NFC tags and identity chips' },
-      { key: 'android.permission.BLUETOOTH', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
-      { key: 'android.permission.BLUETOOTH_CONNECT', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
-      { key: 'android.permission.READ_CONTACTS', type: 'Contacts', purpose: 'To select recipients and contacts from the address book' },
-    ];
-
-    const iosMap: Array<{ key: string; type: string; purpose: string }> = [
-      { key: 'NSCameraUsageDescription', type: 'Camera', purpose: 'To scan codes and capture verification photos' },
-      { key: 'NSMicrophoneUsageDescription', type: 'Microphone', purpose: 'To record voice notes and audio input' },
-      { key: 'NSLocationWhenInUseUsageDescription', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
-      { key: 'NSLocationAlwaysUsageDescription', type: 'Location', purpose: 'To verify geographic location and provide localized services' },
-      { key: 'NSFaceIDUsageDescription', type: 'Biometrics', purpose: 'To authenticate user identity via Face ID' },
-      { key: 'NFCReaderUsageDescription', type: 'NFC', purpose: 'To scan contactless NFC tags and identity chips' },
-      { key: 'NSBluetoothAlwaysUsageDescription', type: 'Bluetooth', purpose: 'To communicate with nearby Bluetooth devices' },
-      { key: 'NSContactsUsageDescription', type: 'Contacts', purpose: 'To select recipients and contacts from the address book' },
-    ];
+    if (!this.storageService || definitions.length === 0) return;
 
     const paths = [androidStoragePath, iosStoragePath].filter(
       (p): p is string => Boolean(p),
@@ -443,24 +315,34 @@ export class CapabilityDetectorHelper {
           const name = entry.entryName.toLowerCase();
           if (name.endsWith('androidmanifest.xml')) {
             const xml = entry.getData().toString('utf8');
-            for (const rule of androidMap) {
-              if (xml.includes(rule.key)) {
-                addPerm(
-                  rule.type,
-                  rule.purpose,
-                  `Native AndroidManifest (${rule.key})`,
+            for (const def of definitions) {
+              const androidPerms = def.detectionRules?.androidPermissions;
+              if (!Array.isArray(androidPerms)) continue;
+              const hit = androidPerms.find(
+                (p) => typeof p === 'string' && p.trim() && xml.includes(p.trim()),
+              );
+              if (hit) {
+                addCapability(
+                  def.key,
+                  def.detectionRules?.defaultPurpose || def.description || '',
+                  `Native AndroidManifest (${hit})`,
                   'HIGH',
                 );
               }
             }
           } else if (name.endsWith('info.plist')) {
             const plist = entry.getData().toString('utf8');
-            for (const rule of iosMap) {
-              if (plist.includes(rule.key)) {
-                addPerm(
-                  rule.type,
-                  rule.purpose,
-                  `Native iOS Info.plist (${rule.key})`,
+            for (const def of definitions) {
+              const plistKeys = def.detectionRules?.iosPlistKeys;
+              if (!Array.isArray(plistKeys)) continue;
+              const hit = plistKeys.find(
+                (k) => typeof k === 'string' && k.trim() && plist.includes(k.trim()),
+              );
+              if (hit) {
+                addCapability(
+                  def.key,
+                  def.detectionRules?.defaultPurpose || def.description || '',
+                  `Native iOS Info.plist (${hit})`,
                   'HIGH',
                 );
               }
@@ -476,114 +358,53 @@ export class CapabilityDetectorHelper {
   }
 
   /**
-   * Discovers required native permissions by analyzing Flutter package pubspec.yaml dependencies.
+   * Discovers required capabilities by matching Flutter pubspec.yaml dependencies
+   * against DB-configured `detectionRules.pubspecPackages`.
    */
-  detectFromPubspecDependencies(
+  async detectFromPubspecDependencies(
     dependencies: Record<string, any> = {},
     appName?: string,
-  ): DetectedPermissionResult[] {
+    preloadedDefinitions?: CapabilityDefinition[],
+  ): Promise<DetectedPermissionResult[]> {
+    const definitions =
+      preloadedDefinitions ??
+      (this.capabilitiesService
+        ? await this.capabilitiesService.getActiveDefinitions()
+        : []);
+
     const detected: DetectedPermissionResult[] = [];
-    const addedTypes = new Set<string>();
+    const addedKeys = new Set<string>();
     const appLabel = appName?.trim() || '$(PRODUCT_NAME)';
-
-    const formatPurpose = (type: string, reason: string): string => {
-      const cleanReason = reason.replace(/^(to|for)\s+/i, '').trim();
-      return `${appLabel} requires access to your ${type.toLowerCase()} to ${cleanReason}.`;
-    };
-
-    const add = (type: string, reason: string, plugin: string) => {
-      const normalized = type.charAt(0).toUpperCase() + type.slice(1);
-      if (!addedTypes.has(normalized.toLowerCase())) {
-        addedTypes.add(normalized.toLowerCase());
-        detected.push({
-          type: normalized,
-          purpose: formatPurpose(normalized, reason),
-          source: `Flutter Plugin (${plugin})`,
-          confidence: 'HIGH',
-        });
-      }
-    };
-
     const depKeys = Object.keys(dependencies || {}).map((k) => k.toLowerCase());
 
-    for (const dep of depKeys) {
-      if (dep === 'nfc_manager' || dep.includes('nfc')) {
-        add(
-          'NFC',
-          'to read NFC smart cards and contactless security tokens',
-          dep,
-        );
-      }
-      if (
-        dep === 'camera' ||
-        dep === 'qr_code_scanner' ||
-        dep === 'mobile_scanner'
-      ) {
-        add('Camera', 'to scan codes and capture verification photos', dep);
-      }
-      if (dep === 'image_picker') {
-        add('Camera', 'to select and upload verification photos', dep);
-      }
-      if (
-        dep === 'geolocator' ||
-        dep === 'location' ||
-        dep.includes('geoloc')
-      ) {
-        add(
-          'Location',
-          'to verify geographic location and provide localized services',
-          dep,
-        );
-      }
-      if (dep === 'local_auth' || dep.includes('biometric')) {
-        add(
-          'Biometrics',
-          'to securely authenticate the user and authorize operations',
-          dep,
-        );
-      }
-      if (
-        dep === 'record' ||
-        dep === 'audioplayers' ||
-        dep === 'flutter_sound'
-      ) {
-        add('Microphone', 'to capture audio recordings and voice input', dep);
-      }
-      if (
-        dep === 'flutter_blue_plus' ||
-        dep === 'flutter_bluetooth_serial' ||
-        dep.includes('bluetooth')
-      ) {
-        add('Bluetooth', 'to communicate with nearby peripheral devices', dep);
-      }
-      if (
-        dep === 'flutter_secure_storage' ||
-        dep.includes('secure_storage') ||
-        dep === 'storage'
-      ) {
-        add(
-          'Storage',
-          'to securely store encrypted session data, tokens, and local cache',
-          dep,
-        );
-      }
-      if (
-        dep === 'webview_flutter' ||
-        dep.includes('webview') ||
-        dep === 'flutter_inappwebview'
-      ) {
-        add(
-          'Webview_runtime',
-          'to host sandboxed web application views and JS bridge communications',
-          dep,
-        );
-      }
-      if (dep === 'contacts_service' || dep === 'flutter_contacts') {
-        add(
-          'Contacts',
-          'to access address book contacts for beneficiary selection',
-          dep,
-        );
+    if (depKeys.length === 0 || definitions.length === 0) {
+      return detected;
+    }
+
+    for (const def of definitions) {
+      const pkgRules = def.detectionRules?.pubspecPackages;
+      if (!Array.isArray(pkgRules) || pkgRules.length === 0) continue;
+
+      const matchedDep = depKeys.find((dep) =>
+        pkgRules.some((rule) => {
+          const r = String(rule || '').toLowerCase().trim();
+          return r && (dep === r || dep.includes(r));
+        }),
+      );
+
+      if (matchedDep && !addedKeys.has(def.key.toLowerCase())) {
+        addedKeys.add(def.key.toLowerCase());
+        const reason =
+          def.detectionRules?.defaultPurpose ||
+          def.description ||
+          `support ${def.name.toLowerCase()} features`;
+        const cleanReason = reason.replace(/^(to|for)\s+/i, '').trim().replace(/\.$/, '');
+        detected.push({
+          type: def.key,
+          purpose: `${appLabel} requires access to your ${(def.name || def.key).toLowerCase()} to ${cleanReason}.`,
+          source: `Flutter Plugin (${matchedDep})`,
+          confidence: 'HIGH',
+        });
       }
     }
 

@@ -6,6 +6,20 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export interface CapabilityDetectionRules {
+  pubspecPackages?: string[];
+  androidPermissions?: string[];
+  iosPlistKeys?: string[];
+  jsBridgeKeywords?: string[];
+  defaultPurpose?: string;
+}
+
+export interface CapabilityStoreMapping {
+  iosKey?: string;
+  androidPermission?: string;
+  defaultAction?: string;
+}
+
 @Entity('capability_definitions')
 export class CapabilityDefinition {
   @PrimaryGeneratedColumn('uuid')
@@ -43,6 +57,15 @@ export class CapabilityDefinition {
 
   @Column({ nullable: true })
   maxSuperAppVersion!: string;
+
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  aliases!: string[];
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  detectionRules!: CapabilityDetectionRules;
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  storeMapping!: CapabilityStoreMapping;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;

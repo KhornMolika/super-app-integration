@@ -24,7 +24,6 @@ import {
 import {
   formatCompliantPurpose,
   normalizeCapabilityKey,
-  WHITELISTED_HOST_CAPABILITIES,
 } from '@/components/forms/CapabilitiesForm';
 import { getInitialRegisterFormData } from '../constants';
 import {
@@ -58,6 +57,14 @@ export function useMiniAppRegister() {
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>(getInitialRegisterFormData());
   const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [allowedCapabilityKeys, setAllowedCapabilityKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    permissionsApi
+      .getAllowedKeys()
+      .then((keys) => setAllowedCapabilityKeys(Array.isArray(keys) ? keys : []))
+      .catch(() => setAllowedCapabilityKeys([]));
+  }, []);
 
   // Restore draft from localStorage on initial mount
   useEffect(() => {
@@ -1047,7 +1054,7 @@ export function useMiniAppRegister() {
 
   const handleConfirmUnsupported = async () => {
     const unsupported = (formData.permissions || []).filter(
-      (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes(normalizeCapabilityKey(p.type || ''))
+      (p: any) => !allowedCapabilityKeys.includes(normalizeCapabilityKey(p.type || ''))
     );
     for (const perm of unsupported) {
       try {
@@ -1141,5 +1148,6 @@ export function useMiniAppRegister() {
     hasRestoredDraft,
     draftSavedAt,
     handleDiscardDraft,
+    allowedCapabilityKeys,
   };
 }

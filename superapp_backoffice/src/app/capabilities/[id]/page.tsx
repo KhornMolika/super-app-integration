@@ -199,9 +199,13 @@ export default function CapabilityDetailPage({
         description: editForm.description,
         category: editForm.category,
         isActive: editForm.isActive,
+        isAllowed: editForm.isAllowed,
         isDeprecated: editForm.isDeprecated,
         minSuperAppVersion: editForm.minSuperAppVersion,
         maxSuperAppVersion: editForm.maxSuperAppVersion,
+        aliases: editForm.aliases || [],
+        detectionRules: editForm.detectionRules || {},
+        storeMapping: editForm.storeMapping || {},
         metadata: parsedMetadata,
       });
 
@@ -984,12 +988,199 @@ export default function CapabilityDetailPage({
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={editForm.isAllowed !== false}
+                      onChange={(e) => setEditForm({ ...editForm, isAllowed: e.target.checked })}
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Allowed by Host Policy</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
                       checked={Boolean(editForm.isDeprecated)}
                       onChange={(e) => setEditForm({ ...editForm, isDeprecated: e.target.checked })}
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer"
                     />
                     <span>Mark as Deprecated</span>
                   </label>
+                </div>
+
+                {/* Dynamic Rule Configuration */}
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="md:col-span-2">
+                    <Label>Aliases (comma-separated)</Label>
+                    <Input
+                      value={(editForm.aliases || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          aliases: e.target.value
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. camera, photo, camera_access"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Pubspec Packages (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.pubspecPackages || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            pubspecPackages: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. camera, image_picker"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>JS Bridge Keywords (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.jsBridgeKeywords || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            jsBridgeKeywords: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. takePhoto, getUserMedia"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Android Manifest Permissions (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.androidPermissions || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            androidPermissions: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. android.permission.CAMERA"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>iOS Info.plist Keys (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.iosPlistKeys || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            iosPlistKeys: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. NSCameraUsageDescription"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Default Purpose Template</Label>
+                    <Input
+                      value={editForm.detectionRules?.defaultPurpose || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            defaultPurpose: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs"
+                      placeholder="e.g. capture verification photos and upload documents"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Store Mapping: iOS Key</Label>
+                    <Input
+                      value={editForm.storeMapping?.iosKey || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            iosKey: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="NSCameraUsageDescription"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Store Mapping: Android Permission</Label>
+                    <Input
+                      value={editForm.storeMapping?.androidPermission || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            androidPermission: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="android.permission.CAMERA"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Store Mapping: Default Action</Label>
+                    <Input
+                      value={editForm.storeMapping?.defaultAction || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            defaultAction: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs"
+                      placeholder="e.g. photograph evidence and upload documents"
+                    />
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
