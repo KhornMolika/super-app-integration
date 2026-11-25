@@ -84,7 +84,7 @@ const METHOD_OPTIONS = [
 /** Columns the API can sort by (sortBy keys of GET /mini-apps). */
 const SORTABLE = ['name', 'organization', 'availability', 'updatedAt'] as const;
 const DEFAULT_SORT = { key: 'updatedAt', dir: 'desc' as SortDirection };
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 5;
 
 type Scope = 'all' | 'mine';
 

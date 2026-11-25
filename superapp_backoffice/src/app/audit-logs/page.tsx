@@ -46,6 +46,17 @@ const COMMON_ACTOR_ROLES = [
   'MA_DEVELOPER',
 ];
 
+const COMMON_RESOURCE_TYPES = [
+  'ALL',
+  'MiniApp',
+  'User',
+  'Organization',
+  'Role',
+  'Settings',
+  'Banner',
+  'Capability',
+];
+
 function AuditLogsContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,10 +67,11 @@ function AuditLogsContent() {
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialAction = searchParams.get('action') || 'ALL';
   const initialRole = searchParams.get('actorRole') || 'ALL';
+  const initialResource = searchParams.get('resourceType') || 'ALL';
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +83,7 @@ function AuditLogsContent() {
   const [debouncedSearch, setDebouncedSearch] = useState<string>(initialSearch);
   const [actionFilter, setActionFilter] = useState<string>(initialAction);
   const [roleFilter, setRoleFilter] = useState<string>(initialRole);
+  const [resourceFilter, setResourceFilter] = useState<string>(initialResource);
 
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: initialPage,
@@ -103,10 +116,11 @@ function AuditLogsContent() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (pageSize !== 5) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (actionFilter !== 'ALL') params.set('action', actionFilter);
     if (roleFilter !== 'ALL') params.set('actorRole', roleFilter);
+    if (resourceFilter !== 'ALL') params.set('resourceType', resourceFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
@@ -116,7 +130,7 @@ function AuditLogsContent() {
         window.history.replaceState(null, '', targetUrl);
       }
     }
-  }, [currentPage, pageSize, debouncedSearch, actionFilter, roleFilter, pathname]);
+  }, [currentPage, pageSize, debouncedSearch, actionFilter, roleFilter, resourceFilter, pathname]);
 
   // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
@@ -124,15 +138,17 @@ function AuditLogsContent() {
       if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
-      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '5', 10));
       const searchFromUrl = params.get('search') || '';
       const actionFromUrl = params.get('action') || 'ALL';
       const roleFromUrl = params.get('actorRole') || 'ALL';
+      const resourceFromUrl = params.get('resourceType') || 'ALL';
 
       setCurrentPage(pageFromUrl);
       setPageSize(limitFromUrl);
       setActionFilter(actionFromUrl);
       setRoleFilter(roleFromUrl);
+      setResourceFilter(resourceFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
     };
@@ -157,6 +173,9 @@ function AuditLogsContent() {
       }
       if (roleFilter !== 'ALL') {
         queryParams.actorRole = roleFilter;
+      }
+      if (resourceFilter !== 'ALL') {
+        queryParams.resourceType = resourceFilter;
       }
 
       const res = await auditLogsApi.getAll(queryParams);
@@ -183,7 +202,7 @@ function AuditLogsContent() {
     } finally {
       setLoading(false);
     }
-  }, [can, currentPage, pageSize, debouncedSearch, actionFilter, roleFilter]);
+  }, [can, currentPage, pageSize, debouncedSearch, actionFilter, roleFilter, resourceFilter]);
 
   useEffect(() => {
     if (hasAuditRead) {
@@ -198,6 +217,11 @@ function AuditLogsContent() {
 
   const handleRoleChange = (val: string) => {
     setRoleFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handleResourceChange = (val: string) => {
+    setResourceFilter(val);
     setCurrentPage(1);
   };
 
@@ -531,12 +555,27 @@ function AuditLogsContent() {
               onChange: handleRoleChange,
               dropdownWidth: 'w-56',
             },
+            {
+              id: 'resourceType',
+              label: 'Resource',
+              value: resourceFilter,
+              options: [
+                { label: 'All Resources', value: 'ALL' },
+                ...COMMON_RESOURCE_TYPES.filter((r) => r !== 'ALL').map((r) => ({
+                  label: r,
+                  value: r,
+                })),
+              ],
+              onChange: handleResourceChange,
+              dropdownWidth: 'w-52',
+            },
           ]}
-          isFiltered={searchQuery.trim() !== '' || actionFilter !== 'ALL' || roleFilter !== 'ALL'}
+          isFiltered={searchQuery.trim() !== '' || actionFilter !== 'ALL' || roleFilter !== 'ALL' || resourceFilter !== 'ALL'}
           onResetFilters={() => {
             setSearchQuery('');
             setActionFilter('ALL');
             setRoleFilter('ALL');
+            setResourceFilter('ALL');
             setCurrentPage(1);
           }}
           totalItemsCount={paginationMeta.totalItems}

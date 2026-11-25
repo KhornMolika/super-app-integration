@@ -28,7 +28,7 @@ function IssuesContent() {
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialSeverity = searchParams.get('severity') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
@@ -70,7 +70,7 @@ function IssuesContent() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (pageSize !== 5) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (severityFilter !== 'ALL') params.set('severity', severityFilter);
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
@@ -91,7 +91,7 @@ function IssuesContent() {
       if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
-      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '5', 10));
       const searchFromUrl = params.get('search') || '';
       const severityFromUrl = params.get('severity') || 'ALL';
       const statusFromUrl = params.get('status') || 'ALL';

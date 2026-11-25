@@ -22,6 +22,7 @@ import { rolesApi, Role } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
@@ -41,6 +42,8 @@ function RolesPageContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'SYSTEM' | 'CUSTOM'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -207,7 +210,10 @@ function RolesPageContent() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search roles by identifier or description..."
             className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
@@ -216,7 +222,10 @@ function RolesPageContent() {
         <div className="flex items-center gap-2">
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as any)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value as any);
+              setCurrentPage(1);
+            }}
             className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="ALL">All Role Types</option>
@@ -263,7 +272,9 @@ function RolesPageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {filteredRoles.map((role) => {
+                {filteredRoles
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((role) => {
                   const isSystem = isSystemRole(role.name);
                   const theme = getRoleTheme(role.name);
                   const permCount = role.permissions?.length || 0;
@@ -384,6 +395,23 @@ function RolesPageContent() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && filteredRoles.length > 0 && (
+          <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-700/60">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRoles.length}
+              pageSize={pageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              showPageSizeSelector
+              showTotal
+            />
           </div>
         )}
       </div>

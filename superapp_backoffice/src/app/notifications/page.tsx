@@ -49,7 +49,7 @@ function readNotificationState(params: URLSearchParams): {
   const timeframe = (['ALL', 'TODAY', 'WEEK', 'MONTH'].includes(rawTime) ? rawTime : 'ALL') as NotificationTimeframe;
 
   const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
-  const pageSize = Math.max(5, parseInt(params.get('limit') || '10', 10) || 10);
+  const pageSize = Math.max(5, parseInt(params.get('limit') || '5', 10) || 5);
 
   return {
     searchQuery: q,
@@ -80,7 +80,7 @@ function writeNotificationState(
   if (filters.severity !== 'ALL') p.set('severity', filters.severity);
   if (filters.timeframe !== 'ALL') p.set('timeframe', filters.timeframe);
   if (page > 1) p.set('page', String(page));
-  if (limit !== 10) p.set('limit', String(limit));
+  if (limit !== 5) p.set('limit', String(limit));
   return p.toString();
 }
 

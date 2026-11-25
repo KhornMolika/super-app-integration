@@ -47,7 +47,7 @@ function UsersContent() {
   const canManageUsers = can('user:manage');
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialRole = searchParams.get('role') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
