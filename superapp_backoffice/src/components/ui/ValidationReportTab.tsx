@@ -746,7 +746,15 @@ export default function ValidationReportTab({
     }
 
     return list;
-  }, [findings, issues, effectiveData.validationErrors]);
+  }, [
+    findings,
+    issues,
+    effectiveData.validationErrors,
+    effectiveData.validationStatus,
+    miniApp.validationStatus,
+    stages?.capability_gate?.findings,
+    stages?.capability_gate?.status,
+  ]);
 
   // Stage aliases mapping
   const checkAliases: Record<string, string[]> = useMemo(() => ({
