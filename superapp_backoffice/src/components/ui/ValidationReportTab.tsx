@@ -342,7 +342,7 @@ function VersionSelectorPopover({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-2xs transition-all cursor-pointer group"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-all cursor-pointer group"
         title="Switch Release Version"
       >
         <span className="text-xs font-sans font-extrabold uppercase tracking-wider text-slate-400">
@@ -1661,10 +1661,10 @@ export default function ValidationReportTab({
 
         {/* Version Context Switcher Bar (Only rendered when embedded inside MiniApp tabs) */}
         {!isStandalonePage && (
-          <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-6 print:hidden">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-6 print:hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-750">
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-700">
                   <Layers className="w-4 h-4 text-brand-500" />
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                     Release Version
@@ -1717,7 +1717,7 @@ export default function ValidationReportTab({
                       );
                     })
                   ) : (
-                    <div className="px-3 py-1 bg-white dark:bg-slate-850 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-750">
+                    <div className="px-3 py-1 bg-white dark:bg-slate-800 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                       {selectedVersion || 'v1.0.0'} (Default)
                     </div>
                   )}
@@ -1732,7 +1732,7 @@ export default function ValidationReportTab({
                 )}
                 <Link
                   href={`/miniapps/${miniApp.id}/security?version=${encodeURIComponent(selectedVersion || '')}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors cursor-pointer"
                   title="Open dedicated security report page"
                 >
                   <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />

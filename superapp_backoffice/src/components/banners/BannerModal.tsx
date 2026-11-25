@@ -310,7 +310,7 @@ export function BannerModal({
           </div>
 
           {/* Action Destination Config */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
               Tap Action Destination
             </label>

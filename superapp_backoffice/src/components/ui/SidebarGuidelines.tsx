@@ -21,7 +21,7 @@ export function SidebarGuidelines() {
         } rounded-xl border transition-all duration-200 cursor-pointer ${
           isActive
             ? 'bg-brand-500/20 border-brand-400 text-white shadow-sm'
-            : 'bg-brand-900/40 dark:bg-slate-900/60 border-brand-800/60 dark:border-slate-800 text-slate-300 hover:text-white hover:bg-brand-900/80 dark:hover:bg-slate-850 hover:border-brand-700/80'
+            : 'bg-brand-900/40 dark:bg-slate-900/60 border-brand-800/60 dark:border-slate-800 text-slate-300 hover:text-white hover:bg-brand-900/80 dark:hover:bg-slate-800 hover:border-brand-700/80'
         }`}
       >
         <div

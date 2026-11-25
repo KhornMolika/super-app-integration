@@ -319,7 +319,7 @@ export function BackendServiceOfflineNotice({
                 type="button"
                 onClick={runQuickDiagnostic}
                 disabled={diagnosticsRunning}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 active:scale-95 disabled:opacity-50 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 disabled:opacity-50 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
               >
                 <SettingsIcon className={`w-4 h-4 ${diagnosticsRunning ? 'animate-spin' : ''}`} />
                 <span>{diagnosticsRunning ? 'Testing /api/health...' : 'Test Health Endpoint'}</span>

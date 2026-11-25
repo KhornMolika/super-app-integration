@@ -188,7 +188,7 @@ export default function SandboxBuildStatusIndicator() {
         mounted &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-            <div className="w-full max-w-3xl my-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-750/80 overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-white/10">
+            <div className="w-full max-w-3xl my-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-white/10">
             
             {/* Terminal Top Window Chrome */}
             <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-4">
@@ -239,7 +239,7 @@ export default function SandboxBuildStatusIndicator() {
                 <button
                   type="button"
                   onClick={handleCopyLogs}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer shadow-xs"
                   title="Copy logs to clipboard"
                 >
                   {copied ? (
