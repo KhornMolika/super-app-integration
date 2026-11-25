@@ -299,13 +299,13 @@ export function Section04SdkContract({
                 <th className="py-3 pr-6 w-40">Layer</th>
                 <th className="py-3 pr-6">
                   <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                    <Cpu className="w-3.5 h-3.5 text-brand-500" />
+                    <Cpu className="w-3.5 h-3.5 text-brand-500 shrink-0" />
                     SuperApp Host Shell
                   </span>
                 </th>
                 <th className="py-3">
                   <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                    <SparklesIcon />
+                    <Sparkle className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     MiniApp Developer
                   </span>
                 </th>
