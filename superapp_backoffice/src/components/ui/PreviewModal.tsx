@@ -471,8 +471,11 @@ export default function PreviewModal({
               {/* Viewport Content: Flutter Web SuperApp Container vs Mock Home vs Direct MiniApp */}
               {currentScreen === 'sandbox' ? (
                 <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 overflow-hidden">
+                  {activeDeviceType === 'Phone' && orientation === 'Portrait' && (
+                    <div className="h-8 bg-slate-900 shrink-0" />
+                  )}
                   {/* Top Bar for Flutter Web Container */}
-                  <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
+                  <div className="h-10 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span className="text-xs font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
@@ -502,32 +505,35 @@ export default function PreviewModal({
                 </div>
               ) : (
                 <div className="w-full h-full relative z-10 flex flex-col bg-white dark:bg-slate-900">
+                  {activeDeviceType === 'Phone' && orientation === 'Portrait' && (
+                    <div className="h-8 bg-slate-900 shrink-0" />
+                  )}
                   {/* SuperApp In-App Browser Bar */}
-                  <div className="h-12 bg-slate-900 border-b border-slate-800 text-white px-3 flex items-center justify-between z-20 flex-shrink-0">
+                  <div className="h-11 bg-slate-900 border-b border-slate-800 text-white px-2.5 flex items-center justify-between gap-2 z-20 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => setCurrentScreen('sandbox')}
-                      className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                      className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0 whitespace-nowrap"
                       title="Switch to SuperApp Shell"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
                       <span>SuperApp</span>
                     </button>
 
-                    <div className="flex flex-col items-center text-center px-2">
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span className="truncate max-w-[130px]">{title}</span>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <div className="flex flex-col items-center text-center min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white flex items-center justify-center gap-1.5 max-w-full">
+                        <span className="truncate">{title}</span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                          Preview Mode
+                          Preview
                         </span>
                       </div>
-                      <span className="text-xs text-slate-400 font-mono truncate max-w-[180px]">
+                      <span className="text-[10px] text-slate-400 font-mono truncate max-w-full">
                         {displayMiniAppSubtitle}
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <button
                         type="button"
                         onClick={handleReload}
