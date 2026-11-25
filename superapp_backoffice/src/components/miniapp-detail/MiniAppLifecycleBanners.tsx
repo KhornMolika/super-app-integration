@@ -283,16 +283,16 @@ export default function MiniAppLifecycleBanners({
       {/* 1. Review & Action Banner for IN_REVIEW (New App vs Update Proposal).
           After a failed security scan: no Approve, only Request Changes / Reject. */}
       {status === 'IN_REVIEW' && (
-        <div className={`mb-6 p-5 rounded-2xl border shadow-sm animate-in fade-in flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        <div className={`mb-6 p-4 sm:p-5 rounded-2xl border shadow-sm animate-in fade-in flex flex-col xl:flex-row xl:items-center justify-between gap-4 ${
           isUpdateProposal
-            ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40'
-            : 'border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40'
+            ? 'border-amber-200/90 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/35'
+            : 'border-blue-200/90 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/35'
         }`}>
-          <div className="flex items-start gap-3.5">
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
               isUpdateProposal
-                ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                : 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                ? 'bg-amber-100/90 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                : 'bg-blue-100/90 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
             }`}>
               {isUpdateProposal ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,30 +309,30 @@ export default function MiniAppLifecycleBanners({
                 </svg>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className={`text-base font-bold ${
-                  isUpdateProposal ? 'text-amber-900 dark:text-amber-200' : 'text-blue-900 dark:text-blue-200'
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className={`text-sm sm:text-base font-bold ${
+                  isUpdateProposal ? 'text-amber-950 dark:text-amber-100' : 'text-slate-900 dark:text-slate-100'
                 }`}>
                   {isUpdateProposal
                     ? `MiniApp Update Proposal${draftVersion ? ` (${draftVersion})` : ''}`
                     : 'New MiniApp Initial Submission'}
                 </h4>
                 {isUpdateProposal && currentReleaseVersion && (
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60">
                     Active v{currentReleaseVersion}
                   </span>
                 )}
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                <span className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-md border ${
                   isUpdateProposal
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                    ? 'bg-amber-100/90 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60'
+                    : 'bg-blue-100/90 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60'
                 }`}>
-                  IN REVIEW
+                  In Review
                 </span>
               </div>
-              <p className={`text-sm mt-1 leading-relaxed ${
-                isUpdateProposal ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'
+              <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${
+                isUpdateProposal ? 'text-amber-900/80 dark:text-amber-200/90' : 'text-slate-600 dark:text-slate-300'
               }`}>
                 {actions.scanFailed
                   ? 'The automated security scan FAILED, so this cannot be approved. Review the findings in the security report, then Request Changes so the developer can fix them, or Reject.'
@@ -342,59 +342,61 @@ export default function MiniAppLifecycleBanners({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {onOpenReviewDiff && (
               <Button
                 type="button"
+                variant="outline"
                 onClick={onOpenReviewDiff}
-                className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2.5 font-bold rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-2 transition-all"
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs inline-flex items-center gap-1.5 transition-all"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
                 <span>{isUpdateProposal ? 'Review Changes Diff' : 'Open Review Desk'}</span>
               </Button>
             )}
             {actions.approve && (
-                <Button
-                  type="button"
-                  onClick={() => onLifecycleAction('approve')}
-                  disabled={isSubmitting}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-5 py-2.5 font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
-                </Button>
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('approve')}
+                disabled={isSubmitting}
+                className="h-9 px-4 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/15 inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
+              </Button>
             )}
             {actions.requestChanges && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onLifecycleAction('request-changes')}
-                  disabled={isSubmitting}
-                  className="border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
-                >
-                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Request Changes</span>
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onLifecycleAction('request-changes')}
+                disabled={isSubmitting}
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap border-amber-300 dark:border-amber-700/80 text-amber-800 dark:text-amber-200 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 shadow-2xs inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Request Changes</span>
+              </Button>
             )}
             {actions.reject && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onLifecycleAction('reject')}
-                  disabled={isSubmitting}
-                  className="border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
-                >
-                  <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <span>Reject</span>
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onLifecycleAction('reject')}
+                disabled={isSubmitting}
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/80 dark:hover:bg-rose-900/40 shadow-2xs inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Reject</span>
+              </Button>
             )}
           </div>
         </div>
