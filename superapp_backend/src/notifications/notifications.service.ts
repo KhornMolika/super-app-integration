@@ -1,7 +1,7 @@
 import { isPgUuid } from '../common/utils/uuid.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { Identity } from '../identities/entities/identity.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
@@ -240,8 +240,15 @@ export class NotificationsService {
     userId: string,
     query?: QueryNotificationsDto,
   ): Promise<PaginatedResult<Notification> | Notification[]> {
+    if (!userId) {
+      return query
+        ? createPaginatedResponse([], 0, query.page ?? 1, query.limit ?? 20)
+        : [];
+    }
+
     if (!query) {
       return this.notificationRepository.find({
+        where: { userId },
         relations: { miniApp: true },
         order: { createdAt: 'DESC' },
         take: 100,
@@ -260,7 +267,8 @@ export class NotificationsService {
 
     const qb = this.notificationRepository
       .createQueryBuilder('notification')
-      .leftJoinAndSelect('notification.miniApp', 'miniApp');
+      .leftJoinAndSelect('notification.miniApp', 'miniApp')
+      .where('notification.userId = :userId', { userId });
 
     if (isRead !== undefined) {
       qb.andWhere('notification.isRead = :isRead', { isRead });
@@ -292,38 +300,47 @@ export class NotificationsService {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
-  async findById(id: string): Promise<Notification | null> {
+  async findById(id: string, userId?: string): Promise<Notification | null> {
     return this.notificationRepository.findOne({
-      where: { id },
+      where: userId ? { id, userId } : { id },
       relations: { miniApp: true },
     });
   }
 
-  async markAsRead(id: string): Promise<{ success: boolean }> {
-    await this.notificationRepository.update(id, { isRead: true });
-    return { success: true };
-  }
-
-  async markAllAsRead(): Promise<{ success: boolean }> {
+  async markAsRead(id: string, userId?: string): Promise<{ success: boolean }> {
     await this.notificationRepository.update(
-      { isRead: false },
+      userId ? { id, userId } : { id },
       { isRead: true },
     );
     return { success: true };
   }
 
-  async delete(id: string): Promise<{ success: boolean }> {
-    await this.notificationRepository.delete(id);
+  async markAllAsRead(userId?: string): Promise<{ success: boolean }> {
+    if (!userId) {
+      return { success: true };
+    }
+    await this.notificationRepository.update(
+      { userId, isRead: false },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  async delete(id: string, userId?: string): Promise<{ success: boolean }> {
+    await this.notificationRepository.delete(userId ? { id, userId } : { id });
     return { success: true };
   }
 
   async deleteBulk(
     ids: string[],
+    userId?: string,
   ): Promise<{ success: boolean; deletedCount: number }> {
     if (!ids || ids.length === 0) {
       return { success: true, deletedCount: 0 };
     }
-    const result = await this.notificationRepository.delete(ids);
+    const result = await this.notificationRepository.delete(
+      userId ? { id: In(ids), userId } : { id: In(ids) },
+    );
     return { success: true, deletedCount: result.affected || 0 };
   }
 
@@ -340,12 +357,15 @@ export class NotificationsService {
   }
 
   async findUnreadAnnouncements(
-    _userId: string,
+    userId: string,
   ): Promise<{ count: number; items: Notification[] }> {
+    if (!userId) {
+      return { count: 0, items: [] };
+    }
     const items = await this.notificationRepository.find({
       where: [
-        { type: 'ANNOUNCEMENT', isRead: false },
-        { type: 'PLATFORM_ANNOUNCEMENT', isRead: false },
+        { type: 'ANNOUNCEMENT', isRead: false, userId },
+        { type: 'PLATFORM_ANNOUNCEMENT', isRead: false, userId },
       ],
       order: { createdAt: 'DESC' },
       take: 10,

@@ -122,19 +122,19 @@ function OrganizationDetailContent() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Active Subordinate Organizations ({activeChildren.length})
               </span>
               <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                 {activeChildren.map((child) => (
                   <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+                      <span className="font-mono font-bold text-xs px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
                         {child.code || 'ORG'}
                       </span>
                       <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
                     </div>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Active
                     </span>
@@ -145,7 +145,7 @@ function OrganizationDetailContent() {
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
               <span className="font-semibold text-slate-700 dark:text-slate-200">Required Next Steps:</span>
-              <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-slate-500 dark:text-slate-400">
+              <ol className="list-decimal list-inside space-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <li>Reassign each subordinate entity to another parent authority, or</li>
                 <li>Disable each subordinate organization first.</li>
               </ol>
@@ -173,7 +173,7 @@ function OrganizationDetailContent() {
                 {organization.parent?.name || organization.parentAuthority || 'None (Independent)'}
               </p>
             </div>
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Active
             </span>
@@ -188,7 +188,7 @@ function OrganizationDetailContent() {
                 </svg>
                 <span>High-Impact Regulatory Action</span>
               </div>
-              <p className="text-[11.5px] leading-relaxed text-rose-700/90 dark:text-rose-300/90">
+              <p className="text-xs leading-relaxed text-rose-700/90 dark:text-rose-300/90">
                 {isRoot && isOwnOrg
                   ? 'This is the root parent authority and your assigned organization. Suspending it affects all subordinate services and active operator accounts.'
                   : isRoot
@@ -216,7 +216,7 @@ function OrganizationDetailContent() {
                 {organization.parent?.name || organization.parentAuthority || 'None (Independent)'}
               </p>
             </div>
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               Inactive
             </span>
@@ -292,14 +292,14 @@ function OrganizationDetailContent() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Linked Subordinate Organizations ({organization.children?.length})
               </span>
               <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                 {organization.children?.map((child) => (
                   <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
-                    <span className="font-mono text-[10px] text-slate-400">{child.code || 'ORG'}</span>
+                    <span className="font-mono text-xs text-slate-400">{child.code || 'ORG'}</span>
                   </div>
                 ))}
               </div>
@@ -434,21 +434,44 @@ function OrganizationDetailContent() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <svg
-          className="animate-spin h-8 w-8 text-brand-600"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-        <span className="text-sm font-medium text-slate-500">Loading organization details...</span>
+      <div className="w-full min-w-0 space-y-6 pb-16 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-slate-800 shrink-0" />
+            <div className="space-y-2">
+              <div className="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="h-3.5 w-32 rounded-md bg-slate-200/70 dark:bg-slate-800/70" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-24 rounded-xl bg-slate-200 dark:bg-slate-800" />
+            <div className="h-9 w-28 rounded-xl bg-slate-200 dark:bg-slate-800" />
+          </div>
+        </div>
+
+        {/* KPI Cards Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2"
+            >
+              <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="h-7 w-16 rounded-lg bg-slate-200/80 dark:bg-slate-800/80" />
+            </div>
+          ))}
+        </div>
+
+        {/* Content Table Skeleton */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-4">
+          <div className="h-9 w-64 rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3, 4, 5].map((r) => (
+              <div key={r} className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/50" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -513,7 +536,14 @@ function OrganizationDetailContent() {
 
 export default function OrganizationDetailPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><span className="text-sm text-slate-400 animate-pulse">Loading organization...</span></div>}>
+    <Suspense
+      fallback={
+        <div className="w-full min-w-0 space-y-6 pb-16 animate-pulse">
+          <div className="h-24 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800" />
+          <div className="h-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800" />
+        </div>
+      }
+    >
       <OrganizationDetailContent />
     </Suspense>
   );

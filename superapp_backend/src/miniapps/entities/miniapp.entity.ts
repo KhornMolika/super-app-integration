@@ -34,16 +34,9 @@ import {
   stageOfLifecycle,
 } from '../status/app-status';
 
-/**
- * Old status values written on an app in this request (not stored): what the
- * lifecycleStatus / availabilityStatus setters were given. See MiniApp.
- */
-const writtenStatus = new WeakMap<object, { lifecycle?: string; availability?: string }>();
-
-/** The lifecycle value code wrote on this app, or undefined when it wrote none. */
-export function writtenLifecycle(app: object | null | undefined): string | undefined {
-  return app ? writtenStatus.get(app)?.lifecycle : undefined;
-}
+// =========================================================================
+// ZONE 1: PRIMARY DOMAIN TYPES & CANONICAL ENUMS
+// =========================================================================
 
 export { AppStatus, VersionStage } from '../status/app-status';
 
@@ -157,8 +150,22 @@ export function isMiniAppLive(app: {
   );
 }
 
+/**
+ * Storage for transient legacy status writes in current process execution (Phase 6 compatibility shim).
+ */
+const writtenStatus = new WeakMap<object, { lifecycle?: string; availability?: string }>();
+
+/** @deprecated Use app.appStatus directly. */
+export function writtenLifecycle(app: object | null | undefined): string | undefined {
+  return app ? writtenStatus.get(app)?.lifecycle : undefined;
+}
+
 @Entity('mini_apps')
 export class MiniApp {
+  // =========================================================================
+  // ZONE 2: PERSISTENT DATABASE COLUMNS (mini_apps table)
+  // =========================================================================
+
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -183,103 +190,6 @@ export class MiniApp {
   @Column({ type: 'uuid' })
   organizationId!: string;
 
-  @ManyToOne(() => Organization, (org) => org.miniApps, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-    eager: true,
-  })
-  @JoinColumn({ name: 'organizationId' })
-  organizationRelation?: Organization;
-
-  @Column({
-    type: 'varchar',
-    default: MiniAppTargetAudience.PUBLIC,
-  })
-  targetAudience!: string;
-
-  /**
-   * Can users get the app? DRAFT (never released), LIVE, SUSPENDED or
-   * ARCHIVED (AppStatus). Column "status"; the property is appStatus because
-   * `status` is the API alias of lifecycleStatus. The stage of the version
-   * being worked on is on its version row (versionStage).
-   */
-  @Column({ name: 'status', type: 'varchar', length: 20, default: AppStatus.DRAFT })
-  appStatus!: string;
-
-  /*
-   * The old status fields (lifecycleStatus, availabilityStatus) are not
-   * columns (Phase 6e). Reading one works it out from appStatus, the stage of
-   * the version being worked on and the latest build run (lifecycleOf,
-   * availabilityOf). Writing one sets appStatus (a column, saved with the
-   * app) and versionStage, which reaches the version row through
-   * persistAppVersions or the version sync subscriber after the save.
-   */
-  get lifecycleStatus(): string {
-    return (
-      writtenStatus.get(this)?.lifecycle ??
-      lifecycleOf({
-        appStatus: this.appStatus,
-        stage: this.versionStage,
-        everLive: this.everLive(),
-        buildStatus: this.buildStatus,
-      })
-    );
-  }
-  set lifecycleStatus(value: string) {
-    this.writeStatus({ lifecycle: value });
-  }
-
-  get availabilityStatus(): string {
-    return writtenStatus.get(this)?.availability ?? availabilityOf(this.appStatus);
-  }
-  set availabilityStatus(value: string) {
-    this.writeStatus({ availability: value });
-  }
-
-  get status(): string {
-    return this.lifecycleStatus;
-  }
-  set status(val: string) {
-    this.lifecycleStatus = val;
-  }
-
-  /** A version of this app was released (it has, or had, a live row). */
-  private everLive(): boolean {
-    return (
-      Boolean(this.liveVersionId) ||
-      (Array.isArray(this.versions) && this.versions.some((v) => v?.status === 'ACTIVE'))
-    );
-  }
-
-  private writeStatus(patch: { lifecycle?: string; availability?: string }): void {
-    const lifecycleBefore = this.lifecycleStatus;
-    const availabilityBefore = this.availabilityStatus;
-    const next = { ...(writtenStatus.get(this) ?? {}), ...patch };
-    writtenStatus.set(this, next);
-    this.appStatus = appStatusOf(next.lifecycle ?? lifecycleBefore, next.availability ?? availabilityBefore);
-    if (patch.lifecycle !== undefined && !this.everLive()) {
-      const stage = stageOfLifecycle(patch.lifecycle);
-      if (stage && stage !== 'ACTIVE') this.versionStage = stage;
-    }
-    // A save then always writes a row (even when only the stage changed), so
-    // the version sync subscriber sees it
-    this.updatedAt = new Date();
-  }
-
-  @OneToOne(() => MiniAppLegal, (legal) => legal.miniApp, {
-    cascade: true,
-    eager: true,
-  })
-  legal?: MiniAppLegal;
-
-  @ManyToOne(() => Identity, {
-    nullable: true,
-    onDelete: 'SET NULL',
-    eager: true,
-  })
-  @JoinColumn({ name: 'ownerId' })
-  owner!: Identity;
-
   @Column({ nullable: true })
   ownerId!: string;
 
@@ -289,68 +199,19 @@ export class MiniApp {
   @Column({ nullable: true })
   alertTelegramChatId?: string;
 
-  /** WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK or DEEP_LINK (IntegrationMethod); it decides the shape of integrationConfig. */
-  @Column({ nullable: true })
-  integrationMethod!: string;
-  /*
-   * The integration below is not stored on mini_apps: it belongs to the
-   * version the app serves (mini_app_versions.integrationConfig, homeWidget;
-   * the domain-verification fields inside integrationConfig). Filled after
-   * load from the eager versions, written with persistAppVersions.
-   * Typed for one method with integrationConfigFor(app, 'FLUTTER_PACKAGE').
-   */
-  integrationConfig!: IntegrationConfig | null;
-
-  // The Home widget the app declares for the Widget Slot (shape depends on
-  // integrationMethod, see HOME_WIDGET_FIELD); null = no Home widget.
-  homeWidget?: HomeWidget | null;
-
-  verificationToken?: string | null;
-
-  isDomainVerified!: boolean;
-
-  domainVerifiedAt?: Date | null;
+  @Column({
+    type: 'varchar',
+    default: MiniAppTargetAudience.PUBLIC,
+  })
+  targetAudience!: string;
 
   /**
-   * What the app asks for: the capabilities of the version it serves (the
-   * ACTIVE row, else its TESTING/DRAFT working row). Not a column: filled
-   * after load from the eager versions, written with persistAppVersions.
+   * Can users get the app? DRAFT (never released), LIVE, SUSPENDED or
+   * ARCHIVED (AppStatus). Column "status"; property name is appStatus because
+   * `status` is the backward-compatible getter/setter shim.
    */
-  capabilities!: MiniAppCapabilityDeclaration[];
-
-  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
-  securityChecks?: string[];
-
-  /**
-   * The staged revision of a live app. Not a column: it lives on the app's
-   * DRAFT version row (mini_app_versions.revision). Filled after load from
-   * the eager versions (or MiniAppVersionsService.attachRevisions for query
-   * builder lists); written with persistAppVersions after a save.
-   * undefined = not loaded, null = none.
-   */
-  pendingRevision?: MiniAppRevision | null;
-
-  /**
-   * Set while the app is SUSPENDED (or ARCHIVED). Not a column: replayed
-   * after load from statusEvents (status/status-events.ts); the retirement
-   * helper writes an event for every change.
-   */
-  suspension?: MiniAppSuspension | null;
-
-  /** An ADMIN asked a SUPER_ADMIN to archive this app; cleared on archive/decline. Not a column, as suspension. */
-  archiveRequest?: MiniAppArchiveRequest | null;
-
-  /** Every suspend, resume, archive request, decline, archive and restore, oldest first after load. */
-  @OneToMany(() => MiniAppStatusEvent, (event) => event.miniApp, { eager: true })
-  statusEvents?: MiniAppStatusEvent[];
-
-  /**
-   * The version the app is on: its live (ACTIVE) row's version, else the
-   * version being prepared. Not a column: filled after load from the version
-   * rows; a new value reaches the working row through persistAppVersions
-   * (publish and rollback move the rows themselves).
-   */
-  currentReleaseVersion?: string;
+  @Column({ name: 'status', type: 'varchar', length: 20, default: AppStatus.DRAFT })
+  appStatus!: string;
 
   /** The version phones get (its ACTIVE mini_app_versions row); null before the first release. */
   @Column({ type: 'uuid', nullable: true })
@@ -359,6 +220,13 @@ export class MiniApp {
   /** The Super App test build (e.g. v0.2.1) this app was last put in. */
   @Column({ nullable: true })
   activeTestVersion?: string;
+
+  /** WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK or DEEP_LINK (IntegrationMethod); decides shape of integrationConfig. */
+  @Column({ nullable: true })
+  integrationMethod!: string;
+
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  securityChecks?: string[];
 
   /** Structured review feedback (rejection reason, category, remediation checklist, reviewer notes) */
   @Column({ type: 'jsonb', nullable: true })
@@ -376,11 +244,121 @@ export class MiniApp {
     targetFiles?: string[];
   } | null;
 
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date;
+
+  // =========================================================================
+  // ZONE 3: TYPEORM ENTITY RELATIONS
+  // =========================================================================
+
+  @ManyToOne(() => Organization, (org) => org.miniApps, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+    eager: true,
+  })
+  @JoinColumn({ name: 'organizationId' })
+  organizationRelation?: Organization;
+
+  @ManyToOne(() => Identity, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    eager: true,
+  })
+  @JoinColumn({ name: 'ownerId' })
+  owner!: Identity;
+
+  @OneToOne(() => MiniAppLegal, (legal) => legal.miniApp, {
+    cascade: true,
+    eager: true,
+  })
+  legal?: MiniAppLegal;
+
+  // No cascade: MiniAppVersionsService writes version rows. Saving an app
+  // with a stale versions array must never overwrite them.
+  @OneToMany(() => MiniAppVersion, (version) => version.miniApp, {
+    eager: true,
+  })
+  versions!: MiniAppVersion[];
+
+  @OneToMany(() => MiniAppBuild, (build) => build.miniApp, {
+    cascade: true,
+  })
+  builds!: MiniAppBuild[];
+
+  @OneToMany(() => MiniAppScan, (scan) => scan.miniApp)
+  scans!: MiniAppScan[];
+
+  @OneToMany(() => MiniAppCollaborator, (collab) => collab.miniApp, {
+    cascade: true,
+  })
+  collaborators!: MiniAppCollaborator[];
+
+  @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
+    cascade: true,
+    eager: true,
+  })
+  issues!: MiniAppIssue[];
+
+  @OneToMany(() => Notification, (notification) => notification.miniApp, {
+    cascade: true,
+  })
+  notifications!: Notification[];
+
+  /** Every suspend, resume, archive request, decline, archive and restore, oldest first after load. */
+  @OneToMany(() => MiniAppStatusEvent, (event) => event.miniApp, { eager: true })
+  statusEvents?: MiniAppStatusEvent[];
+
+  // =========================================================================
+  // ZONE 4: VIRTUAL RUNTIME FIELDS & COMPUTED HELPERS (Not DB Columns)
+  // =========================================================================
+
+  /**
+   * The version the app is on: its live (ACTIVE) row's version, else the
+   * version being prepared. Filled after load from version rows.
+   */
+  currentReleaseVersion?: string;
+
+  /**
+   * Stage of the version being worked on (DRAFT ... TEST_PASSED):
+   * an unreleased app's row, or a live app's revision row; null when nothing in progress.
+   */
+  versionStage?: string | null;
+
+  /**
+   * The staged revision of a live app. Lives on mini_app_versions.revision.
+   */
+  pendingRevision?: MiniAppRevision | null;
+
+  /**
+   * What the app asks for: capabilities of the version it serves.
+   */
+  capabilities!: MiniAppCapabilityDeclaration[];
+
+  /**
+   * Active integration config belonging to the version the app serves.
+   */
+  integrationConfig!: IntegrationConfig | null;
+
+  /** Home widget the app declares for the Widget Slot; null = no widget. */
+  homeWidget?: HomeWidget | null;
+
+  verificationToken?: string | null;
+
+  isDomainVerified!: boolean;
+
+  domainVerifiedAt?: Date | null;
+
+  /** Set while app is SUSPENDED or ARCHIVED (replayed from statusEvents). */
+  suspension?: MiniAppSuspension | null;
+
+  /** An ADMIN requested archive; cleared on archive/decline. */
+  archiveRequest?: MiniAppArchiveRequest | null;
+
   /*
-   * Latest scan and build runs, not columns: they live in mini_app_scans and
-   * mini_app_builds. MiniAppRunsService.attach() fills them on loaded apps
-   * (API responses keep these fields); writers record runs through
-   * MiniAppRunsService (syncScan, recordBuild, ...).
+   * Latest scan and build runs filled by MiniAppRunsService.attach().
    */
   validationStatus?: string;
   validationStages?: Record<string, any> | null;
@@ -390,28 +368,9 @@ export class MiniApp {
   buildStages?: Record<string, any> | null;
   buildError?: string | null;
 
-  @OneToMany(() => MiniAppCollaborator, (collab) => collab.miniApp, {
-    cascade: true,
-  })
-  collaborators!: MiniAppCollaborator[];
-
-  // No cascade: MiniAppVersionsService writes version rows. Saving an app
-  // with a stale versions array must never overwrite them.
-  @OneToMany(() => MiniAppVersion, (version) => version.miniApp, {
-    eager: true,
-  })
-  versions!: MiniAppVersion[];
-
   /**
-   * Stage of the version being worked on (DRAFT ... TEST_PASSED, see
-   * status/app-status.ts): an unreleased app's row, or a live app's revision
-   * row; null when nothing is in progress. Not a column: filled after load.
-   */
-  versionStage?: string | null;
-
-  /**
-   * Fills pendingRevision, versionStage, the integration and capabilities
-   * from the eager versions (revisionRowOf / servingRowOf in versions/).
+   * Fills pendingRevision, versionStage, integration, and capabilities
+   * from the eager versions (revisionRowOf / servingRowOf).
    */
   @AfterLoad()
   loadPendingRevision(): void {
@@ -450,37 +409,83 @@ export class MiniApp {
     }
   }
 
-  @OneToMany(() => MiniAppBuild, (build) => build.miniApp, {
-    cascade: true,
-  })
-  builds!: MiniAppBuild[];
-
-  @OneToMany(() => MiniAppScan, (scan) => scan.miniApp)
-  scans!: MiniAppScan[];
-
-  @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
-    cascade: true,
-    eager: true,
-  })
-  issues!: MiniAppIssue[];
-
-  @OneToMany(() => Notification, (notification) => notification.miniApp, {
-    cascade: true,
-  })
-  notifications!: Notification[];
-
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt!: Date;
-
-  /** Responses keep the old status fields (worked out, see lifecycleStatus). */
+  /** Serializes canonical entity fields while preserving backward-compatible status aliases. */
   toJSON() {
     return {
       ...this,
       lifecycleStatus: this.lifecycleStatus,
       availabilityStatus: this.availabilityStatus,
     };
+  }
+
+  // =========================================================================
+  // ZONE 5: DEPRECATED BACKWARD-COMPATIBILITY SHIMS (Legacy Ph 1-5 Emulation)
+  // =========================================================================
+
+  /**
+   * @deprecated Legacy monolithic lifecycle getter/setter.
+   * - Read: computed from `appStatus`, `versionStage`, and latest `buildStatus`.
+   * - Write: sets `appStatus` and working `versionStage`.
+   * Migrate backend callers to write directly to `app.appStatus` and `version.status`.
+   */
+  get lifecycleStatus(): string {
+    return (
+      writtenStatus.get(this)?.lifecycle ??
+      lifecycleOf({
+        appStatus: this.appStatus,
+        stage: this.versionStage,
+        everLive: this.everLive(),
+        buildStatus: this.buildStatus,
+      })
+    );
+  }
+  set lifecycleStatus(value: string) {
+    this.writeStatus({ lifecycle: value });
+  }
+
+  /**
+   * @deprecated Legacy availability getter/setter.
+   * Computed from `appStatus`. Migrate callers to `app.appStatus`.
+   */
+  get availabilityStatus(): string {
+    return writtenStatus.get(this)?.availability ?? availabilityOf(this.appStatus);
+  }
+  set availabilityStatus(value: string) {
+    this.writeStatus({ availability: value });
+  }
+
+  /**
+   * @deprecated Alias for legacy `lifecycleStatus`.
+   */
+  get status(): string {
+    return this.lifecycleStatus;
+  }
+  set status(val: string) {
+    this.lifecycleStatus = val;
+  }
+
+  /** A version of this app was released (it has, or had, a live row). */
+  private everLive(): boolean {
+    return (
+      Boolean(this.liveVersionId) ||
+      (Array.isArray(this.versions) && this.versions.some((v) => v?.status === 'ACTIVE'))
+    );
+  }
+
+  /**
+   * Translates legacy lifecycle/availability writes into modern appStatus & versionStage.
+   */
+  private writeStatus(patch: { lifecycle?: string; availability?: string }): void {
+    const lifecycleBefore = this.lifecycleStatus;
+    const availabilityBefore = this.availabilityStatus;
+    const next = { ...(writtenStatus.get(this) ?? {}), ...patch };
+    writtenStatus.set(this, next);
+    this.appStatus = appStatusOf(next.lifecycle ?? lifecycleBefore, next.availability ?? availabilityBefore);
+    if (patch.lifecycle !== undefined && !this.everLive()) {
+      const stage = stageOfLifecycle(patch.lifecycle);
+      if (stage && stage !== 'ACTIVE') this.versionStage = stage;
+    }
+    // A save then always writes a row so subscribers see it
+    this.updatedAt = new Date();
   }
 }

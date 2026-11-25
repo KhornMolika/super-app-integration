@@ -195,10 +195,16 @@ export default function SecurityValidationSelector({
     return availableChecks.filter((c) => c.isRecommended(normMethod)).map((c) => c.id);
   }, [availableChecks, normMethod]);
 
+  const latestInitRef = React.useRef({ selectedChecks, recommendedChecks, onChange });
+  useEffect(() => {
+    latestInitRef.current = { selectedChecks, recommendedChecks, onChange };
+  });
+
   // If selectedChecks is empty on first load, initialize with recommended checks
   useEffect(() => {
-    if ((!selectedChecks || selectedChecks.length === 0) && recommendedChecks.length > 0) {
-      onChange(recommendedChecks);
+    const { selectedChecks: sel, recommendedChecks: rec, onChange: emitChange } = latestInitRef.current;
+    if ((!sel || sel.length === 0) && rec.length > 0) {
+      emitChange(rec);
     }
   }, [normMethod]);
 

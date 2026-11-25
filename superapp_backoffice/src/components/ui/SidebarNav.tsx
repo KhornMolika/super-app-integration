@@ -78,7 +78,7 @@ const mainNavGroups: NavGroup[] = [
       {
         name: 'SuperApp & Releases',
         href: '/releases',
-        requiredPermission: 'super_app:read',
+        requiredRole: ['SUPER_ADMIN', 'PLATFORM_ADMIN'],
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -119,7 +119,7 @@ const mainNavGroups: NavGroup[] = [
       {
         name: 'Banners',
         href: '/banners',
-        requiredPermission: 'miniapp:read',
+        requiredRole: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'ORG_ADMIN', 'ADMIN'],
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -266,14 +266,14 @@ const miniAppRegisterNavGroups: NavGroupWithTab[] = [
         icon: null as any,
       },
       {
-        name: 'Security scans',
+        name: 'Security profile',
         href: '/miniapps/register?step=5',
         tabKey: '5',
         stepNumber: 5,
         icon: null as any,
       },
       {
-        name: 'Review',
+        name: 'Review & submit',
         href: '/miniapps/register?step=6',
         tabKey: '6',
         stepNumber: 6,
@@ -354,22 +354,37 @@ const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
         ),
       },
       {
-        name: 'Security & Validation',
-        href: `/miniapps/${miniAppId}?tab=report`,
-        tabKey: 'report',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-        ),
-      },
-      {
         name: 'Activity History',
         href: `/miniapps/${miniAppId}?tab=activity`,
         tabKey: 'activity',
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    label: 'AUDIT WORKSPACES',
+    items: [
+      {
+        name: 'Review & Diff Desk',
+        href: `/miniapps/${miniAppId}/review`,
+        tabKey: 'review',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Security & Validation',
+        href: `/miniapps/${miniAppId}/security`,
+        tabKey: 'security',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         ),
       },
@@ -428,7 +443,7 @@ function SidebarNavContent() {
   const capabilityView = useCapabilityView();
   // Only the platform admin browses every organization; everyone else
   // (organization admins included) gets "My Organization"
-  const isSuperOrAdmin = role === 'SUPER_ADMIN';
+  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
   const { isCollapsed, isWizardStepAllowed, completedWizardSteps } = useSidebar();
 
 
@@ -443,6 +458,8 @@ function SidebarNavContent() {
     pathname !== '/capabilities';
   const miniAppId = isMiniAppDetailMode ? pathname.split('/')[2] || '' : '';
   const capabilityId = isCapabilityDetailMode ? pathname.split('/')[2] || '' : '';
+  const miniAppSubpage = isMiniAppDetailMode ? pathname.split('/')[3] || '' : '';
+  const currentMiniAppTab = miniAppSubpage || searchParams?.get('tab') || 'overview';
   const currentTab = searchParams?.get('tab') || (isCapabilityDetailMode ? 'specs' : 'overview');
   const currentStep = parseInt(searchParams?.get('step') || '1', 10);
 
@@ -569,7 +586,7 @@ function SidebarNavContent() {
         return (
           <div key={group.label} className="space-y-1">
             {!isCollapsed ? (
-              <h3 className="px-3 text-[11px] font-bold uppercase tracking-widest text-brand-400 mb-1.5">{group.label}</h3>
+              <h3 className="px-3 text-xs font-bold uppercase tracking-widest text-brand-400 mb-1.5">{group.label}</h3>
             ) : (
               <div className="h-px bg-brand-900/60 dark:bg-slate-800/80 my-2 mx-2" />
             )}
@@ -631,7 +648,13 @@ function SidebarNavContent() {
                       </div>
                     );
                   }
-                } else if (isMiniAppDetailMode || isCapabilityDetailMode) {
+                } else if (isMiniAppDetailMode) {
+                  if (miniAppSubpage) {
+                    isActive = item.tabKey === miniAppSubpage;
+                  } else {
+                    isActive = item.tabKey ? currentMiniAppTab === item.tabKey : false;
+                  }
+                } else if (isCapabilityDetailMode) {
                   isActive = item.tabKey ? currentTab === item.tabKey : false;
                 } else {
                   isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));
@@ -656,6 +679,11 @@ function SidebarNavContent() {
                     </span>
                     {!isCollapsed && (
                       <span className="truncate tracking-wide">{displayName}</span>
+                    )}
+                    {!isCollapsed && group.label === 'AUDIT WORKSPACES' && (
+                      <span className="ml-auto text-xs font-sans font-extrabold uppercase px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 shrink-0">
+                        Launch ↗
+                      </span>
                     )}
                   </Link>
                 );

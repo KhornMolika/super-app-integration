@@ -119,7 +119,7 @@ export function Section04SdkContract({
   const currentMeta = methodMetadata[activeMethodTab] || methodMetadata.webview;
 
   return (
-    <div className="space-y-10 text-base text-slate-600 dark:text-slate-300">
+    <div className="space-y-14 text-base text-slate-600 dark:text-slate-300">
       {/* Intro Paragraph */}
       <div className="space-y-3">
         <p className="leading-relaxed">
@@ -131,45 +131,39 @@ export function Section04SdkContract({
       </div>
 
       {/* PILLAR 0: Prerequisites, SDK Download & Token Setup (Auto-Filtered by Active Stack) */}
-      <div id="contract-prerequisites" className="rounded-2xl border border-brand-200 dark:border-brand-900/60 bg-gradient-to-br from-brand-50/50 via-white to-slate-50/50 dark:from-brand-950/20 dark:via-slate-900 dark:to-slate-950 p-6 space-y-6 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-              <Download className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-                  Prerequisites &amp; Setup
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  SDK Download, Developer Tokens &amp; App Setup for {currentMeta.name}
-                </h4>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Download the private SDK, authenticate your developer environment, and configure package identifiers without registration bottlenecks.
-              </p>
-            </div>
+      <section id="contract-prerequisites" className="space-y-6 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Prerequisites &amp; Setup • {currentMeta.name}
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              SDK Download, Developer Tokens &amp; App Setup
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Download the private SDK, authenticate your developer environment, and configure package identifiers without registration bottlenecks.
+            </p>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-brand-100/70 dark:bg-brand-950 text-brand-800 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-semibold flex items-center gap-1.5">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-md bg-brand-500/10 text-brand-700 dark:text-brand-300 font-medium flex items-center gap-1.5 shrink-0">
             <Key className="w-3.5 h-3.5 text-brand-500" />
             No App Registration Required to Start
           </span>
         </div>
 
-        {/* 4-Step Action Grid (Dynamically Auto-Filtered) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        {/* 4-Step Editorial Grid (Dynamically Auto-Filtered) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-7 text-sm">
           {/* STEP 1: Developer Access Token (Account Level) */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
-              Get Developer SDK Token (Account-Level)
-            </strong>
-            <p className="text-slate-600 dark:text-slate-400">
-              You do <strong>not</strong> need to register an app first to begin coding. Access tokens are tied to your Developer Account:
+          <div className="space-y-2.5 border-l-2 border-brand-500/50 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">01</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Get Developer SDK Token (Account-Level)
+              </h5>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              You do <strong className="text-slate-900 dark:text-slate-200">not</strong> need to register an app first to begin coding. Access tokens are tied to your Developer Account:
             </p>
-            <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+            <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
               <p className="text-slate-400"># 1. Log into FSA BackOffice</p>
               <p className="text-brand-300"># 2. Go to: Settings &gt; Developer Tokens (PAT)</p>
               <p className="text-emerald-400"># 3. Copy your Developer Token: fsa_pat_****************</p>
@@ -177,254 +171,250 @@ export function Section04SdkContract({
           </div>
 
           {/* STEP 2: Stack-Specific Download & Installation */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
-              Install {currentMeta.pkg}
-            </strong>
+          <div className="space-y-2.5 border-l-2 border-brand-500/50 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">02</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white truncate">
+                Install {currentMeta.pkg}
+              </h5>
+            </div>
             {activeMethodTab === "webview" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Configure <code className="font-mono text-brand-600">.npmrc</code> in your project root with your Developer Token, then install:
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Configure <code className="font-mono text-brand-600 dark:text-brand-400">.npmrc</code> in your project root with your Developer Token, then install:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-brand-300">@fsasuperapp:registry=https://app.fintechcenterfsa.com/api/sdk/</p>
-                  <p className="text-sky-300">pnpm add @fsasuperapp/miniapp-web-sdk</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-brand-300 whitespace-nowrap">@fsasuperapp:registry=https://app.fintechcenterfsa.com/api/sdk/</p>
+                  <p className="text-sky-300 whitespace-nowrap">pnpm add @fsasuperapp/miniapp-web-sdk</p>
                 </div>
               </>
             ) : activeMethodTab === "flutter" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Authenticate the hosted pub repository via terminal, then declare in <code className="font-mono text-indigo-500">pubspec.yaml</code>:
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Authenticate the hosted pub repository via terminal, then declare in <code className="font-mono text-indigo-500 dark:text-indigo-400">pubspec.yaml</code>:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-brand-300">dart pub token add https://app.fintechcenterfsa.com/pub</p>
-                  <p className="text-indigo-300"># In pubspec.yaml: fsa_superapp_miniapp_flutter_sdk: ^1.0.0</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-brand-300 whitespace-nowrap">dart pub token add https://app.fintechcenterfsa.com/pub</p>
+                  <p className="text-indigo-300 whitespace-nowrap"># In pubspec.yaml: fsa_superapp_miniapp_flutter_sdk: ^1.0.0</p>
                 </div>
               </>
             ) : activeMethodTab === "native" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Download compiled binaries directly from BackOffice Artifact Hub (`/api/sdk-artifacts`):
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Download compiled binaries directly from BackOffice Artifact Hub (<code className="font-mono">/api/sdk-artifacts</code>):
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-emerald-300">Android: libs/fsasuperapp-native-sdk.aar</p>
-                  <p className="text-indigo-300">iOS: Frameworks/FSASuperAppNativeSDK.xcframework</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-emerald-300 whitespace-nowrap">Android: libs/fsasuperapp-native-sdk.aar</p>
+                  <p className="text-indigo-300 whitespace-nowrap">iOS: Frameworks/FSASuperAppNativeSDK.xcframework</p>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   Install protocol helper and register custom URI scheme in OS manifests:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-amber-300">pnpm add @fsasuperapp/miniapp-deeplink-sdk</p>
-                  <p className="text-slate-400"># URI Scheme: fsahr://attendance/open</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-amber-300 whitespace-nowrap">pnpm add @fsasuperapp/miniapp-deeplink-sdk</p>
+                  <p className="text-slate-400 whitespace-nowrap"># URI Scheme: fsahr://attendance/open</p>
                 </div>
               </>
             )}
           </div>
 
           {/* STEP 3: Slug vs. Auto-Detected MiniApp ID (Two-Tier Model) */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
-              Package Identifier &amp; Portal Slug
-            </strong>
+          <div className="space-y-2.5 border-l-2 border-slate-300 dark:border-slate-700 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">03</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Package Identifier &amp; Portal Slug
+              </h5>
+            </div>
             {activeMethodTab === "flutter" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Use standard Dart <code className="font-mono text-indigo-500">snake_case</code> in <code className="font-mono">pubspec.yaml</code> (e.g. <code className="font-mono text-brand-600">fsa_hr_attendance_module</code>). When you register in BackOffice, the SuperApp <strong>auto-detects and links your binary app_id directly from pubspec.yaml</strong>—avoiding naming conflicts.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Use standard Dart <code className="font-mono text-indigo-500 dark:text-indigo-400">snake_case</code> in <code className="font-mono">pubspec.yaml</code> (e.g. <code className="font-mono text-brand-600 dark:text-brand-400">fsa_hr_attendance_module</code>). When you register in BackOffice, the SuperApp <strong className="text-slate-900 dark:text-slate-200">auto-detects and links your binary app_id directly from pubspec.yaml</strong>—avoiding naming conflicts.
               </p>
             ) : activeMethodTab === "native" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Use standard reverse-DNS in Android (<code className="font-mono text-emerald-500">com.fsa.enterprise.hr</code>) and iOS bundle ID. In BackOffice, the SuperApp <strong>auto-detects your app_id from your uploaded .aar or framework</strong> in the Integration step.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Use standard reverse-DNS in Android (<code className="font-mono text-emerald-500 dark:text-emerald-400">com.fsa.enterprise.hr</code>) and iOS bundle ID. In BackOffice, the SuperApp <strong className="text-slate-900 dark:text-slate-200">auto-detects your app_id from your uploaded .aar or framework</strong> in the Integration step.
               </p>
             ) : activeMethodTab === "deeplink" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Register your custom scheme (<code className="font-mono text-amber-500">fsahr</code>) and host path (<code className="font-mono">attendance/open</code>) in the Integration tab. In Basic Info, supply a friendly human slug (<code className="font-mono">staff-portal-attendance</code>).
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Register your custom scheme (<code className="font-mono text-amber-500 dark:text-amber-400">fsahr</code>) and host path (<code className="font-mono">attendance/open</code>) in the Integration tab. In Basic Info, supply a friendly human slug (<code className="font-mono">staff-portal-attendance</code>).
               </p>
             ) : (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Develop locally using your package name in <code className="font-mono">package.json</code> (<code className="font-mono text-brand-600">fsa-hr-attendance-miniapp</code>). When you register in BackOffice, Tab 1 sets your friendly URL <strong>Slug</strong> (<code className="font-mono">staff-portal-attendance</code>), and Tab 2 links your package.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Develop locally using your package name in <code className="font-mono">package.json</code> (<code className="font-mono text-brand-600 dark:text-brand-400">fsa-hr-attendance-miniapp</code>). When you register in BackOffice, Tab 1 sets your friendly URL <strong className="text-slate-900 dark:text-slate-200">Slug</strong> (<code className="font-mono">staff-portal-attendance</code>), and Tab 2 links your package.
               </p>
             )}
-            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-[11px] text-slate-600 dark:text-slate-300 font-mono flex items-center justify-between">
+            <div className="pt-1 text-xs font-mono flex flex-wrap items-center gap-x-2 gap-y-1 text-slate-500 dark:text-slate-400">
               <span>Basic Info: Slug (URL/Catalog)</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">&rarr; Integration: Auto-Detected app_id</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">&rarr; Integration: Auto-Detected app_id</span>
             </div>
           </div>
 
           {/* STEP 4: Runtime Employee Token & Scopes */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
-              Runtime Employee Session &amp; Scopes
-            </strong>
-            <p className="text-slate-600 dark:text-slate-400">
+          <div className="space-y-2.5 border-l-2 border-slate-300 dark:border-slate-700 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">04</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Runtime Employee Session &amp; Scopes
+              </h5>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               When the employee opens your MiniApp, the SuperApp host shell injects a verified session token for your backend API calls:
             </p>
-            <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-              <p className="text-sky-300">const auth = await FSASuperApp.getAuthToken();</p>
-              <p className="text-slate-400"># Send: Authorization: Bearer &#36;&#123;auth.accessToken&#125;</p>
-              <p className="text-purple-300"># Scopes: staff:profile:read, notification:push, storage:secure</p>
+            <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+              <p className="text-sky-300 whitespace-nowrap">const auth = await FSASuperApp.getAuthToken();</p>
+              <p className="text-slate-400 whitespace-nowrap"># Send: Authorization: Bearer &#36;&#123;auth.accessToken&#125;</p>
+              <p className="text-purple-300 whitespace-nowrap"># Scopes: staff:profile:read, notification:push, storage:secure</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 1: Shared Responsibility Model */}
-      <div id="contract-shared-model" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-900/60 dark:to-slate-950 p-6 space-y-5 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-                  Pillar 1
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  Shared Responsibility Model: Zero-Crash Architecture
-                </h4>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Division of responsibilities guaranteeing host shell stability and graceful user degradation.
-              </p>
-            </div>
+      <section id="contract-shared-model" className="space-y-5 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Pillar 1 • Architecture
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              Shared Responsibility Model: Zero-Crash Architecture
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Division of responsibilities guaranteeing host shell stability and graceful user degradation.
+            </p>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-semibold flex items-center gap-1.5">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold flex items-center gap-1.5 shrink-0">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
             Zero Host Crash Guarantee
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
-          {/* Host Shell Responsibility */}
-          <div className="p-5 rounded-xl border border-sky-200 dark:border-sky-900/40 bg-sky-50/40 dark:bg-sky-950/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400 flex items-center gap-1.5">
-                <Cpu className="w-4 h-4" /> SuperApp Host Shell Guarantees
-              </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300">
-                Host Container
-              </span>
-            </div>
-            <ul className="text-xs space-y-2 text-slate-700 dark:text-slate-300">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                <span><strong>Crash-Proof Bridge:</strong> The host shell intercepts unsupported or unvetted bridge calls safely; the host app will NEVER crash.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                <span><strong>Introspection API:</strong> Exposes <code className="font-mono text-sky-600 dark:text-sky-400">canIUse(key)</code> across all platforms for pre-flight feature verification.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                <span><strong>Standard Rejection Envelope:</strong> Returns a uniform <code className="font-mono text-rose-600 dark:text-rose-400">CAPABILITY_UNSUPPORTED</code> payload when a feature is missing.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                <span><strong>Pre-Publish Automated Gate:</strong> Automatically rejects MiniApps requesting required capabilities not supported by the shell build.</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* MiniApp Developer Responsibility */}
-          <div className="p-5 rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-950/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                <SparklesIcon /> MiniApp Developer Obligations
-              </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">
-                Partner Codebase
-              </span>
-            </div>
-            <ul className="text-xs space-y-2 text-slate-700 dark:text-slate-300">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                <span><strong>Feature Gating:</strong> Call <code className="font-mono text-indigo-600 dark:text-indigo-400">canIUse()</code> before rendering native hardware action triggers.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                <span><strong>Business Fallback UI:</strong> Render alternative flows (e.g. manual code input if camera is absent; cached records if offline).</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                <span><strong>Error Trapping:</strong> Wrap bridge operations in <code className="font-mono">try / catch</code> blocks to gracefully handle denials or timeouts.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                <span><strong>Scope Transparency:</strong> Accurately register permissions in the portal as <code className="font-mono">Required</code> (blocking) or <code className="font-mono">Optional</code> (progressive enhancement).</span>
-              </li>
-            </ul>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th className="py-3 pr-6 w-40">Layer</th>
+                <th className="py-3 pr-6">
+                  <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                    <Cpu className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                    SuperApp Host Shell
+                  </span>
+                </th>
+                <th className="py-3">
+                  <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                    <Sparkle className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    MiniApp Developer
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/70 text-slate-600 dark:text-slate-300">
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Bridge Safety
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Safely intercepts unsupported or unvetted bridge calls so the host app never crashes.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Wrap bridge calls in <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">try / catch</code> to handle denials or timeouts gracefully.
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Feature Discovery
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Exposes <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-brand-700 dark:text-brand-300">canIUse(key)</code> across all platforms for pre-flight verification.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Call <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-brand-700 dark:text-brand-300">canIUse()</code> before rendering native hardware action triggers.
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Degradation
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Returns a uniform <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400">CAPABILITY_UNSUPPORTED</code> envelope when a feature is missing.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Render fallback UI (e.g., manual input when camera is absent; cached data when offline).
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3.5 pr-6 font-medium text-slate-900 dark:text-white whitespace-nowrap align-top">
+                  Review Gate
+                </td>
+                <td className="py-3.5 pr-6 align-top leading-relaxed">
+                  Automatically rejects builds requesting required capabilities not supported by the shell.
+                </td>
+                <td className="py-3.5 align-top leading-relaxed">
+                  Register permissions accurately as <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Required</code> or <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Optional</code>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 2: canIUse() Introspection Protocol */}
-      <div id="contract-can-i-use" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 p-6 space-y-5 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <Terminal className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                  Pillar 2
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  canIUse() Introspection Protocol &amp; Rejection Contract
-                </h4>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Runtime capability discovery protocol guaranteeing backward compatibility across device versions.
-              </p>
-            </div>
+      <section id="contract-can-i-use" className="space-y-5 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Pillar 2 • Protocol
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              canIUse() Introspection Protocol &amp; Rejection Contract
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Runtime capability discovery protocol guaranteeing backward compatibility across device versions.
+            </p>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold shrink-0">
             Pre-flight Gate Pattern
           </span>
         </div>
 
-        {/* 3-Step Flow Diagram */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-brand-600 dark:text-brand-400">Step 1: Introspect</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-semibold">Pre-flight</span>
+        {/* 3-Step Flow (Clean Borderless Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1 text-sm">
+          <div className="border-l-2 border-slate-300 dark:border-slate-700 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white">1. Introspect</span>
+              <span className="text-xs text-slate-400 font-medium">• Pre-flight</span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400">
-              MiniApp calls <code className="font-mono font-bold text-slate-800 dark:text-slate-200">await FSASuperApp.canIUse('biometric_auth')</code> before triggering native sensors.
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed break-words">
+              Call <code className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400 break-all">FSASuperApp.canIUse(&apos;biometric_auth&apos;)</code> before triggering native sensors.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">Step 2: Path Branching</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold">True / False</span>
+          <div className="border-l-2 border-emerald-500 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white">2. Branch Path</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">• True / False</span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400">
-              If <code className="font-mono text-emerald-600 font-semibold">true</code>, invoke native hardware bridge. If <code className="font-mono text-amber-600 font-semibold">false</code>, render fallback UI immediately.
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              If <code className="font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">true</code>, invoke the native bridge. If <code className="font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">false</code>, render fallback UI immediately.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-rose-600 dark:text-rose-400">Step 3: Safe Rejection</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-semibold">Fallback</span>
+          <div className="border-l-2 border-rose-500 pl-4 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white">3. Safe Rejection</span>
+              <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">• Fallback</span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400">
-              If an unsupported method is called directly, the host intercepts safely and emits the uniform rejection envelope.
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              If an unsupported method is called directly, the host intercepts it safely and emits the standard rejection envelope.
             </p>
           </div>
         </div>
 
         {/* Rejection Schema Box */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
@@ -432,7 +422,7 @@ export function Section04SdkContract({
             </span>
             <button
               onClick={() => handleCopy(rejectionJsonExample, "rejection-json")}
-              className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-mono transition"
+              className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 font-mono transition cursor-pointer"
             >
               {copiedSnippet === "rejection-json" ? (
                 <>
@@ -448,11 +438,11 @@ export function Section04SdkContract({
           <div className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto border border-slate-800">
             <pre>{rejectionJsonExample}</pre>
           </div>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             All SuperApp host versions guarantee this structured JSON error format. Handling this code ensures your MiniApp will never experience a white screen or crash.
           </p>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 3: Focused Implementation Guide for Active Method (HR MiniApp Codebase) */}
       <div id="contract-code-examples" className="space-y-6 scroll-mt-24">
@@ -476,7 +466,7 @@ export function Section04SdkContract({
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
             {currentMeta.pkgBadge}
           </span>
         </div>
@@ -505,13 +495,13 @@ export function Section04SdkContract({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">1</span>
                   Setup Scoped NPM Registry &amp; Install
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Place an authenticated <code className="font-mono text-brand-600">.npmrc</code> in your project root, then add the SDK dependency:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-brand-300">pnpm add @fsasuperapp/miniapp-web-sdk</p>
                   <p className="text-slate-400"># or for HTML5 CDN: &lt;script src="...min.js"&gt;&lt;/script&gt;</p>
                 </div>
@@ -519,13 +509,13 @@ export function Section04SdkContract({
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">2</span>
                   Startup Ready Handshake
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   In your root entry file (<code className="font-mono">main.tsx</code> or <code className="font-mono">App.tsx</code>), complete the handshake before rendering:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-purple-300">import FSASuperApp from '@fsasuperapp/miniapp-web-sdk';</p>
                   <p className="text-slate-200">await FSASuperApp.ready(); // Handshake with host shell</p>
                 </div>
@@ -533,13 +523,13 @@ export function Section04SdkContract({
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">3</span>
                   Access Auth Token &amp; Staff Profile
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Retrieve verified staff identity and short-lived host bearer token to authorize your HR backend API calls:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-sky-300">const auth = await FSASuperApp.getAuthToken();</p>
                   <p className="text-sky-300">const user = await FSASuperApp.getUserProfile();</p>
                 </div>
@@ -547,13 +537,13 @@ export function Section04SdkContract({
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+                  <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">4</span>
                   Feature Check &amp; Graceful Exit
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Inspect capability before calling native features, and close the MiniApp cleanly on task completion:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-amber-300">if (await FSASuperApp.canIUse('biometric_auth')) &#123; ... &#125;</p>
                   <p className="text-rose-300">FSASuperApp.close(); // Return to SuperApp</p>
                 </div>
@@ -817,13 +807,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<StaffPortalApp />)
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold">1</span>
                   Private Pub Token &amp; pubspec.yaml
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Authenticate your developer environment and declare the hosted private pub dependency:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-brand-300">dart pub token add https://app.fintechcenterfsa.com/pub</p>
                   <p className="text-slate-400"># In pubspec.yaml: fsa_superapp_miniapp_flutter_sdk: ^1.0.0</p>
                 </div>
@@ -831,13 +821,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<StaffPortalApp />)
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold">2</span>
                   Extend MiniAppWidget (Never runApp)
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   MiniApps are modular child widgets. Never define <code className="font-mono text-rose-500">void main()</code> or invoke <code className="font-mono text-rose-500">runApp()</code>:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-purple-300">class MiniAppEntryPoint extends MiniAppWidget &#123;</p>
                   <p className="text-slate-300 pl-2">Widget build(BuildContext ctx, MiniAppContext appCtx) &#123; ... &#125;</p>
                   <p className="text-purple-300">&#125;</p>
@@ -846,13 +836,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<StaffPortalApp />)
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold">3</span>
                   Access MiniAppContext for Staff Auth
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   The injected <code className="font-mono">MiniAppContext</code> provides verified staff profile and JWT tokens:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-sky-300">final user = appCtx.auth.currentUser;</p>
                   <p className="text-sky-300">final token = appCtx.auth.jwtToken;</p>
                 </div>
@@ -860,13 +850,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<StaffPortalApp />)
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+                  <span className="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold">4</span>
                   Introspect &amp; Exit Safe
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Check features before calling and exit via <code className="font-mono">appCtx.navigation.exit()</code> (NEVER call <code className="font-mono text-rose-500">exit(0)</code>):
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-amber-300">final canNotify = await appCtx.capabilities.canIUse('notification');</p>
                   <p className="text-rose-300">appCtx.navigation.exit(); // Safe navigation exit</p>
                 </div>
@@ -1077,13 +1067,13 @@ dependencies:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">1</span>
                   Android: FSAMiniAppNativePlugin
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Implement the plugin interface, attach to the host context, and pre-check capability support:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-emerald-300">class MiniAppPlugin : FSAMiniAppNativePlugin &#123;</p>
                   <p className="text-slate-300 pl-2">override fun initialize(ctx: Context, appCtx: MiniAppNativeContext) &#123; ... &#125;</p>
                   <p className="text-emerald-300">&#125;</p>
@@ -1092,13 +1082,13 @@ dependencies:
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">2</span>
                   iOS: FSASuperAppMiniAppNativeProtocol
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Implement the Swift protocol and store the active session context for platform services:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-indigo-300">@objc public class MiniAppPlugin: NSObject, FSASuperAppMiniAppNativeProtocol &#123;</p>
                   <p className="text-slate-300 pl-2">public static func initialize(with context: MiniAppNativeContext) &#123; ... &#125;</p>
                   <p className="text-indigo-300">&#125;</p>
@@ -1107,27 +1097,27 @@ dependencies:
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">3</span>
                   Present Staff Portal UI View
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Launch your HR Activity or UIViewController from the presenter view passed by host:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-sky-300">// Android: activity.startActivity(Intent(activity, StaffPortalActivity::class.java))</p>
-                  <p className="text-sky-300">// iOS: presenter.present(navController, animated: true)</p>
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
+                  <p className="text-sky-300">{'// Android: activity.startActivity(Intent(activity, StaffPortalActivity::class.java))'}</p>
+                  <p className="text-sky-300">{'// iOS: presenter.present(navController, animated: true)'}</p>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">4</span>
                   Return Result &amp; Terminate
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Deliver the task outcome callback to the host shell and dismiss cleanly:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-purple-300">callback(mapOf("status" to "completed", "staffId" to "EMP-8842"))</p>
                   <p className="text-rose-300">appCtx.navigation.terminateSession()</p>
                 </div>
@@ -1253,13 +1243,13 @@ import FSASuperAppMiniAppNativeSDK
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">1</span>
                   Register URI Scheme in Backoffice Portal
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Register your custom URI scheme and store fallback URLs in the registration form:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-brand-300">Scheme: fsahr://attendance/open</p>
                   <p className="text-slate-400">Android: com.fsa.enterprise.hr | iOS: https://apps.apple.com/...</p>
                 </div>
@@ -1267,26 +1257,26 @@ import FSASuperAppMiniAppNativeSDK
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">2</span>
                   Receive Incoming Launch Intent
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   The SuperApp initiates the handoff with verified user ID, short-lived JWT, and return callback URL:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-purple-300">fsahr://attendance/open?token=...&amp;callbackUrl=...</p>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">3</span>
                   Decode Session via DeepLink Helper
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Use the helper library to parse parameters and validate signature integrity:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-sky-300">const session = FSASuperAppDeepLink.parseIncomingUrl(url);</p>
                   <p className="text-slate-400">console.log(session.userId, session.token);</p>
                 </div>
@@ -1294,13 +1284,13 @@ import FSASuperAppMiniAppNativeSDK
 
               <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
                 <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+                  <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">4</span>
                   Redirect User Back to SuperApp
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400">
                   Construct verified callback URL and return user seamlessly to the SuperApp host:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
+                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
                   <p className="text-emerald-300">window.location.href = session.buildCallbackUrl(&#123; ... &#125;);</p>
                 </div>
               </div>
@@ -1403,7 +1393,7 @@ export function returnToSuperApp(session: any, recordId: string) {
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-semibold">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-semibold">
             Enforced in Automated CI/CD
           </span>
         </div>
@@ -1415,7 +1405,7 @@ export function returnToSuperApp(session: any, recordId: string) {
               <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400 text-sm">
                 <BanIcon /> Strictly Prohibited (Immediate Build Rejection)
               </strong>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300">
+              <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300">
                 Rule ID
               </span>
             </div>
@@ -1526,7 +1516,7 @@ export function returnToSuperApp(session: any, recordId: string) {
               <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-sm">
                 <CheckCircleIcon /> Required Development Conventions
               </strong>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
+              <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
                 Rule ID
               </span>
             </div>

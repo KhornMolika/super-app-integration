@@ -212,7 +212,7 @@ export function AddCollaboratorModal({
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>Add MiniApp Collaborator</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200/80 dark:border-emerald-800/80">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200/80 dark:border-emerald-800/80">
                   Direct (1-Click)
                 </span>
               </h3>
@@ -238,7 +238,7 @@ export function AddCollaboratorModal({
               Organization Member <span className="text-rose-500">*</span>
             </Label>
             {agencyName && (
-              <span className="text-[11px] text-slate-400 dark:text-slate-400 font-medium flex items-center gap-1">
+              <span className="text-xs text-slate-400 dark:text-slate-400 font-medium flex items-center gap-1">
                 <BuildingIcon className="w-3 h-3 text-slate-400" />
                 <span>Organization: {agencyName}</span>
               </span>
@@ -261,7 +261,7 @@ export function AddCollaboratorModal({
                     <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
                       {selectedUser.name || 'Organization Teammate'}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 uppercase tracking-wide">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 uppercase tracking-wide">
                       <CheckIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Selected</span>
                     </span>
@@ -363,7 +363,7 @@ export function AddCollaboratorModal({
                             <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 truncate">
                               {user.name || 'Unnamed Staff'}
                             </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                               {user.email}
                             </div>
                           </div>
@@ -418,7 +418,7 @@ export function AddCollaboratorModal({
                       {isSelected && <CheckIcon className="w-3 h-3 stroke-[3]" />}
                     </span>
                   </span>
-                  <span className="block mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  <span className="block mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-snug">
                     {r.grants.slice(r.value === 'VIEWER' ? 0 : 1).join('. ')}.
                   </span>
                 </button>

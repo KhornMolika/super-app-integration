@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { Button } from './inputs';
+import { CleanDropdown } from './CleanDropdown';
 import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from './DownloadApkModal';
@@ -280,7 +281,7 @@ export default function PreviewModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-slate-100 truncate max-w-[140px]" title={title}>{title}</h3>
-                <span className="text-[10px] bg-accent-500/20 text-accent-300 font-semibold px-2 py-0.5 rounded-full border border-accent-500/30 shrink-0">
+                <span className="text-xs bg-accent-500/20 text-accent-300 font-semibold px-2 py-0.5 rounded-full border border-accent-500/30 shrink-0">
                   {getMethodBadge()}
                 </span>
               </div>
@@ -315,7 +316,7 @@ export default function PreviewModal({
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-              <span className="text-slate-300 text-[11px] font-medium">Ready</span>
+              <span className="text-slate-300 text-xs font-medium">Ready</span>
             </span>
           )}
         </div>
@@ -324,17 +325,20 @@ export default function PreviewModal({
         <div className="flex items-center gap-2">
           {/* Compact Device Dropdown Switcher */}
           <div className="flex items-center bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 shadow-xs">
-            <select
+            <CleanDropdown
+              label=""
               value={device}
-              onChange={(e) => setDevice(e.target.value as DeviceType)}
-              className="bg-transparent text-xs font-semibold text-slate-200 pl-2.5 pr-2 py-1.5 focus:outline-none cursor-pointer rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <option value="iPhone 16 Pro" className="bg-slate-900 text-slate-200">iPhone 16 Pro (393×852)</option>
-              <option value="Galaxy S25 Ultra" className="bg-slate-900 text-slate-200">Galaxy S25 Ultra (412×915)</option>
-              <option value="iPad Pro 11&quot;" className="bg-slate-900 text-slate-200">iPad Pro 11&quot; (834×1194)</option>
-              <option value="Laptop 14&quot;" className="bg-slate-900 text-slate-200">Laptop 14&quot; (1440×900)</option>
-              <option value="Responsive" className="bg-slate-900 text-slate-200">Responsive (Fluid)</option>
-            </select>
+              onChange={(val) => setDevice(val as DeviceType)}
+              options={[
+                { value: 'iPhone 16 Pro', label: 'iPhone 16 Pro (393×852)' },
+                { value: 'Galaxy S25 Ultra', label: 'Galaxy S25 Ultra (412×915)' },
+                { value: 'iPad Pro 11"', label: 'iPad Pro 11" (834×1194)' },
+                { value: 'Laptop 14"', label: 'Laptop 14" (1440×900)' },
+                { value: 'Responsive', label: 'Responsive (Fluid)' },
+              ]}
+              buttonClassName="h-8 px-2.5 py-1 rounded-lg border-0 bg-transparent text-slate-200 hover:bg-slate-700/50"
+              dropdownWidth="w-56"
+            />
 
             {/* Orientation Toggle Button */}
             {activeDeviceType === 'Phone' && (
@@ -346,7 +350,7 @@ export default function PreviewModal({
                 <svg className="w-3.5 h-3.5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="hidden xl:inline text-[11px]">{orientation}</span>
+                <span className="hidden xl:inline text-xs">{orientation}</span>
               </button>
             )}
           </div>
@@ -467,11 +471,14 @@ export default function PreviewModal({
               {/* Viewport Content: Flutter Web SuperApp Container vs Mock Home vs Direct MiniApp */}
               {currentScreen === 'sandbox' ? (
                 <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 overflow-hidden">
+                  {activeDeviceType === 'Phone' && orientation === 'Portrait' && (
+                    <div className="h-8 bg-slate-900 shrink-0" />
+                  )}
                   {/* Top Bar for Flutter Web Container */}
-                  <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
+                  <div className="h-10 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-[11px] font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
+                      <span className="text-xs font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
@@ -498,32 +505,35 @@ export default function PreviewModal({
                 </div>
               ) : (
                 <div className="w-full h-full relative z-10 flex flex-col bg-white dark:bg-slate-900">
+                  {activeDeviceType === 'Phone' && orientation === 'Portrait' && (
+                    <div className="h-8 bg-slate-900 shrink-0" />
+                  )}
                   {/* SuperApp In-App Browser Bar */}
-                  <div className="h-12 bg-slate-900 border-b border-slate-800 text-white px-3 flex items-center justify-between z-20 flex-shrink-0">
+                  <div className="h-11 bg-slate-900 border-b border-slate-800 text-white px-2.5 flex items-center justify-between gap-2 z-20 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => setCurrentScreen('sandbox')}
-                      className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                      className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0 whitespace-nowrap"
                       title="Switch to SuperApp Shell"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
                       <span>SuperApp</span>
                     </button>
 
-                    <div className="flex flex-col items-center text-center px-2">
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span className="truncate max-w-[130px]">{title}</span>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <div className="flex flex-col items-center text-center min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white flex items-center justify-center gap-1.5 max-w-full">
+                        <span className="truncate">{title}</span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                          Preview Mode
+                          Preview
                         </span>
                       </div>
-                      <span className="text-[9px] text-slate-400 font-mono truncate max-w-[180px]">
+                      <span className="text-[10px] text-slate-400 font-mono truncate max-w-full">
                         {displayMiniAppSubtitle}
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <button
                         type="button"
                         onClick={handleReload}

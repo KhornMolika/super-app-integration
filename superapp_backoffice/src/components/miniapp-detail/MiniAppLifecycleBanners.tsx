@@ -42,6 +42,7 @@ export interface MiniAppLifecycleBannersProps {
   currentReleaseVersion?: string;
   draftVersion?: string;
   hasActiveProduction?: boolean;
+  integrationMethod?: string;
 }
 
 export default function MiniAppLifecycleBanners({
@@ -63,7 +64,15 @@ export default function MiniAppLifecycleBanners({
   currentReleaseVersion,
   draftVersion,
   hasActiveProduction,
+  integrationMethod,
 }: MiniAppLifecycleBannersProps) {
+  const isDynamicMethod = ['WEBVIEW', 'DEEP_LINK'].includes(
+    String(integrationMethod || '').toUpperCase(),
+  );
+  const dynamicLabel =
+    String(integrationMethod || '').toUpperCase() === 'DEEP_LINK'
+      ? 'Deep Link'
+      : 'WebView';
   const stageDefs = [
     { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-accent-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
     { id: 'compile', name: '2. Compile APK', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter SuperApp container and compiling APK.' },
@@ -178,8 +187,8 @@ export default function MiniAppLifecycleBanners({
         </div>
       )}
 
-      {/* Draft, rejected or changes requested: the developer submits it */}
-      {actions.phase === 'draft' && (
+      {/* Draft: the developer submits it (not shown for CHANGES_REQUESTED/REJECTED since ChangesRequestedBanner handles those) */}
+      {status === 'DRAFT' && (
         <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 border border-brand-200 dark:border-brand-800">
@@ -189,12 +198,12 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {status === 'REJECTED' ? 'Rejected' : status === 'CHANGES_REQUESTED' ? 'Changes requested' : 'Draft'}
+                Draft
               </h4>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                {status === 'DRAFT'
+                {actions.submit
                   ? 'Not sent for review yet. Finish the details, then submit it.'
-                  : 'Fix what the reviewer asked for (see the Activity tab), then submit it again.'}
+                  : 'Waiting for the MiniApp developer to finish configuration and submit for review.'}
               </p>
             </div>
           </div>
@@ -283,16 +292,16 @@ export default function MiniAppLifecycleBanners({
       {/* 1. Review & Action Banner for IN_REVIEW (New App vs Update Proposal).
           After a failed security scan: no Approve, only Request Changes / Reject. */}
       {status === 'IN_REVIEW' && (
-        <div className={`mb-6 p-5 rounded-2xl border shadow-sm animate-in fade-in flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        <div className={`mb-6 p-4 sm:p-5 rounded-2xl border shadow-sm animate-in fade-in flex flex-col xl:flex-row xl:items-center justify-between gap-4 ${
           isUpdateProposal
-            ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40'
-            : 'border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40'
+            ? 'border-amber-200/90 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/35'
+            : 'border-blue-200/90 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/35'
         }`}>
-          <div className="flex items-start gap-3.5">
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
               isUpdateProposal
-                ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                : 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                ? 'bg-amber-100/90 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                : 'bg-blue-100/90 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
             }`}>
               {isUpdateProposal ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,30 +318,30 @@ export default function MiniAppLifecycleBanners({
                 </svg>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className={`text-base font-bold ${
-                  isUpdateProposal ? 'text-amber-900 dark:text-amber-200' : 'text-blue-900 dark:text-blue-200'
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className={`text-sm sm:text-base font-bold ${
+                  isUpdateProposal ? 'text-amber-950 dark:text-amber-100' : 'text-slate-900 dark:text-slate-100'
                 }`}>
                   {isUpdateProposal
                     ? `MiniApp Update Proposal${draftVersion ? ` (${draftVersion})` : ''}`
                     : 'New MiniApp Initial Submission'}
                 </h4>
                 {isUpdateProposal && currentReleaseVersion && (
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60">
                     Active v{currentReleaseVersion}
                   </span>
                 )}
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                <span className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-md border ${
                   isUpdateProposal
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                    ? 'bg-amber-100/90 text-amber-800 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60'
+                    : 'bg-blue-100/90 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60'
                 }`}>
-                  IN REVIEW
+                  In Review
                 </span>
               </div>
-              <p className={`text-sm mt-1 leading-relaxed ${
-                isUpdateProposal ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'
+              <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${
+                isUpdateProposal ? 'text-amber-900/80 dark:text-amber-200/90' : 'text-slate-600 dark:text-slate-300'
               }`}>
                 {actions.scanFailed
                   ? 'The automated security scan FAILED, so this cannot be approved. Review the findings in the security report, then Request Changes so the developer can fix them, or Reject.'
@@ -342,59 +351,59 @@ export default function MiniAppLifecycleBanners({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {isUpdateProposal && onOpenReviewDiff && (
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onOpenReviewDiff && (
               <Button
                 type="button"
+                variant="outline"
                 onClick={onOpenReviewDiff}
-                className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2.5 font-bold rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-2 transition-all"
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs inline-flex items-center gap-1.5 transition-all"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
-                <span>Review Changes Diff</span>
+                <span>{isUpdateProposal ? 'Review Changes Diff' : 'Open Review Desk'}</span>
               </Button>
             )}
             {actions.approve && (
-                <Button
-                  type="button"
-                  onClick={() => onLifecycleAction('approve')}
-                  disabled={isSubmitting}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-5 py-2.5 font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
-                </Button>
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('approve')}
+                disabled={isSubmitting}
+                className="h-9 px-4 rounded-xl text-xs font-semibold whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/15 inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
+              </Button>
             )}
             {actions.requestChanges && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onLifecycleAction('request-changes')}
-                  disabled={isSubmitting}
-                  className="border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
-                >
-                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Request Changes</span>
-                </Button>
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('request-changes')}
+                disabled={isSubmitting}
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-sm shadow-amber-500/15 inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Request Changes</span>
+              </Button>
             )}
             {actions.reject && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onLifecycleAction('reject')}
-                  disabled={isSubmitting}
-                  className="border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
-                >
-                  <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <span>Reject</span>
-                </Button>
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('reject')}
+                disabled={isSubmitting}
+                className="h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/15 inline-flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Reject</span>
+              </Button>
             )}
           </div>
         </div>
@@ -411,11 +420,14 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-teal-900 dark:text-teal-200">
-                MiniApp Approved — Build & Assembly Required
+                {isDynamicMethod
+                  ? 'MiniApp Approved — Ready for Sandbox Testing'
+                  : 'MiniApp Approved — Build & Assembly Required'}
               </h4>
               <p className="text-sm text-teal-800 dark:text-teal-200 mt-1 leading-relaxed">
-                Integration review approved by SA Admin. Build and validate the SuperApp test container before moving
-                to the TESTING phase for APK download.
+                {isDynamicMethod
+                  ? `Integration review approved. No native build is required for ${dynamicLabel} — move directly to Sandbox Testing.`
+                  : 'Integration review approved by SA Admin. Build and validate the SuperApp test container before moving to the TESTING phase for APK download.'}
               </p>
             </div>
           </div>
@@ -434,7 +446,7 @@ export default function MiniAppLifecycleBanners({
                   d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
                 />
               </svg>
-              <span>Build & Move to Testing</span>
+              <span>{isDynamicMethod ? 'Testing' : 'Build & Move to Testing'}</span>
             </Button>
           </div>
         </div>
@@ -514,7 +526,7 @@ export default function MiniAppLifecycleBanners({
                       <span>{st.icon}</span>
                       <span>{st.name}</span>
                     </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
                       isRunning
                         ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/60 dark:text-accent-300 animate-pulse'
                         : isCompleted
@@ -526,7 +538,7 @@ export default function MiniAppLifecycleBanners({
                       {recorded?.status || (idx === 0 ? 'RUNNING' : 'PENDING')}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
                     {recorded?.details || st.defaultDetails}
                   </p>
                 </div>
@@ -621,7 +633,7 @@ export default function MiniAppLifecycleBanners({
 
             {/* Technical Failure Log / Raw Diagnostic */}
             <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs space-y-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+              <div className="flex items-center justify-between text-xs text-slate-400 pb-1 border-b border-slate-800">
                 <span className="uppercase tracking-wider font-semibold">Technical Console Diagnostic</span>
                 <span>Jenkins Fastlane Pipeline</span>
               </div>
@@ -649,12 +661,18 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-accent-900 dark:text-accent-200">
-                Manual Sandbox Testing Phase
+                {isDynamicMethod ? `${dynamicLabel} Sandbox Testing` : 'Manual Sandbox Testing Phase'}
               </h4>
               <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
-                The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or
-                the test APK on an Android phone. When everything works, a reviewer marks testing as passed; found a
-                defect? Request changes.
+                {isDynamicMethod ? (
+                  <>
+                    Ready for verification. Test the MiniApp with <strong>Sandbox Preview</strong> in the header or inside the SuperApp. When everything works, mark testing as passed; found a defect? Request changes.
+                  </>
+                ) : (
+                  <>
+                    The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or the test APK on an Android phone. When everything works, a reviewer marks testing as passed; found a defect? Request changes.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -688,8 +706,9 @@ export default function MiniAppLifecycleBanners({
             <div>
               <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-200">Testing Passed</h4>
               <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1 leading-relaxed">
-                The test build was verified. Activating starts the production release build and puts the MiniApp in
-                the SuperApp catalog.
+                {isDynamicMethod
+                  ? `${dynamicLabel} sandbox testing was verified. Activating publishes the MiniApp directly to the SuperApp catalog.`
+                  : 'The test build was verified. Activating starts the production release build and puts the MiniApp in the SuperApp catalog.'}
               </p>
             </div>
           </div>

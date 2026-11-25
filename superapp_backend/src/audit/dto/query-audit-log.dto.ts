@@ -16,5 +16,9 @@ export class QueryAuditLogDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsString()
+  actorRole?: string;
+
+  @IsOptional()
+  @IsString()
   resourceId?: string;
 }

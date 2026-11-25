@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
@@ -233,7 +233,7 @@ export function AssignMiniAppModal({
                               {group.title}
                             </span>
                             {group.isDefaultProfileChat && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 font-bold flex items-center gap-1">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 font-bold flex items-center gap-1">
                                 <StarIcon className="w-3 h-3 text-amber-500 fill-amber-500" />
                                 <span>Default</span>
                               </span>
@@ -319,7 +319,7 @@ export function AssignMiniAppModal({
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Make sure you added the bot as an administrator in the new group before saving.
               </p>
             </div>

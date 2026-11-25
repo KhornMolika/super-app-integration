@@ -84,7 +84,7 @@ const METHOD_OPTIONS = [
 /** Columns the API can sort by (sortBy keys of GET /mini-apps). */
 const SORTABLE = ['name', 'organization', 'availability', 'updatedAt'] as const;
 const DEFAULT_SORT = { key: 'updatedAt', dir: 'desc' as SortDirection };
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 5;
 
 type Scope = 'all' | 'mine';
 
@@ -223,7 +223,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
     >
       <div
         aria-hidden="true"
-        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 shadow-2xs ${getAvatarColor(
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(
           displayName,
         )}`}
       >
@@ -245,7 +245,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
         >
           <div className="flex items-center gap-2 mb-1 pb-1 border-b border-slate-700/60 dark:border-slate-700/80">
             <div
-              className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${getAvatarColor(
+              className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${getAvatarColor(
                 displayName,
               )}`}
             >
@@ -256,7 +256,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
             </span>
           </div>
           {email && (
-            <span className="block text-[11px] text-slate-300 dark:text-slate-300 font-mono truncate select-all">
+            <span className="block text-xs text-slate-300 dark:text-slate-300 font-mono truncate select-all">
               {email}
             </span>
           )}
@@ -481,30 +481,38 @@ function MiniAppsContent() {
       {
         key: 'name',
         header: 'App',
-        width: 'w-[22%]',
+        width: 'w-[28%]',
         sortable: true,
-        cell: (app) => (
-          <div className="flex items-center gap-3 min-w-0">
-            <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
-            <div className="min-w-0">
-              <span className="block font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[220px]">
-                {app.name || '-'}
-              </span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">
-                <span className="font-mono">{app.appId}</span>
-                <span aria-hidden="true"> · </span>
-                {METHOD_LABEL[app.integrationMethod || ''] || app.integrationMethod}
-              </span>
+        cell: (app) => {
+          const methodLabel = METHOD_LABEL[app.integrationMethod || ''] || app.integrationMethod;
+          return (
+            <div className="flex items-center gap-3 min-w-0">
+              <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
+              <div className="min-w-0 flex-1">
+                <span className="block font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  {app.name || '-'}
+                </span>
+                <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
+                    {app.appId}
+                  </span>
+                  {methodLabel && (
+                    <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
+                      {methodLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         key: 'organization',
         header: 'Org',
         width: 'w-[7%]',
         headerClassName: 'hidden md:table-cell',
-        className: 'hidden md:table-cell',
+        className: 'hidden md:table-cell whitespace-nowrap',
         sortable: true,
         cell: (app) => (
           <span
@@ -518,7 +526,7 @@ function MiniAppsContent() {
       {
         key: 'owner',
         header: 'App Owner',
-        width: 'w-[13%]',
+        width: 'w-[15%]',
         headerClassName: 'hidden sm:table-cell',
         className: 'hidden sm:table-cell',
         sortable: true,
@@ -532,33 +540,25 @@ function MiniAppsContent() {
       {
         key: 'availability',
         header: 'Status',
-        width: 'w-[11%]',
+        width: 'w-[14%]',
+        className: 'whitespace-nowrap',
         sortable: true,
-        cell: (app) => <AppStatusBadge app={app} />,
-      },
-      {
-        key: 'lifecycle',
-        header: 'Stage',
-        width: 'w-[13%]',
-        sortable: false,
-        cell: (app) => (
-          <VersionStageBadge
-            app={app}
-            empty={
-              <span title="No new version in progress" className="text-xs text-slate-400 dark:text-slate-500">
-                <span aria-hidden="true">-</span>
-                <span className="sr-only">No new version in progress</span>
-              </span>
-            }
-          />
-        ),
+        cell: (app) => {
+          const hasStagedRevision = Boolean((app as any).pendingRevision);
+          return (
+            <div className="flex flex-col items-start gap-1">
+              <AppStatusBadge app={app} />
+              {hasStagedRevision && <VersionStageBadge app={app} empty={null} />}
+            </div>
+          );
+        },
       },
       {
         key: 'checks',
         header: 'Checks',
-        width: 'w-[11%]',
+        width: 'w-[13%]',
         headerClassName: 'hidden lg:table-cell',
-        className: 'hidden lg:table-cell',
+        className: 'hidden lg:table-cell whitespace-nowrap',
         sortable: false,
         cell: (app) => (
           <div className="space-y-1">
@@ -570,9 +570,9 @@ function MiniAppsContent() {
       {
         key: 'issues',
         header: 'Issues',
-        width: 'w-[7%]',
+        width: 'w-[9%]',
         headerClassName: 'hidden lg:table-cell',
-        className: 'hidden lg:table-cell',
+        className: 'hidden lg:table-cell whitespace-nowrap',
         sortable: false,
         cell: (app) => {
           const { count, severe } = openIssues(app);
@@ -581,7 +581,11 @@ function MiniAppsContent() {
             <Link
               href={`/issues?appId=${app.id}`}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:underline"
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors hover:opacity-85 ${
+                severe
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}
             >
               <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full ${severe ? 'bg-rose-500' : 'bg-amber-500'}`} />
               {count} open
@@ -810,9 +814,10 @@ function MiniAppsContent() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <AppStatusBadge app={app} />
+                  <AppStatusBadge app={app} showPrefix={true} />
                   <VersionStageBadge
                     app={app}
+                    showPrefix={true}
                     empty={
                       <span className="text-xs text-slate-400 dark:text-slate-500">
                         -

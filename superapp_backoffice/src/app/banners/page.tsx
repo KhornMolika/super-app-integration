@@ -22,6 +22,8 @@ import { BannerTable } from '@/components/banners/BannerTable';
 import { BannerModal } from '@/components/banners/BannerModal';
 import { BannerPreviewModal } from '@/components/banners/BannerPreviewModal';
 import { Pagination } from '@/components/ui/Pagination';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function BannersPage() {
   const { toast } = useToast();
@@ -35,7 +37,7 @@ export default function BannersPage() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(5);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -208,113 +210,101 @@ export default function BannersPage() {
     <ProtectedRoute permission="miniapp:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-300">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-              <ImageIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                SuperApp Banners
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Manage promotional hero banners, campaign announcements, and interactive launch shortcuts
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-              title="Refresh Banners"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Banner</span>
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="SuperApp Banners"
+          description="Manage promotional hero banners, campaign announcements, and interactive launch shortcuts"
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                title="Refresh Banners"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenCreate}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Banner</span>
+              </button>
+            </>
+          }
+        />
 
         {/* Filter Bar & View Toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search banners by title or description..."
-              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </div>
-
-          {/* Audience Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <select
-              value={audienceFilter}
-              onChange={(e) => setAudienceFilter(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="ALL">All Audiences</option>
-              <option value="PUBLIC">Public</option>
-              <option value="ALL_FSA_STAFF">FSA Staff Only</option>
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active Only</option>
-              <option value="INACTIVE">Inactive Only</option>
-            </select>
-          </div>
-
-          {/* View Mode Toggle: Grid vs Table */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'table'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-              title="Table View"
-            >
-              <TableIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <SearchFilterBar
+          searchValue={searchTerm}
+          onSearchChange={(val) => setSearchTerm(val)}
+          searchPlaceholder="Search banners by title or description..."
+          filters={[
+            {
+              id: 'audience',
+              label: 'Audience',
+              icon: <Filter className="w-3.5 h-3.5" />,
+              value: audienceFilter,
+              onChange: (val) => setAudienceFilter(val),
+              options: [
+                { value: 'ALL', label: 'All Audiences' },
+                { value: 'PUBLIC', label: 'Public' },
+                { value: 'ALL_FSA_STAFF', label: 'FSA Staff Only' },
+              ],
+              dropdownWidth: 'w-52',
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              value: statusFilter,
+              onChange: (val) => setStatusFilter(val),
+              options: [
+                { value: 'ALL', label: 'All Status' },
+                { value: 'ACTIVE', label: 'Active Only' },
+                { value: 'INACTIVE', label: 'Inactive Only' },
+              ],
+              dropdownWidth: 'w-48',
+            },
+          ]}
+          isFiltered={searchTerm.trim() !== '' || audienceFilter !== 'ALL' || statusFilter !== 'ALL'}
+          onResetFilters={() => {
+            setSearchTerm('');
+            setAudienceFilter('ALL');
+            setStatusFilter('ALL');
+          }}
+          rightSlot={
+            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('grid')}
+                className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="Table View"
+              >
+                <TableIcon className="w-4 h-4" />
+              </button>
+            </div>
+          }
+        />
 
         {/* Content Section */}
         {loading ? (
@@ -390,13 +380,13 @@ export default function BannersPage() {
             )}
 
             {/* Pagination Controls */}
-            {banners.length > 0 && (
+            {banners.length >= 5 && (
               <div className="pt-2 flex justify-center sm:justify-end">
                 <Pagination
                   currentPage={currentPage}
                   totalItems={banners.length}
                   pageSize={pageSize}
-                  pageSizeOptions={viewMode === 'grid' ? [8, 12, 24, 48] : [10, 20, 50]}
+                  pageSizeOptions={[5, 10, 20, 50]}
                   showPageSizeSelector
                   showTotal
                   onPageChange={(page) => setCurrentPage(page)}

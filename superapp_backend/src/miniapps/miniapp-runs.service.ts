@@ -54,6 +54,8 @@ export interface BuildState {
 export interface AppRunFields {
   id: string;
   version?: string | null;
+  currentReleaseVersion?: string | null;
+  versions?: any[] | null;
   activeTestVersion?: string | null;
   securityChecks?: string[] | null;
   validationStatus?: string;
@@ -310,6 +312,9 @@ export class MiniAppRunsService {
       app.pendingRevision && typeof app.pendingRevision === 'object'
         ? app.pendingRevision
         : null;
+    const resolvedVersion = rev
+      ? (rev.version ?? null)
+      : (app.currentReleaseVersion || (Array.isArray((app as any).versions) && (app as any).versions[0]?.version) || (app as any).version || null);
     return this.recordScan(
       app.id,
       rev ? 'REVISION' : 'APP',
@@ -319,7 +324,7 @@ export class MiniAppRunsService {
         report: app.validationReport,
         errors: app.validationErrors,
         checks: app.securityChecks ?? undefined,
-        version: rev ? (rev.version ?? null) : (app.version ?? null),
+        version: resolvedVersion,
       },
       actorId,
     );

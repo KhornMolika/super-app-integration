@@ -36,13 +36,12 @@ function OrganizationsContent() {
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialStatus = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
   const lastPushedUrlRef = useRef<string>('');
 
   // Server-Driven Pagination & Filter State
@@ -173,19 +172,11 @@ function OrganizationsContent() {
     const searchFromUrl = searchParams.get('search') || '';
     const statusFromUrl = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
 
-    if (pageFromUrl !== currentPage) {
-      setCurrentPage(pageFromUrl);
-    }
-    if (limitFromUrl !== pageSize) {
-      setPageSize(limitFromUrl);
-    }
-    if (statusFromUrl !== statusFilter) {
-      setStatusFilter(statusFromUrl);
-    }
-    if (searchFromUrl !== searchQuery) {
-      setSearchQuery(searchFromUrl);
-      setDebouncedSearch(searchFromUrl);
-    }
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
+    setSearchQuery((prev) => (prev !== searchFromUrl ? searchFromUrl : prev));
+    setDebouncedSearch((prev) => (prev !== searchFromUrl ? searchFromUrl : prev));
   }, [searchParams]);
 
   // Handle browser back/forward navigation smoothly via popstate
@@ -212,7 +203,7 @@ function OrganizationsContent() {
   const fetchOrganizations = useCallback(async () => {
     if (!isSuperOrAdmin) return;
     try {
-      setIsFetching(true);
+      setLoading(true);
       const queryParams: Record<string, any> = {
         page: currentPage,
         limit: pageSize,
@@ -245,7 +236,6 @@ function OrganizationsContent() {
       console.error('Failed to fetch organizations:', err);
       toast.error('Failed to load organizations from database.');
     } finally {
-      setIsFetching(false);
       setLoading(false);
     }
   }, [isSuperOrAdmin, currentPage, pageSize, debouncedSearch, statusFilter]);
@@ -346,19 +336,19 @@ function OrganizationsContent() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Active Subordinate Organizations ({activeChildren.length})
               </span>
               <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                 {activeChildren.map((child) => (
                   <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+                      <span className="font-mono font-bold text-xs px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
                         {child.code || 'ORG'}
                       </span>
                       <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
                     </div>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Active
                     </span>
@@ -369,7 +359,7 @@ function OrganizationsContent() {
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
               <span className="font-semibold text-slate-700 dark:text-slate-200">Required Next Steps:</span>
-              <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-slate-500 dark:text-slate-400">
+              <ol className="list-decimal list-inside space-y-1 text-xs text-slate-500 dark:text-slate-400">
                 <li>Reassign each subordinate entity to another parent authority, or</li>
                 <li>Disable each subordinate organization first.</li>
               </ol>
@@ -397,7 +387,7 @@ function OrganizationsContent() {
                 {org.parent?.name || org.parentAuthority || 'None (Independent)'}
               </p>
             </div>
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Active
             </span>
@@ -427,7 +417,7 @@ function OrganizationsContent() {
                 {org.parent?.name || org.parentAuthority || 'None (Independent)'}
               </p>
             </div>
-            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               Inactive
             </span>
@@ -490,14 +480,14 @@ function OrganizationsContent() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Linked Subordinate Organizations ({org.children?.length})
               </span>
               <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                 {org.children?.map((child) => (
                   <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
                     <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
-                    <span className="font-mono text-[10px] text-slate-400">{child.code || 'ORG'}</span>
+                    <span className="font-mono text-xs text-slate-400">{child.code || 'ORG'}</span>
                   </div>
                 ))}
               </div>
@@ -637,7 +627,7 @@ function OrganizationsContent() {
   };
 
   // If MA Developer is redirecting to their own organization detail page
-  if (isAuthLoading || (!isSuperOrAdmin && user?.organizationId)) {
+  if (!isAuthLoading && !isSuperOrAdmin && user?.organizationId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
         <svg className="animate-spin h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24">
@@ -650,7 +640,7 @@ function OrganizationsContent() {
   }
 
   // If MA Developer has no organization assigned
-  if (!isSuperOrAdmin && !user?.organizationId) {
+  if (!isAuthLoading && !isSuperOrAdmin && !user?.organizationId) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-4">
         <div className="p-4 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 w-14 h-14 mx-auto flex items-center justify-center">
@@ -685,7 +675,7 @@ function OrganizationsContent() {
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Organizations
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -704,13 +694,12 @@ function OrganizationsContent() {
         activeCount={globalCounts.isLoaded ? globalCounts.active : (statusFilter === 'ACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.active)}
         inactiveCount={globalCounts.isLoaded ? globalCounts.inactive : (statusFilter === 'INACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.inactive)}
         onAddClick={handleOpenCreate}
-        isSearching={isFetching || searchQuery !== debouncedSearch}
       />
 
       {/* Organizations Table with Server-Driven Pagination */}
       <OrganizationsTable
         organizations={organizations}
-        loading={loading && organizations.length === 0}
+        loading={loading}
         onView={handleOpenView}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}

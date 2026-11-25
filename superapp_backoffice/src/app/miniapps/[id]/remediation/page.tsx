@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { miniappsApi } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import ChangesRequestedBanner from '@/components/miniapp-detail/ChangesRequestedBanner';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { useAuth } from '@/lib/auth';
 import { getAllowedActions } from '@/components/miniapp-detail/miniappActions';
 import { toAccessLevel } from '@/lib/miniappAccess';
@@ -28,7 +29,7 @@ function MiniAppRemediationPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchApp = async () => {
+  const fetchApp = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
@@ -41,11 +42,11 @@ function MiniAppRemediationPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchApp();
-  }, [id]);
+  }, [fetchApp]);
 
   if (loading) {
     return (
@@ -122,7 +123,7 @@ function MiniAppRemediationPageContent() {
 
         <Link
           href={`/miniapps/${id}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm self-start sm:self-auto"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to MiniApp Management</span>
@@ -132,17 +133,12 @@ function MiniAppRemediationPageContent() {
       {/* MiniApp Profile Header Card */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-center shadow-sm">
-            {miniApp.logo || miniApp.iconUrl ? (
-              <img
-                src={miniApp.logo || miniApp.iconUrl}
-                alt={miniApp.name || 'MiniApp logo'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ClipboardList className="w-7 h-7 text-amber-500" />
-            )}
-          </div>
+          <AppLogoAvatar
+            logo={miniApp.logo || miniApp.iconUrl}
+            name={miniApp.name || miniApp.appId}
+            size="lg"
+            className="w-14 h-14 rounded-2xl"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">

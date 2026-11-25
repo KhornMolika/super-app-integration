@@ -98,7 +98,7 @@ export class SeederService implements OnApplicationBootstrap {
       savedPerms.push(perm);
     }
 
-    // 2. Streamlined 3 Enterprise Roles (SUPER_ADMIN, ADMIN, MA_DEVELOPER)
+    // 2. Enterprise SuperApp Roles (Platform Operator & Partner Tenant)
     const rolesConfig: Array<{
       name: string;
       description: string;
@@ -111,14 +111,51 @@ export class SeederService implements OnApplicationBootstrap {
         perms: allPerms,
       },
       {
-        name: 'ADMIN',
+        name: 'PLATFORM_ADMIN',
         description:
-          'Organization Administrator: supervises the mini apps, users and audit trail of their own organization. Review decisions (approve, reject, testing, activation) belong to SUPER_ADMIN',
-        // No miniapp:approve / miniapp:reject: review decisions are SUPER_ADMIN only.
-        // Every grant below is scoped to the admin's organization (see
-        // access-control/helpers/platform-admin.helper.ts). Platform settings and
-        // Super App build infrastructure (settings:manage, super_app:manage) are
-        // SUPER_ADMIN only.
+          'Platform Administrator: oversees ecosystem operations, organization governance, and capabilities',
+        perms: [
+          'miniapp:read',
+          'miniapp:suspend',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'permission_proposal:approve',
+          'super_app:read',
+          'user:read',
+          'user:manage',
+          'role:read',
+          'permission:read',
+          'permission:manage',
+          'organization:read',
+          'organization:manage',
+          'audit_log:read',
+          'settings:manage',
+        ],
+      },
+      {
+        name: 'APP_REVIEWER',
+        description:
+          'Ecosystem Reviewer & Security Auditor: evaluates submissions on Review & Diff Deck, inspects CVEs/SBOMs, and issues verdicts',
+        perms: [
+          'miniapp:read',
+          'miniapp:approve',
+          'miniapp:reject',
+          'miniapp:suspend',
+          'miniapp_permission:approve',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'super_app:read',
+          'permission:read',
+          'organization:read',
+          'audit_log:read',
+        ],
+      },
+      {
+        name: 'ORG_ADMIN',
+        description:
+          'Organization Administrator: supervises the mini apps, users, banners and audit trail of their own organization',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -128,8 +165,30 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:submit',
           'miniapp_permission:approve',
           'issue:resolve',
-          // Regulatory admin: sees capability requests, cannot decide them
-          // (only SUPER_ADMIN reviews and approves Super App capabilities)
+          'permission_proposal:read',
+          'super_app:read',
+          'user:read',
+          'user:manage',
+          'role:read',
+          'permission:read',
+          'organization:read',
+          'organization:manage',
+          'audit_log:read',
+        ],
+      },
+      {
+        name: 'ADMIN',
+        description:
+          'Organization Administrator (Legacy Alias)',
+        perms: [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:delete',
+          'miniapp:suspend',
+          'miniapp:submit',
+          'miniapp_permission:approve',
+          'issue:resolve',
           'permission_proposal:read',
           'super_app:read',
           'user:read',
@@ -190,7 +249,7 @@ export class SeederService implements OnApplicationBootstrap {
     }
 
     const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
-    const adminRole = rolesMap.get('ADMIN')!;
+    const adminRole = rolesMap.get('ORG_ADMIN') || rolesMap.get('ADMIN')!;
 
     // 3. Seed Root Authority: Non-Bank Financial Services Authority (FSA) with null parent
     const rootFsaData = {

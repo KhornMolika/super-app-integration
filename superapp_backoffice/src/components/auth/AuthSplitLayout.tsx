@@ -132,7 +132,7 @@ export function AuthSplitLayout({
                   <h1 className="text-base font-bold tracking-tight text-white">
                     FSA SuperApp
                   </h1>
-                  <p className="text-[11px] font-medium text-slate-400">
+                  <p className="text-xs font-medium text-slate-400">
                     Non-Bank Financial Services Authority
                   </p>
                 </div>
@@ -155,7 +155,7 @@ export function AuthSplitLayout({
       </main>
 
       {/* 2. BOTTOM FOOTER: Seamless Footer on Same Background */}
-      <footer className="w-full relative z-20 px-6 sm:px-10 lg:px-16 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+      <footer className="w-full relative z-20 px-6 sm:px-10 lg:px-16 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
         <span>© 2026 Non-Bank Financial Services Authority (FSA)</span>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 text-slate-400 font-medium">

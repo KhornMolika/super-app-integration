@@ -6,8 +6,8 @@ export const STEP_TITLES = [
   'Terms & privacy',
   'Integration',
   'Permissions',
-  'Security scans',
-  'Review',
+  'Security profile',
+  'Review & submit',
 ] as const;
 
 export const STEP_DESCRIPTIONS = [
@@ -15,7 +15,7 @@ export const STEP_DESCRIPTIONS = [
   'Optional. Recommended before the app goes live.',
   'How the Super App runs your app.',
   'Device features your app needs, and why.',
-  'Scans that run on every submission. Recommended ones are on.',
+  'Automated security gating configured for submission.',
   'Check everything, then submit for review.',
 ] as const;
 

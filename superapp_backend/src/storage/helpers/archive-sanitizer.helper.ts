@@ -33,6 +33,38 @@ export interface InspectedArchiveResult {
     environment?: Record<string, any>;
   };
   widgetCandidates: string[];
+  sdkWarning?: string;
+}
+
+/**
+ * Checks if a Dart SDK constraint exceeds the SuperApp platform's supported runtime.
+ * Platform default runtime is Dart 3.12.0.
+ */
+export function checkDartSdkCompatibility(
+  sdkConstraint?: string,
+  platformDartVersion = '3.12.0',
+): string | null {
+  if (!sdkConstraint || typeof sdkConstraint !== 'string') return null;
+  const trimmed = sdkConstraint.trim();
+  const m = trimmed.match(/[\^>=]?\s*(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!m) return null;
+  const major = parseInt(m[1], 10);
+  const minor = parseInt(m[2], 10);
+  const patch = m[3] ? parseInt(m[3], 10) : 0;
+
+  const [pMajor, pMinor, pPatch] = platformDartVersion
+    .split('.')
+    .map((v) => parseInt(v, 10) || 0);
+
+  const isHigher =
+    major > pMajor ||
+    (major === pMajor && minor > pMinor) ||
+    (major === pMajor && minor === pMinor && patch > pPatch);
+
+  if (isHigher) {
+    return `Your package requires Dart SDK ${trimmed}, but the SuperApp platform currently runs on Dart ${platformDartVersion}. Please update your environment constraint to '>=3.0.0 <4.0.0' to ensure compatibility.`;
+  }
+  return null;
 }
 
 @Injectable()
@@ -240,6 +272,8 @@ export class ArchiveSanitizerHelper {
 
     const name = parsedPubspec?.name ? String(parsedPubspec.name).trim() : undefined;
     const version = parsedPubspec?.version ? String(parsedPubspec.version).trim() : undefined;
+    const sdkConstraint = parsedPubspec?.environment?.sdk;
+    const sdkWarning = checkDartSdkCompatibility(sdkConstraint);
 
     return {
       success: true,
@@ -257,6 +291,7 @@ export class ArchiveSanitizerHelper {
         environment: parsedPubspec?.environment,
       },
       widgetCandidates,
+      ...(sdkWarning ? { sdkWarning } : {}),
     };
   }
 }

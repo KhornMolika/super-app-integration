@@ -277,7 +277,7 @@ export function UserAuditTab({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${theme.badge}`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${theme.badge}`}
                         >
                           {log.action}
                         </span>
@@ -286,7 +286,7 @@ export function UserAuditTab({
                         </span>
                         {log.resourceId && (
                           <span
-                            className="font-mono text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer truncate max-w-[140px]"
+                            className="font-mono text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer truncate max-w-[140px]"
                             title={log.resourceId}
                           >
                             #{log.resourceId.slice(0, 8)}
@@ -296,7 +296,7 @@ export function UserAuditTab({
 
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
                         {log.ipAddress && (
-                          <span className="font-mono text-[11px]">IP: {log.ipAddress}</span>
+                          <span className="font-mono text-xs">IP: {log.ipAddress}</span>
                         )}
                         {log.userAgent && (
                           <>
@@ -317,7 +317,7 @@ export function UserAuditTab({
                         year: 'numeric',
                       })}
                     </span>
-                    <span className="text-[10px] text-slate-400 block font-mono">
+                    <span className="text-xs text-slate-400 block font-mono">
                       {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
@@ -325,7 +325,7 @@ export function UserAuditTab({
                       <button
                         type="button"
                         onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                        className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline mt-0.5"
+                        className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline mt-0.5"
                       >
                         {isExpanded ? 'Hide Payload' : 'View Payload'}
                       </button>
@@ -336,7 +336,7 @@ export function UserAuditTab({
                 {/* Expanded Payload Inspector */}
                 {isExpanded && hasMetadata && (
                   <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 overflow-x-auto max-h-60">
-                    <pre className="text-[11px] leading-relaxed">
+                    <pre className="text-xs leading-relaxed">
                       {JSON.stringify(
                         {
                           metadata: log.metadata,

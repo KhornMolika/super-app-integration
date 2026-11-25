@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Input, Label, Button } from '@/components/ui/inputs';
+import { Input, Label, Button, RequiredOptionalToggle } from '@/components/ui/inputs';
 import { miniappsApi } from '@/api';
-import { permissionsApi, Permission, CapabilityItem } from '@/api/permissions.api';
+import {
+  permissionsApi,
+  Permission,
+  CapabilityItem,
+  CapabilityStoreMapping,
+} from '@/api/permissions.api';
 import {
   CheckIcon,
   XIcon,
@@ -11,112 +16,29 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
 
-export function normalizeCapabilityKey(raw: string): string {
+export function normalizeCapabilityKey(
+  raw: string,
+  aliasLookup?: Record<string, string>,
+): string {
   const lower = (raw || '').toLowerCase().trim();
-  if (lower === 'take_photo' || lower === 'camera' || lower === 'photo' || lower === 'camera & document capture') return 'camera';
-  if (lower === 'get_location' || lower === 'location' || lower === 'gps' || lower === 'geolocation services' || lower === 'location services') return 'location';
-  if (lower === 'biometric_auth' || lower === 'biometrics' || lower === 'biometric' || lower === 'biometric authentication') return 'biometrics';
-  if (lower === 'record' || lower === 'microphone' || lower === 'audio' || lower === 'microphone & audio') return 'microphone';
-  if (lower === 'secure_storage' || lower === 'storage' || lower === 'secure vault storage') return 'storage';
-  if (lower === 'webview_runtime' || lower === 'webview' || lower === 'internet' || lower === 'sandboxed webview runtime') return 'webview_runtime';
+  if (!lower) return '';
+  if (aliasLookup && aliasLookup[lower]) {
+    return aliasLookup[lower];
+  }
   return lower;
 }
 
-export const PERMISSION_STORE_MAP: Record<
-  string,
-  { iosKey: string; androidPermission: string; defaultAction: string; description: string }
-> = {
-  camera: {
-    iosKey: 'NSCameraUsageDescription',
-    androidPermission: 'android.permission.CAMERA',
-    defaultAction: 'photograph accident evidence and upload policy claim documents',
-    description: 'Capture photos, scan QR codes, and upload identity/claim documents.',
-  },
-  location: {
-    iosKey: 'NSLocationWhenInUseUsageDescription',
-    androidPermission: 'android.permission.ACCESS_FINE_LOCATION',
-    defaultAction: 'provide location-based services, navigation, and find nearby branches',
-    description: 'Access GPS coordinates for local services, branch locator, and fraud prevention.',
-  },
-  biometrics: {
-    iosKey: 'NSFaceIDUsageDescription',
-    androidPermission: 'android.permission.USE_BIOMETRIC',
-    defaultAction: 'securely authenticate your identity and authorize sensitive transactions',
-    description: 'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
-  },
-  microphone: {
-    iosKey: 'NSMicrophoneUsageDescription',
-    androidPermission: 'android.permission.RECORD_AUDIO',
-    defaultAction: 'record audio notes and enable voice-guided features',
-    description: 'Access device microphone to record audio notes or voice features.',
-  },
-  storage: {
-    iosKey: 'Keychain & NSPhotoLibraryUsageDescription',
-    androidPermission: 'android.security.keystore & WRITE_EXTERNAL_STORAGE',
-    defaultAction: 'securely store encrypted tokens, offline cache, and user vault data',
-    description: 'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
-  },
-  secure_storage: {
-    iosKey: 'Keychain & NSPhotoLibraryUsageDescription',
-    androidPermission: 'android.security.keystore & WRITE_EXTERNAL_STORAGE',
-    defaultAction: 'securely store encrypted tokens, offline cache, and user vault data',
-    description: 'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
-  },
-  webview_runtime: {
-    iosKey: 'NSAppTransportSecurity',
-    androidPermission: 'android.permission.INTERNET',
-    defaultAction: 'host isolated web application runtime and process secure JS bridge communications',
-    description: 'Isolated web application host container with security boundary and JS bridge.',
-  },
-  internet: {
-    iosKey: 'NSAppTransportSecurity',
-    androidPermission: 'android.permission.INTERNET',
-    defaultAction: 'connect to authorized secure API endpoints and process real-time network requests',
-    description: 'Network connectivity and outbound API access.',
-  },
-  nfc: {
-    iosKey: 'NFCReaderUsageDescription',
-    androidPermission: 'android.permission.NFC',
-    defaultAction: 'scan contactless NFC smart cards and national identity chips',
-    description: 'Read contactless smart cards and national identity e-chips.',
-  },
-  bluetooth: {
-    iosKey: 'NSBluetoothAlwaysUsageDescription',
-    androidPermission: 'android.permission.BLUETOOTH_CONNECT',
-    defaultAction: 'connect to and communicate with nearby verified devices',
-    description: 'Communicate with external peripherals and proximity beacons.',
-  },
-  contacts: {
-    iosKey: 'NSContactsUsageDescription',
-    androidPermission: 'android.permission.READ_CONTACTS',
-    defaultAction: 'select contacts directly from your address book',
-    description: 'Access address book for quick recipient selection.',
-  },
-};
-
-export const WHITELISTED_HOST_CAPABILITIES = [
-  'camera',
-  'location',
-  'biometrics',
-  'storage',
-  'secure_storage',
-  'webview_runtime',
-  'internet',
-];
-
-export const CANONICAL_SHELL_CAPABILITIES = [
-  'Webview_runtime',
-  'Camera',
-  'Location',
-  'Biometrics',
-  'Storage',
-];
-
-export function formatCompliantPurpose(type: string, rawPurpose: string, appName?: string): string {
+export function formatCompliantPurpose(
+  type: string,
+  rawPurpose: string,
+  appName?: string,
+  storeMetaMap?: Record<string, CapabilityStoreMapping>,
+  aliasLookup?: Record<string, string>,
+): string {
   const appLabel = appName?.trim() || '$(PRODUCT_NAME)';
   const trimmed = (rawPurpose || '').trim();
-  const canonKey = normalizeCapabilityKey(type);
-  const meta = PERMISSION_STORE_MAP[canonKey] || PERMISSION_STORE_MAP[type.toLowerCase()];
+  const canonKey = normalizeCapabilityKey(type, aliasLookup);
+  const meta = storeMetaMap?.[canonKey] || storeMetaMap?.[type.toLowerCase()];
   const fallbackAction = meta?.defaultAction || `access ${type.toLowerCase()} features`;
 
   if (!trimmed) {
@@ -275,13 +197,13 @@ export default function CapabilitiesForm({
     if (!customKey.trim()) return;
     setIsManuallyModified(true);
     const cleanType = customKey.trim();
-    const canon = normalizeCapabilityKey(cleanType);
+    const canon = normalizeCapabilityKey(cleanType, aliasLookup);
     const purpose =
       customPurpose.trim() ||
-      formatCompliantPurpose(cleanType, '', formData.name);
+      formatCompliantPurpose(cleanType, '', formData.name, storeMetaMap, aliasLookup);
 
     const exists = (formData.permissions || []).some(
-      (p: any) => normalizeCapabilityKey(p.type) === canon,
+      (p: any) => normalizeCapabilityKey(p.type, aliasLookup) === canon,
     );
 
     if (!exists) {
@@ -348,11 +270,23 @@ export default function CapabilitiesForm({
         formData.integrationConfig?.packagePath ||
         '';
 
+      const androidStoragePath =
+        formData.integrationConfigNativeSdk?.androidStoragePath ||
+        formData.integrationConfig?.androidStoragePath ||
+        '';
+
+      const iosStoragePath =
+        formData.integrationConfigNativeSdk?.iosStoragePath ||
+        formData.integrationConfig?.iosStoragePath ||
+        '';
+
       const data = await miniappsApi.detectPermissions({
         productionUrl: prodUrl,
         gitUrl,
         gitBranch,
         gitPath,
+        androidStoragePath,
+        iosStoragePath,
         name: formData.name,
         appId: formData.appId,
       });
@@ -421,58 +355,113 @@ export default function CapabilitiesForm({
     formData.integrationConfigFlutter?.packagePath,
     formData.integrationConfig?.gitUrl,
     formData.integrationConfig?.repoUrl,
-    formData.category,
+    formData.integrationConfig?.gitBranch,
+    formData.integrationConfig?.gitPath,
+    formData.integrationConfig?.packagePath,
+    formData.integrationConfigNativeSdk?.androidStoragePath,
+    formData.integrationConfigNativeSdk?.iosStoragePath,
+    formData.integrationConfig?.androidStoragePath,
+    formData.integrationConfig?.iosStoragePath,
     formData.name,
     formData.appId,
     formData.permissions,
     setFormData,
   ]);
 
+  const autoDetectedOnceRef = React.useRef(false);
   // Auto-run once on initial visit if empty
   useEffect(() => {
-    if (!formData.permissions || formData.permissions.length === 0) {
+    if (!autoDetectedOnceRef.current && (!formData.permissions || formData.permissions.length === 0)) {
+      autoDetectedOnceRef.current = true;
       handleAutoDetect();
     }
-  }, []);
+  }, [formData.permissions, handleAutoDetect]);
+
+  // Build dynamic alias lookup and store metadata maps from DB-loaded capabilities
+  const { aliasLookup, storeMetaMap } = useMemo(() => {
+    const aliases: Record<string, string> = {};
+    const storeMap: Record<string, CapabilityStoreMapping & { description?: string }> = {};
+
+    const registerDef = (item: {
+      key?: string;
+      name?: string;
+      description?: string;
+      aliases?: string[];
+      requiredPermissions?: string[];
+      storeMapping?: CapabilityStoreMapping;
+      metadata?: any;
+    }) => {
+      const canonical = (item.key || item.name || '').toLowerCase().trim();
+      if (!canonical) return;
+      aliases[canonical] = canonical;
+      if (item.name) aliases[item.name.toLowerCase().trim()] = canonical;
+      if (Array.isArray(item.aliases)) {
+        item.aliases.forEach((a) => {
+          if (typeof a === 'string' && a.trim()) {
+            aliases[a.toLowerCase().trim()] = canonical;
+          }
+        });
+      }
+      if (Array.isArray(item.requiredPermissions)) {
+        item.requiredPermissions.forEach((rp) => {
+          if (typeof rp === 'string' && rp.trim()) {
+            aliases[rp.toLowerCase().trim()] = canonical;
+          }
+        });
+      }
+      const sm: CapabilityStoreMapping = item.storeMapping || {
+        iosKey: item.metadata?.iosPlistKey,
+        androidPermission: item.metadata?.androidPermission,
+        defaultAction: item.metadata?.defaultAction,
+      };
+      if (sm.iosKey || sm.androidPermission || sm.defaultAction || item.description) {
+        storeMap[canonical] = { ...sm, description: item.description };
+      }
+    };
+
+    hostCapabilities.forEach((cap) => registerDef(cap));
+    hostPermissions.forEach((perm) => registerDef(perm));
+    return { aliasLookup: aliases, storeMetaMap: storeMap };
+  }, [hostCapabilities, hostPermissions]);
 
   // Dynamically compute host-supported whitelisted capabilities synced directly with SuperApp container
   const liveWhitelistedSet = useMemo(() => {
     const set = new Set<string>();
 
-    // 1. From real SuperApp capabilities scanner (super-app/pubspec.yaml & AndroidManifest)
     hostCapabilities.forEach((cap) => {
+      if (cap.isAllowed === false) return;
       if (cap.status === 'Active' || cap.status === 'Beta') {
+        const key = cap.key.toLowerCase().trim();
+        set.add(key);
+        set.add(normalizeCapabilityKey(key, aliasLookup));
         (cap.requiredPermissions || []).forEach((p) => {
           set.add(p.toLowerCase());
-          set.add(normalizeCapabilityKey(p));
+          set.add(normalizeCapabilityKey(p, aliasLookup));
         });
-        set.add(cap.key.toLowerCase());
-        set.add(normalizeCapabilityKey(cap.key));
+        (cap.aliases || []).forEach((a) => {
+          set.add(a.toLowerCase());
+          set.add(normalizeCapabilityKey(a, aliasLookup));
+        });
       }
     });
 
-    // 2. From real database permissions
     hostPermissions.forEach((perm) => {
-      if (perm.isActive !== false) {
+      if (perm.isActive !== false && perm.isAllowed !== false) {
         if (perm.key) {
           set.add(perm.key.toLowerCase());
-          set.add(normalizeCapabilityKey(perm.key));
+          set.add(normalizeCapabilityKey(perm.key, aliasLookup));
         }
         set.add(perm.name.toLowerCase());
-        set.add(normalizeCapabilityKey(perm.name));
+        set.add(normalizeCapabilityKey(perm.name, aliasLookup));
+        (perm.aliases || []).forEach((a) => {
+          set.add(a.toLowerCase());
+          set.add(normalizeCapabilityKey(a, aliasLookup));
+        });
       }
     });
 
-    // 3. Fallback baseline only if completely offline
-    if (hostCapabilities.length === 0 && hostPermissions.length === 0) {
-      WHITELISTED_HOST_CAPABILITIES.forEach((p) => {
-        set.add(p.toLowerCase());
-        set.add(normalizeCapabilityKey(p));
-      });
-    }
-
     return set;
-  }, [hostCapabilities, hostPermissions]);
+  }, [hostCapabilities, hostPermissions, aliasLookup]);
 
   const allAvailableTypes = useMemo(() => {
     const list: string[] = [];
@@ -480,46 +469,33 @@ export default function CapabilitiesForm({
 
     const addType = (raw: string) => {
       if (!raw) return;
-      const canon = normalizeCapabilityKey(raw);
-      if (!seen.has(canon)) {
+      const canon = normalizeCapabilityKey(raw, aliasLookup);
+      const visualTitle = getPermissionVisual(raw).title;
+      const dedupeKey = visualTitle && visualTitle !== raw ? visualTitle.toLowerCase() : canon;
+      if (!seen.has(canon) && !seen.has(dedupeKey)) {
         seen.add(canon);
-        // Canonical display name matching Shell & Capabilities page
+        seen.add(dedupeKey);
         const display = canon.charAt(0).toUpperCase() + canon.slice(1);
         list.push(display);
       }
     };
 
-    // 1. Dynamic SuperApp capabilities detected from shell (from /api/permissions/capabilities)
-    if (hostCapabilities.length > 0 || hostPermissions.length > 0) {
-      hostCapabilities.forEach((c) => {
-        if (c.status === 'Active' || c.status === 'Beta') {
-          addType(c.key);
-        }
-      });
-    } else {
-      // Offline fallback only when backend registry is unreachable
-      CANONICAL_SHELL_CAPABILITIES.forEach((c) => addType(c));
-    }
+    hostCapabilities.forEach((c) => {
+      if (c.status === 'Active' || c.status === 'Beta') {
+        addType(c.key);
+      }
+    });
 
-    // 3. Real active permissions defined in database
     hostPermissions.forEach((p) => {
       if (p.isActive !== false && (p as any).status !== 'Deprecated') {
-        const canon = normalizeCapabilityKey(p.key || p.name || '');
-        if (canon === 'microphone') {
-          const isLiveInHost = hostCapabilities.some(
-            (c) => normalizeCapabilityKey(c.key) === 'microphone' && c.status === 'Active',
-          );
-          if (!isLiveInHost) return;
-        }
         addType(p.key || p.name || '');
       }
     });
 
-    // 4. Any permission currently requested by the MiniApp
     (formData.permissions || []).forEach((p: any) => addType(p.type));
 
     return list;
-  }, [hostPermissions, hostCapabilities, formData.permissions]);
+  }, [hostPermissions, hostCapabilities, formData.permissions, aliasLookup]);
 
   const activeCount = formData.permissions?.length || 0;
 
@@ -578,14 +554,16 @@ export default function CapabilitiesForm({
       {/* Capabilities List */}
       <div className="space-y-2.5">
         {allAvailableTypes.map((type) => {
-          const canon = normalizeCapabilityKey(type);
-          const activePerm = formData.permissions?.find((p: any) => normalizeCapabilityKey(p.type) === canon);
+          const canon = normalizeCapabilityKey(type, aliasLookup);
+          const activePerm = formData.permissions?.find(
+            (p: any) => normalizeCapabilityKey(p.type, aliasLookup) === canon,
+          );
           const isActive = Boolean(activePerm);
           const isWhitelisted = liveWhitelistedSet.has(canon) || liveWhitelistedSet.has(type.toLowerCase());
           const isRequired = activePerm ? activePerm.required !== false : true;
           const purposeError = getPermError(type, 'purpose');
           const visual = getPermissionVisual(type);
-          const meta = PERMISSION_STORE_MAP[canon] || PERMISSION_STORE_MAP[type.toLowerCase()];
+          const meta = storeMetaMap[canon] || storeMetaMap[type.toLowerCase()];
           const compliant = activePerm ? isStoreCompliant(activePerm.purpose, formData.name) : false;
 
           // Resolve dynamic description from real backend definitions
@@ -625,33 +603,13 @@ export default function CapabilitiesForm({
                 {/* Right controls: Required/Optional segmented pill + Switch */}
                 <div className="shrink-0 flex items-center gap-2.5">
                   {isActive && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                    >
-                      <button
-                        type="button"
-                        disabled={!isEditable}
-                        onClick={() => handleFieldChange(type, 'required', true)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${isRequired
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                          }`}
-                      >
-                        Required
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!isEditable}
-                        onClick={() => handleFieldChange(type, 'required', false)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${!isRequired
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                          }`}
-                      >
-                        Optional
-                      </button>
-                    </div>
+                    <RequiredOptionalToggle
+                      value={isRequired}
+                      onChange={(newRequired) => {
+                        handleFieldChange(activePerm?.type || type, 'required', newRequired);
+                      }}
+                      disabled={!isEditable}
+                    />
                   )}
 
                   <div
@@ -717,7 +675,7 @@ export default function CapabilitiesForm({
                       }`}
                   />
                   {purposeError && (
-                    <p className="text-[11px] text-rose-600 font-medium">{purposeError}</p>
+                    <p className="text-xs text-rose-600 font-medium">{purposeError}</p>
                   )}
                 </div>
               )}
@@ -752,27 +710,13 @@ export default function CapabilitiesForm({
                 />
               </div>
 
-              <div className="flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setCustomRequired(true)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${customRequired
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  Required
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomRequired(false)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${!customRequired
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  Optional
-                </button>
+              <div className="flex items-center">
+                <RequiredOptionalToggle
+                  fullWidth
+                  value={customRequired}
+                  onChange={(newRequired) => setCustomRequired(newRequired)}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

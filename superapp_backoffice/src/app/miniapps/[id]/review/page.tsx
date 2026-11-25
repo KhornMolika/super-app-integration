@@ -15,24 +15,26 @@ import {
   generateReviewDiffFiles,
   ReviewDiffFile,
 } from '@/components/review/diffGenerator';
-import { ReviewDiffViewer } from '@/components/review/ReviewDiffViewer';
+import { ReviewOverviewTab } from '@/components/review/ReviewOverviewTab';
 import { ReviewPermissionsTab } from '@/components/review/ReviewPermissionsTab';
-import { ReviewNetworkTab } from '@/components/review/ReviewNetworkTab';
+import { ReviewWebviewTab } from '@/components/review/ReviewWebviewTab';
+import { ReviewDeepLinkTab } from '@/components/review/ReviewDeepLinkTab';
 import { ReviewSpecsTab } from '@/components/review/ReviewSpecsTab';
+import { ReviewDiffViewer } from '@/components/review/ReviewDiffViewer';
 import {
   FileCode2,
   KeyRound,
   Globe,
+  Radio,
   Package,
-  Clock,
-  User,
   ShieldAlert,
   ArrowLeft,
-  Calendar,
   Layers,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
-type AuditSubTab = 'DIFF' | 'PERMISSIONS' | 'NETWORK' | 'SPECS';
+type AuditSubTab = 'OVERVIEW' | 'PERMISSIONS' | 'WEBVIEW' | 'DEEPLINK' | 'SPECS' | 'DIFF' | 'NETWORK';
 
 function MiniAppReviewPageContent() {
   const params = useParams();
@@ -45,7 +47,7 @@ function MiniAppReviewPageContent() {
   // Search parameters for deep linking
   const queryBase = searchParams.get('base');
   const queryTarget = searchParams.get('target');
-  const queryTab = (searchParams.get('tab') as AuditSubTab) || 'DIFF';
+  const queryTab = (searchParams.get('tab') as AuditSubTab) || 'OVERVIEW';
   const queryView = (searchParams.get('view') as 'split' | 'unified') || 'split';
 
   const [miniApp, setMiniApp] = useState<any>(null);
@@ -330,23 +332,72 @@ function MiniAppReviewPageContent() {
   const securityScore = d?.security?.scoreDiff?.target ?? 100;
   const domainVerified = Boolean(d?.security?.domainVerification?.target);
 
+  const method = (miniApp.integrationMethod || 'WEBVIEW').toUpperCase();
+  const isWebview = method === 'WEBVIEW';
+  const isDeepLink = method === 'DEEP_LINK';
+  const isFlutter = method === 'FLUTTER_PACKAGE' || method === 'NATIVE_SDK';
+
+  const dynamicTechnicalTab = isWebview
+    ? {
+        id: 'WEBVIEW' as AuditSubTab,
+        label: 'WebView & Endpoints',
+        icon: Globe,
+        badge: `${addedDomains.length + removedDomains.length} domains`,
+      }
+    : isDeepLink
+    ? {
+        id: 'DEEPLINK' as AuditSubTab,
+        label: 'Deep Link Routing',
+        icon: Radio,
+        badge: 'Intent Scheme',
+      }
+    : {
+        id: 'SPECS' as AuditSubTab,
+        label: 'Package & Specs',
+        icon: Package,
+        badge: 'Nexus SHA-256',
+      };
+
+  const auditTabs = [
+    {
+      id: 'OVERVIEW' as AuditSubTab,
+      label: 'Overview & Delta Hub',
+      icon: Layers,
+      badge: `${totalAdditions + totalDeletions} deltas`,
+    },
+    {
+      id: 'PERMISSIONS' as AuditSubTab,
+      label: 'Capabilities & Scopes',
+      icon: KeyRound,
+      badge: `${addedPerms.length + removedPerms.length} deltas`,
+    },
+    dynamicTechnicalTab,
+    {
+      id: 'DIFF' as AuditSubTab,
+      label: 'Code & Manifest Changes',
+      icon: FileCode2,
+      badge: `+${totalAdditions} -${totalDeletions}`,
+    },
+  ];
+
   return (
-    <div className="w-full min-w-0 pb-16 animate-in fade-in duration-300">
-      {/* 1. Sticky Decision Bar */}
+    <div className="w-full min-w-0 pb-16">
+      {/* 1. Unified 2-Tier Sticky Command Header */}
       <ReviewDecisionBar
         miniAppId={id}
         miniAppName={miniApp.name}
+        logoUrl={
+          miniApp.logo ||
+          miniApp.logoUrl ||
+          miniApp.iconUrl ||
+          diffData?.differences?.metadata?.logo?.target ||
+          diffData?.differences?.metadata?.logo?.base
+        }
         appId={miniApp.appId}
         integrationMethod={miniApp.integrationMethod}
-        versionsList={versionsList}
-        baseVersion={baseVersion}
         targetVersion={targetVersion}
-        onChangeBaseVersion={handleChangeBaseVersion}
-        onChangeTargetVersion={handleChangeTargetVersion}
-        isHighRiskChange={isHighRisk}
         securityScore={securityScore}
         scanFailed={scanFailed}
-        domainVerified={domainVerified}
         canApprove={canApprove}
         canReject={canReject}
         actionLoading={actionLoading}
@@ -358,106 +409,18 @@ function MiniAppReviewPageContent() {
             : undefined
         }
         onApprovePublish={() => handleAction('publish-revision')}
+        tabs={auditTabs}
+        activeTab={activeTab === 'NETWORK' && isWebview ? 'WEBVIEW' : activeTab}
+        onSelectTab={(tabId) => handleSelectTab(tabId)}
+        baseVersion={baseVersion}
+        versionsList={versionsList}
+        onChangeBaseVersion={handleChangeBaseVersion}
+        onChangeTargetVersion={handleChangeTargetVersion}
+        isHighRiskChange={isHighRisk}
       />
 
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-5 space-y-6">
-        {/* 2. Developer Submission Context Header (What & Why) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Release Notes */}
-          <div className="p-4 rounded-2xl bg-brand-50/40 dark:bg-brand-950/20 border border-brand-200/70 dark:border-brand-800/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-brand-900 dark:text-brand-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-brand-600" />
-                <span>Release Notes &amp; Changelog (What Changed)</span>
-              </span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200">
-                {diffData?.targetVersion?.version || targetVersion}
-              </span>
-            </div>
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-              {diffData?.targetVersion?.changelog ||
-                miniApp?.pendingRevision?.changelog ||
-                'No detailed release notes provided by developer.'}
-            </p>
-          </div>
-
-          {/* Security Justification */}
-          <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                <span>Security Justification (Why Required)</span>
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                Platform Rationale
-              </span>
-            </div>
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-              {diffData?.targetVersion?.justification ||
-                miniApp?.pendingRevision?.justification ||
-                'Updated configuration and capability envelope for SuperApp runtime integration.'}
-            </p>
-          </div>
-        </div>
-
-        {/* 3. Audit Sub-Tabs Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-2">
-          {[
-            {
-              id: 'DIFF' as AuditSubTab,
-              label: 'Code & Manifest Changes',
-              icon: FileCode2,
-              badge: `+${totalAdditions} -${totalDeletions}`,
-            },
-            {
-              id: 'PERMISSIONS' as AuditSubTab,
-              label: 'Capabilities & Permissions',
-              icon: KeyRound,
-              badge: `${addedPerms.length + removedPerms.length} deltas`,
-            },
-            {
-              id: 'NETWORK' as AuditSubTab,
-              label: 'Network Domain Allowlist',
-              icon: Globe,
-              badge: `${addedDomains.length + removedDomains.length} deltas`,
-            },
-            {
-              id: 'SPECS' as AuditSubTab,
-              label: 'Package & Dependency Specs',
-              icon: Package,
-              badge: 'Nexus SHA-256',
-            },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.id)}
-                className={`pb-3 px-3.5 border-b-2 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  isActive
-                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                    isActive
-                      ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  {tab.badge}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 4. Sub-Tab Panel Content */}
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-[196px] space-y-6 animate-in fade-in duration-300">
+        {/* 2. Sub-Tab Panel Content */}
         {diffLoading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
@@ -465,14 +428,14 @@ function MiniAppReviewPageContent() {
           </div>
         ) : (
           <>
-            {/* Tab 1: Code & Manifest Diff */}
-            {activeTab === 'DIFF' && (
-              <ReviewDiffViewer
-                files={diffFiles}
-                totalAdditions={totalAdditions}
-                totalDeletions={totalDeletions}
-                viewMode={viewMode}
-                onChangeViewMode={handleChangeViewMode}
+            {/* Tab 1: Overview & Delta Hub */}
+            {activeTab === 'OVERVIEW' && (
+              <ReviewOverviewTab
+                miniApp={miniApp}
+                diffData={diffData}
+                baseVersion={baseVersion}
+                targetVersion={targetVersion}
+                onNavigateTab={(tab) => handleSelectTab(tab)}
               />
             )}
 
@@ -487,20 +450,27 @@ function MiniAppReviewPageContent() {
               />
             )}
 
-            {/* Tab 3: Network Domain Allowlist */}
-            {activeTab === 'NETWORK' && (
-              <ReviewNetworkTab
+            {/* Tab 3: Dynamic Integration Tab (WebView / DeepLink / Specs) */}
+            {(activeTab === 'WEBVIEW' || (activeTab === 'NETWORK' && isWebview)) && (
+              <ReviewWebviewTab
                 productionUrlDiff={d?.integration?.productionUrl}
                 stagingUrlDiff={d?.integration?.stagingUrl}
-                urlSchemeDiff={d?.integration?.urlScheme}
                 addedDomains={addedDomains}
                 removedDomains={removedDomains}
                 unchangedDomains={unchangedDomains}
                 domainVerified={domainVerified}
+                miniApp={miniApp}
               />
             )}
 
-            {/* Tab 4: Package & Dependency Specs */}
+            {activeTab === 'DEEPLINK' && (
+              <ReviewDeepLinkTab
+                urlSchemeDiff={d?.integration?.urlScheme}
+                deepLinkConfig={d?.integration}
+                miniApp={miniApp}
+              />
+            )}
+
             {activeTab === 'SPECS' && (
               <ReviewSpecsTab
                 miniAppId={id}
@@ -517,6 +487,17 @@ function MiniAppReviewPageContent() {
                 checksum={d?.artifacts?.checksums?.target || (miniApp as any).checksum}
                 apkSizeDiff={d?.artifacts?.apkSizeDiff}
                 testApkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(targetVersion)}`}
+              />
+            )}
+
+            {/* Tab 4: Code & Manifest Diff */}
+            {activeTab === 'DIFF' && (
+              <ReviewDiffViewer
+                files={diffFiles}
+                totalAdditions={totalAdditions}
+                totalDeletions={totalDeletions}
+                viewMode={viewMode}
+                onChangeViewMode={handleChangeViewMode}
               />
             )}
           </>

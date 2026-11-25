@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Input, Label } from '@/components/ui/inputs';
+import { Input, Label, Select } from '@/components/ui/inputs';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
 import { sdkArtifactsApi, SdkArtifactUploadResponse } from '@/api';
 import { deriveNativeSdkDefaults } from '@/lib/integration-utils';
@@ -56,17 +56,17 @@ function EntryClassHint({
         <span className="text-xs text-slate-600 dark:text-slate-400">
           {scan.candidates.length} classes implement {contract}. Pick one:
         </span>
-        <select
+        <Select
           value={scan.candidates.includes(current) ? current : ''}
           onChange={(e) => e.target.value && onPick(e.target.value)}
           disabled={disabled}
-          className="w-full font-mono text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5"
+          className="font-mono text-xs py-1.5"
         >
           <option value="">Choose...</option>
           {scan.candidates.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
-        </select>
+        </Select>
       </div>
     );
   }
@@ -140,10 +140,28 @@ export default function NativeSdkIntegrationForm({
     formData.teamName,
   ]);
 
+  const latestNativeSdkAutoFillRef = React.useRef({
+    nativeSdkConfig: formData.integrationConfigNativeSdk,
+    onUpdateNativeSdkConfig,
+    handleNativeSdkChange,
+  });
+  useEffect(() => {
+    latestNativeSdkAutoFillRef.current = {
+      nativeSdkConfig: formData.integrationConfigNativeSdk,
+      onUpdateNativeSdkConfig,
+      handleNativeSdkChange,
+    };
+  });
+
   // Seamless auto-detection and auto-fill on mount / profile updates
   useEffect(() => {
     if (!isEditable) return;
-    const current = formData.integrationConfigNativeSdk || {};
+    const {
+      nativeSdkConfig,
+      onUpdateNativeSdkConfig: updateNativeSdk,
+      handleNativeSdkChange: changeNativeSdk,
+    } = latestNativeSdkAutoFillRef.current;
+    const current = nativeSdkConfig || {};
     const hasExistingIos = Boolean(current.iosArtifactFilename || current.iosStoragePath);
     const needsAutoFill =
       !current.androidPackageName ||
@@ -169,11 +187,11 @@ export default function NativeSdkIntegrationForm({
         if (!current.iosTypeName) updates.iosTypeName = derivedDefaults.iosTypeName;
       }
 
-      if (onUpdateNativeSdkConfig) {
-        onUpdateNativeSdkConfig(updates);
-      } else if (handleNativeSdkChange) {
+      if (updateNativeSdk) {
+        updateNativeSdk(updates);
+      } else if (changeNativeSdk) {
         Object.entries(updates).forEach(([name, value]) => {
-          handleNativeSdkChange({ target: { name, value } } as any);
+          changeNativeSdk({ target: { name, value } } as any);
         });
       }
     }
@@ -418,7 +436,7 @@ export default function NativeSdkIntegrationForm({
           {label}
         </Label>
         {isLocked && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
             <Lock className="w-3 h-3 text-slate-400" />
             Auto-detected
           </span>
@@ -631,7 +649,7 @@ export default function NativeSdkIntegrationForm({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">iOS</h3>
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
                 Optional
               </span>
             </div>

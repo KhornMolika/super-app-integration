@@ -221,7 +221,7 @@ export function UserProfileCard({
                   <button
                     type="button"
                     onClick={handleCopyId}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
                     title="Click to copy User ID"
                   >
                     <CopyIcon className="w-3 h-3 text-slate-400" />
@@ -280,7 +280,7 @@ export function UserProfileCard({
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Verified Identity
                 </span>
               </div>
@@ -296,7 +296,7 @@ export function UserProfileCard({
                   <span className="text-slate-500 dark:text-slate-400 font-medium">Primary Email</span>
                   <div className="flex items-center gap-2 text-right">
                     <span className="font-mono text-slate-800 dark:text-slate-200">{userEmail}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                       Verified
                     </span>
                   </div>
@@ -329,7 +329,7 @@ export function UserProfileCard({
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
               <span>Account updates synchronized in real time.</span>
               <button
                 type="button"
@@ -351,7 +351,7 @@ export function UserProfileCard({
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
                   <KeyIcon className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   SDK &amp; CLI
                 </span>
               </div>
@@ -382,12 +382,12 @@ export function UserProfileCard({
                   <SendIcon className="w-5 h-5" />
                 </div>
                 {isConnected ? (
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span>Connected</span>
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
                     Not Connected
                   </span>
                 )}
@@ -479,7 +479,7 @@ export function UserProfileCard({
                   disabled
                   className="bg-slate-100 dark:bg-slate-800/80 cursor-not-allowed opacity-75 font-mono text-xs"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Official domain email cannot be altered self-service.</p>
+                <p className="text-xs text-slate-500 mt-1">Official domain email cannot be altered self-service.</p>
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { CheckIcon } from "@/components/ui/Icons";
@@ -13,6 +13,26 @@ export interface FlutterArchiveUploaderProps {
   existingFilename?: string;
   existingChecksum?: string;
   existingSize?: number;
+  sdkWarning?: string | null;
+}
+
+function checkClientDartSdkCompatibility(sdkConstraint?: string, platformDartVersion = '3.12.0'): string | null {
+  if (!sdkConstraint || typeof sdkConstraint !== 'string') return null;
+  const trimmed = sdkConstraint.trim();
+  const m = trimmed.match(/[\^>=]?\s*(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!m) return null;
+  const major = parseInt(m[1], 10);
+  const minor = parseInt(m[2], 10);
+  const patch = m[3] ? parseInt(m[3], 10) : 0;
+  const [pMajor, pMinor, pPatch] = platformDartVersion.split('.').map((v) => parseInt(v, 10) || 0);
+  const isHigher =
+    major > pMajor ||
+    (major === pMajor && minor > pMinor) ||
+    (major === pMajor && minor === pMinor && patch > pPatch);
+  if (isHigher) {
+    return `Your package requires Dart SDK ${trimmed}, but the SuperApp platform currently runs on Dart ${platformDartVersion}. Please update your environment constraint to '>=3.0.0 <4.0.0' to ensure compatibility.`;
+  }
+  return null;
 }
 
 function Command({ label, cmd }: { label: string; cmd: string }) {
@@ -48,6 +68,7 @@ export default function FlutterArchiveUploader({
   existingFilename,
   existingChecksum,
   existingSize,
+  sdkWarning: propSdkWarning,
 }: FlutterArchiveUploaderProps) {
   const [showHelp, setShowHelp] = useState(false);
 
@@ -61,6 +82,12 @@ export default function FlutterArchiveUploader({
   const sha = (archiveUploadSuccess?.sha256 || existingChecksum || "").substring(0, 12);
   const size = archiveUploadSuccess?.size || existingSize;
   const perms: any[] = archiveUploadSuccess?.detectedPermissions || [];
+
+  const sdkWarning =
+    archiveUploadSuccess?.sdkWarning ||
+    archiveUploadSuccess?.pubspec?.sdkWarning ||
+    checkClientDartSdkCompatibility(archiveUploadSuccess?.pubspec?.environment?.sdk) ||
+    propSdkWarning;
 
   return (
     <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
@@ -139,6 +166,21 @@ export default function FlutterArchiveUploader({
               Uses: {perms.map((p) => (typeof p === "string" ? p : p.type || p.name)).join(", ")}
             </p>
           )}
+        </div>
+      )}
+
+      {sdkWarning && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-800/80 bg-amber-50/90 dark:bg-amber-950/40 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5 animate-in fade-in duration-200">
+          <span className="text-base shrink-0 select-none">⚠️</span>
+          <div className="flex-1 space-y-1 min-w-0">
+            <div className="font-bold text-amber-950 dark:text-amber-100 flex items-center gap-1.5 flex-wrap">
+              <span>Dart SDK Runtime Compatibility Notice</span>
+              <span className="text-xs px-1.5 py-0.5 rounded font-mono font-bold bg-amber-200/70 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                SuperApp Platform: Dart 3.12.0
+              </span>
+            </div>
+            <div className="leading-relaxed font-medium">{sdkWarning}</div>
+          </div>
         </div>
       )}
     </section>

@@ -201,12 +201,12 @@ export function OrganizationSelect({
                 {selectedOrg.name}
               </span>
               {selectedOrg.code && (
-                <span className="shrink-0 px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600">
+                <span className="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600">
                   {selectedOrg.code}
                 </span>
               )}
               {isRootOrganization(selectedOrg) && (
-                <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <span className="shrink-0 px-1.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   Root
                 </span>
               )}
@@ -251,7 +251,7 @@ export function OrganizationSelect({
 
       {/* Error Message */}
       {error && (
-        <p className="text-[11px] font-medium text-rose-500 dark:text-rose-400 mt-1 flex items-center gap-1">
+        <p className="text-xs font-medium text-rose-500 dark:text-rose-400 mt-1 flex items-center gap-1">
           <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -347,13 +347,13 @@ export function OrganizationSelect({
                         <div className="flex items-center gap-1.5">
                           <span className="truncate font-medium">{org.name}</span>
                           {isRoot && (
-                            <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <span className="shrink-0 px-1 py-0.2 rounded text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                               Root
                             </span>
                           )}
                         </div>
                         {parentName && (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-400 truncate">
+                          <p className="text-xs text-slate-400 dark:text-slate-400 truncate">
                             Under: {parentName}
                           </p>
                         )}
@@ -362,7 +362,7 @@ export function OrganizationSelect({
 
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       {org.code && (
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
+                        <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
                           {org.code}
                         </span>
                       )}
@@ -376,7 +376,7 @@ export function OrganizationSelect({
             ) : (
               <div className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500 space-y-1">
                 <p className="font-semibold text-slate-600 dark:text-slate-400">No organizations found</p>
-                <p className="text-[11px]">No results match "{searchQuery}"</p>
+                <p className="text-xs">No results match "{searchQuery}"</p>
               </div>
             )}
           </div>

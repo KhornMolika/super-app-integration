@@ -48,7 +48,7 @@ export default function ActivityTrendChart({
 
   const svgWidth = 600;
   const svgHeight = 210;
-  const padding = { top: 22, right: 20, bottom: 35, left: 35 };
+  const padding = useMemo(() => ({ top: 22, right: 20, bottom: 35, left: 35 }), []);
   const chartWidth = svgWidth - padding.left - padding.right;
   const chartHeight = svgHeight - padding.top - padding.bottom;
 
@@ -224,7 +224,7 @@ export default function ActivityTrendChart({
                     x={padding.left - 8}
                     y={y + 3}
                     textAnchor="end"
-                    className="text-[10px] fill-slate-400 dark:fill-slate-500 font-mono font-medium"
+                    className="text-xs fill-slate-400 dark:fill-slate-500 font-mono font-medium"
                   >
                     {val}
                   </text>
@@ -279,7 +279,7 @@ export default function ActivityTrendChart({
                   x={x}
                   y={svgHeight - 10}
                   textAnchor="middle"
-                  className="text-[10px] fill-slate-400 dark:fill-slate-500 font-medium"
+                  className="text-xs fill-slate-400 dark:fill-slate-500 font-medium"
                 >
                   {d.label}
                 </text>
@@ -349,7 +349,7 @@ export default function ActivityTrendChart({
                 top: `${((Math.min(points.subCoords[hoveredIdx].y, points.revCoords[hoveredIdx].y)) / svgHeight) * 100 - 10}%`,
               }}
             >
-              <div className="font-semibold text-slate-300 text-[10px] pb-1 border-b border-slate-700/60 mb-1.5 flex items-center justify-between gap-3">
+              <div className="font-semibold text-slate-300 text-xs pb-1 border-b border-slate-700/60 mb-1.5 flex items-center justify-between gap-3">
                 <span>{displayData[hoveredIdx].date || displayData[hoveredIdx].label}</span>
                 <span className="text-brand-400 font-mono">Telemetry</span>
               </div>

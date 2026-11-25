@@ -58,7 +58,7 @@ export function OrganizationViewModal({
           {/* Organization Name & Code */}
           <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Full Name
               </span>
               {organization.code && (
@@ -75,7 +75,7 @@ export function OrganizationViewModal({
           <div className="grid grid-cols-2 gap-3">
             {/* Parent Authority */}
             <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                 <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400" />
                 <span>Parent Authority</span>
               </div>
@@ -88,7 +88,7 @@ export function OrganizationViewModal({
 
             {/* Status */}
             <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                 Operational Status
               </div>
               <div>
@@ -112,7 +112,7 @@ export function OrganizationViewModal({
 
           {/* Description */}
           <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
               <DocumentTextIcon className="w-3.5 h-3.5 text-slate-400" />
               <span>Description / Mandate</span>
             </div>
@@ -124,7 +124,7 @@ export function OrganizationViewModal({
           </div>
 
           {/* System Metadata (ID & Timestamps) */}
-          <div className="pt-2 text-[11px] text-slate-400 space-y-1 font-mono">
+          <div className="pt-2 text-xs text-slate-400 space-y-1 font-mono">
             <div className="flex justify-between">
               <span>ID:</span>
               <span className="text-slate-600 dark:text-slate-300">{organization.id}</span>

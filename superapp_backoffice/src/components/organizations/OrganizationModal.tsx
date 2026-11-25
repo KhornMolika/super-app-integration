@@ -335,7 +335,7 @@ export function OrganizationModal({
                 {/* Hover Camera Overlay */}
                 <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
                   <CameraIcon className="w-4 h-4 sm:w-5 sm:h-5 mb-0.5" />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                  <span className="text-xs font-bold uppercase tracking-wider">
                     {logoPreview ? 'Change' : 'Upload'}
                   </span>
                 </div>
@@ -347,7 +347,7 @@ export function OrganizationModal({
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Organization Logo & Avatar
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
+                  <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
                     Round Avatar
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export function OrganizationModal({
                     </Button>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-400 leading-tight">
+                <p className="text-xs text-slate-400 dark:text-slate-400 leading-tight">
                   1:1 Square PNG, JPG, SVG, or WEBP (max 2MB). Falls back to initial code badge.
                 </p>
               </div>
@@ -431,7 +431,7 @@ export function OrganizationModal({
                   <HashIcon className="w-3.5 h-3.5 text-slate-400" />
                   <span>Short Code / Acronym</span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-medium">Optional</span>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <input
                 id="org-code"
@@ -441,7 +441,7 @@ export function OrganizationModal({
                 placeholder="e.g. IRC, SERC, FTC"
                 className="w-full h-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 font-mono text-sm uppercase tracking-wider text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-2xs"
               />
-              <p className="text-[10px] text-slate-400 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
                 Generates avatar badges & navigation prefixes.
               </p>
             </div>
@@ -456,7 +456,7 @@ export function OrganizationModal({
                   <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400" />
                   <span>Parent Authority</span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-medium">Hierarchy</span>
+                <span className="text-xs text-slate-400 font-medium">Hierarchy</span>
               </div>
               {isRoot ? (
                 <div className="h-11 px-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-2 select-none">
@@ -481,7 +481,7 @@ export function OrganizationModal({
                   }}
                 />
               )}
-              <p className="text-[10px] text-slate-400 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
                 Parent regulatory or ministerial supervisory body.
               </p>
             </div>
@@ -520,7 +520,7 @@ export function OrganizationModal({
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="font-bold">ACTIVE (Protected Root)</span>
                 </div>
-                <span className="text-[11px] text-amber-600 dark:text-amber-400 italic">
+                <span className="text-xs text-amber-600 dark:text-amber-400 italic">
                   Primary authority must remain ACTIVE
                 </span>
               </div>
@@ -544,7 +544,7 @@ export function OrganizationModal({
                         <CheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                       Operational and active in directory
                     </div>
                   </div>
@@ -568,7 +568,7 @@ export function OrganizationModal({
                         <CheckIcon className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                       Suspended / restricted access
                     </div>
                   </div>
@@ -580,7 +580,7 @@ export function OrganizationModal({
           </>
           )}
           {profileOnly && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-start gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2.5">
               <LockIcon className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
               <span>Short code, parent authority and status are managed by the platform admin.</span>
             </p>

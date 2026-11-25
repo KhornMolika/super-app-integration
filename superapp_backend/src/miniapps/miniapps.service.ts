@@ -22,7 +22,7 @@ import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
 import { Identity } from '../identities/entities/identity.entity';
 import { AuditService } from '../audit/audit.service';
-import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
+import { CapabilityDetectorHelper } from './helpers/capability-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { nativeEntryClassProblems } from './helpers/native-sdk-config.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
@@ -89,7 +89,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     private issueRepository: Repository<MiniAppIssue>,
 
     private auditService: AuditService,
-    private permissionDetectorHelper: PermissionDetectorHelper,
+    private permissionDetectorHelper: CapabilityDetectorHelper,
     private validationHelper: MiniappValidationHelper,
     private lifecycleHelper: MiniappLifecycleHelper,
     private artifactDistributionHelper: ArtifactDistributionHelper,
@@ -1286,8 +1286,16 @@ export class MiniappsService implements OnApplicationBootstrap {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
+    androidStoragePath?: string;
+    iosStoragePath?: string;
   }) {
-    if (!body.gitUrl && body.appId && body.appId !== 'draft') {
+    if (
+      !body.gitUrl &&
+      !body.androidStoragePath &&
+      !body.iosStoragePath &&
+      body.appId &&
+      body.appId !== 'draft'
+    ) {
       try {
         const app = await this.findOne(body.appId);
         if (app?.integrationConfig) {
@@ -1295,6 +1303,8 @@ export class MiniappsService implements OnApplicationBootstrap {
           body.gitUrl = cfg.gitUrl || cfg.repoUrl;
           body.gitBranch = cfg.gitBranch || cfg.ref || 'main';
           body.gitPath = cfg.gitPath || cfg.packagePath;
+          body.androidStoragePath = cfg.androidStoragePath;
+          body.iosStoragePath = cfg.iosStoragePath;
         }
       } catch {
         // App might not exist yet during initial draft creation
@@ -1378,9 +1388,13 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     // 2. Fetch specific scan run from mini_app_scans
     const scanScope = isRevision ? 'REVISION' : 'APP';
-    const scan = this.runs
+    let scan = this.runs
       ? await this.runs.scanForVersion(app.id, normTarget, scanScope as any)
       : null;
+    if (!scan && this.runs) {
+      // Fallback: if scan was recorded without explicit version tag (e.g. initial draft or preflight)
+      scan = await this.runs.latestScan(app.id, scanScope as any);
+    }
 
     // 3. Fetch specific build run from mini_app_builds
     const build = this.runs

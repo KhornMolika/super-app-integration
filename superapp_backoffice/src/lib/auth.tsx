@@ -5,7 +5,14 @@ import { authApi } from '@/api/auth.api';
 import { usersApi } from '@/api/users.api';
 import { resetSessionExpiredState } from '@/api/client';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MA_DEVELOPER' | 'STAFF';
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'PLATFORM_ADMIN'
+  | 'APP_REVIEWER'
+  | 'ORG_ADMIN'
+  | 'ADMIN'
+  | 'MA_DEVELOPER'
+  | 'STAFF';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -19,14 +26,37 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'organization:read', 'organization:manage',
     'audit_log:read', 'settings:manage'
   ],
-  // Organization admin (no approve/reject: review decisions are SUPER_ADMIN only).
-  // Every grant is scoped to their own organization by the
-  // API. Platform settings and Super App build tools (settings:manage,
-  // super_app:manage) are SUPER_ADMIN only.
+  PLATFORM_ADMIN: [
+    'miniapp:read', 'miniapp:suspend', 'issue:resolve',
+    'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
+    'super_app:read',
+    'user:read', 'user:manage',
+    'role:read',
+    'permission:read', 'permission:manage',
+    'organization:read', 'organization:manage',
+    'audit_log:read', 'settings:manage'
+  ],
+  APP_REVIEWER: [
+    'miniapp:read', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
+    'permission_proposal:read', 'permission_proposal:review',
+    'super_app:read', 'permission:read', 'organization:read', 'audit_log:read'
+  ],
+  ORG_ADMIN: [
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
+    'permission_proposal:read',
+    'super_app:read',
+    'user:read', 'user:manage',
+    'role:read',
+    'permission:read',
+    'organization:read', 'organization:manage',
+    'audit_log:read'
+  ],
   ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', // sees their organization's requests, only SUPER_ADMIN decides
+    'permission_proposal:read',
     'super_app:read',
     'user:read', 'user:manage',
     'role:read',
@@ -49,13 +79,27 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
 const ROLE_ALIASES: Record<string, Role> = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   SUPERADMIN: 'SUPER_ADMIN',
-  ADMIN: 'ADMIN',
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  PLATFORM_ADMINISTRATOR: 'PLATFORM_ADMIN',
+  APP_REVIEWER: 'APP_REVIEWER',
+  REVIEWER: 'APP_REVIEWER',
+  ORG_ADMIN: 'ORG_ADMIN',
+  ADMIN: 'ORG_ADMIN',
+  ORGANIZATION_ADMIN: 'ORG_ADMIN',
   MA_DEVELOPER: 'MA_DEVELOPER',
   MINI_APP_DEVELOPER: 'MA_DEVELOPER',
   DEVELOPER: 'MA_DEVELOPER',
   STAFF: 'STAFF',
 };
-const ROLE_PRIORITY: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+const ROLE_PRIORITY: Role[] = [
+  'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'APP_REVIEWER',
+  'ORG_ADMIN',
+  'ADMIN',
+  'MA_DEVELOPER',
+  'STAFF',
+];
 
 /** Role names from the backend, with known aliases normalised. */
 function normaliseRoles(raw: unknown[]): string[] {
@@ -116,7 +160,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
+  const [role, setRoleState] = useState<Role>('STAFF');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -216,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (typeof window !== 'undefined') {
               const currentPath = window.location.pathname;
               const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.href = `/login${redirectParam}`;
             }
           }
@@ -231,9 +276,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // 3. Cross-tab auth state sync (immediate logout/login propagation)
+    let authChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      authChannel = new BroadcastChannel('fsa_backoffice_auth');
+      authChannel.onmessage = (event) => {
+        if (event?.data?.type === 'LOGOUT') {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+          setRoleState('STAFF');
+          if (!window.location.pathname.startsWith('/login')) {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = '/login';
+          }
+        } else if (event?.data?.type === 'LOGIN') {
+          fetchSession();
+        }
+      };
+    }
+
     return () => {
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      authChannel?.close();
     };
   }, []);
 
@@ -258,6 +323,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           organization: res.user.organization || null,
         });
         setIsAuthenticated(true);
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('fsa_backoffice_auth');
+          ch.postMessage({ type: 'LOGIN' });
+          ch.close();
+        }
         // A password someone else chose: the login page sends the user to /change-password
         return { success: true, mustChangePassword: (res as any).must_change_password === true };
       }
@@ -282,7 +352,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (_) {}
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setRoleState('STAFF');
     if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('fsa_backoffice_auth');
+        ch.postMessage({ type: 'LOGOUT' });
+        ch.close();
+      }
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/login';
     }
   };
@@ -297,7 +374,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [role, currentUser?.permissions]
   );
 
-  const hasRole = useCallback((r: Role) => role === r, [role]);
+  const hasRole = useCallback(
+    (r: Role) => {
+      if (role === r) return true;
+      if (
+        (r === 'ADMIN' || r === 'ORG_ADMIN') &&
+        (role === 'ADMIN' || role === 'ORG_ADMIN')
+      ) {
+        return true;
+      }
+      return false;
+    },
+    [role]
+  );
 
   const authValue = useMemo(
     () => ({

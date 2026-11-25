@@ -130,15 +130,21 @@ export const miniappsApi = {
     permissions?: any[];
   }) => {
     if (data.id) {
-      return apiClient<{ verified: boolean; error?: string }>(`/api/mini-apps/${data.id}/verify-domain`, {
+      return apiClient<{ verified: boolean; error?: string; message?: string; allowedDomains?: string[]; permissions?: any[] }>(
+        `/api/mini-apps/${data.id}/verify-domain`,
+        {
+          method: 'POST',
+          body: data,
+        },
+      ).then(unwrapItem);
+    }
+    return apiClient<{ verified: boolean; error?: string; message?: string; allowedDomains?: string[]; permissions?: any[] }>(
+      '/api/mini-apps/verify-domain',
+      {
         method: 'POST',
         body: data,
-      });
-    }
-    return apiClient<{ verified: boolean; error?: string }>('/api/mini-apps/verify-domain', {
-      method: 'POST',
-      body: data,
-    });
+      },
+    ).then(unwrapItem);
   },
 
   triggerAction: (
@@ -274,13 +280,15 @@ export const miniappsApi = {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
+    androidStoragePath?: string;
+    iosStoragePath?: string;
     name?: string;
     appId?: string;
   }) =>
     apiClient<{ detected: Array<{ type: string; purpose: string; source: string }> }>('/api/mini-apps/detect-permissions', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   generateInviteToken: (id: string, expiresIn: string) =>
     apiClient<{ token: string; expiresAt?: string }>(`/api/mini-apps/${id}/invite-token`, {

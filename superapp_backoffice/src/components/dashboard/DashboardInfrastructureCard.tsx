@@ -39,13 +39,13 @@ export default function DashboardInfrastructureCard({
           {/* Storage Engine Status */}
           <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">Storage Engine</span>
+              <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Storage Engine</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
               {storageLicenseType || 'MinIO Object Storage'}
             </div>
-            <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+            <p className="text-xs text-slate-500 font-mono mt-0.5 truncate">
               {storageEndpoint}
             </p>
           </div>
@@ -53,7 +53,7 @@ export default function DashboardInfrastructureCard({
           {/* Telegram Gateway Status */}
           <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">Telegram Gateway</span>
+              <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Telegram Gateway</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
@@ -63,7 +63,7 @@ export default function DashboardInfrastructureCard({
               href={botUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline font-mono mt-0.5 block truncate"
+              className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-mono mt-0.5 block truncate"
             >
               @{botUsername}
             </a>
@@ -72,7 +72,7 @@ export default function DashboardInfrastructureCard({
           {/* Nexus Registry */}
           <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">Nexus Registry</span>
+              <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Nexus Registry</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
@@ -82,7 +82,7 @@ export default function DashboardInfrastructureCard({
               href={nexusUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-accent-600 dark:text-accent-400 hover:underline font-mono mt-0.5 block truncate"
+              className="text-xs text-accent-600 dark:text-accent-400 hover:underline font-mono mt-0.5 block truncate"
             >
               {nexusUrl}
             </a>
@@ -91,7 +91,7 @@ export default function DashboardInfrastructureCard({
           {/* CI/CD Automation */}
           <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">CI/CD Engine</span>
+              <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">CI/CD Engine</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
@@ -101,7 +101,7 @@ export default function DashboardInfrastructureCard({
               href={jenkinsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-mono mt-0.5 block truncate"
+              className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-mono mt-0.5 block truncate"
             >
               {jenkinsUrl}
             </a>

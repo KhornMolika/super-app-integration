@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { miniappsApi, unwrapData } from '@/api';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 import { PaginationProps } from '@/components/ui/Pagination';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface MiniAppIssueItem {
   id: string;
@@ -27,7 +28,7 @@ function IssuesContent() {
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialSeverity = searchParams.get('severity') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
@@ -69,7 +70,7 @@ function IssuesContent() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (pageSize !== 5) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (severityFilter !== 'ALL') params.set('severity', severityFilter);
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
@@ -90,7 +91,7 @@ function IssuesContent() {
       if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
-      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '5', 10));
       const searchFromUrl = params.get('search') || '';
       const severityFromUrl = params.get('severity') || 'ALL';
       const statusFromUrl = params.get('status') || 'ALL';
@@ -161,7 +162,7 @@ function IssuesContent() {
               {issue.miniApp?.name || 'Unknown App'}
             </Link>
             {issue.miniApp?.appId && (
-              <span className="text-[11px] font-mono text-slate-400 block truncate">
+              <span className="text-xs font-mono text-slate-400 block truncate">
                 {issue.miniApp.appId}
               </span>
             )}
@@ -263,14 +264,10 @@ function IssuesContent() {
 
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-          Issues Management
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-          Centralized view of all validation, security, and integration failures across registered MiniApps.
-        </p>
-      </div>
+      <PageHeader
+        title="Issues Management"
+        description="Centralized view of all validation, security, and integration failures across registered MiniApps."
+      />
 
       <DataTable<MiniAppIssueItem>
         data={paginatedIssues}

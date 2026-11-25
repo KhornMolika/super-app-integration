@@ -34,7 +34,7 @@ export function TelegramGuidelineCard({
         <div>
           <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>Setup Guideline &amp; Troubleshooting</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               Guide
             </span>
           </h3>
@@ -132,14 +132,14 @@ export function TelegramGuidelineCard({
                       </svg>
                       <span>Method 1: Auto-Detect</span>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-200/70 dark:bg-brand-900/80 text-brand-800 dark:text-brand-200">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-200/70 dark:bg-brand-900/80 text-brand-800 dark:text-brand-200">
                       Recommended
                     </span>
                   </div>
 
                   <ol className="mt-3 space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-xs shrink-0 mt-0.5">
                         1
                       </span>
                       <span>
@@ -147,7 +147,7 @@ export function TelegramGuidelineCard({
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-xs shrink-0 mt-0.5">
                         2
                       </span>
                       <span>
@@ -155,7 +155,7 @@ export function TelegramGuidelineCard({
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-xs shrink-0 mt-0.5">
                         3
                       </span>
                       <span>
@@ -163,7 +163,7 @@ export function TelegramGuidelineCard({
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-brand-200/80 dark:bg-brand-900 text-brand-800 dark:text-brand-200 font-bold text-xs shrink-0 mt-0.5">
                         4
                       </span>
                       <span>
@@ -184,14 +184,14 @@ export function TelegramGuidelineCard({
                       </svg>
                       <span>Method 2: Telegram Web URL</span>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       Browser
                     </span>
                   </div>
 
                   <ol className="mt-3 space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs shrink-0 mt-0.5">
                         1
                       </span>
                       <span>
@@ -199,7 +199,7 @@ export function TelegramGuidelineCard({
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs shrink-0 mt-0.5">
                         2
                       </span>
                       <span>
@@ -207,7 +207,7 @@ export function TelegramGuidelineCard({
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] shrink-0 mt-0.5">
+                      <span className="flex items-center justify-center w-4.5 h-4.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs shrink-0 mt-0.5">
                         3
                       </span>
                       <span>

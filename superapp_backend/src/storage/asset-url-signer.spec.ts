@@ -134,4 +134,18 @@ describe('signAssetLinks (response interceptor)', () => {
     expect(out.data.description).toBe(body.data.description);
     expect(body.data.logo).not.toContain('sig='); // input not mutated
   });
+
+  it('strips ephemeral tunnel and localhost origins to relative proxy links when signing', () => {
+    const tunnelLink =
+      'https://ton-albums-sublime-showcase.trycloudflare.com/api/storage/asset?key=miniapps%2Fnova%2Flogos%2Flogo.jpg&bucket=superapp-storage';
+    const outTunnel = signAssetLink(tunnelLink, NOW);
+    expect(outTunnel.startsWith('/api/storage/asset?')).toBe(true);
+    expect(outTunnel).not.toContain('trycloudflare.com');
+    expect(verifyLink(outTunnel)).toBe(true);
+
+    const localLink = 'http://localhost:3000/storage/asset?key=logos%2Fa.png';
+    const outLocal = signAssetLink(localLink, NOW);
+    expect(outLocal.startsWith('/api/storage/asset?')).toBe(true);
+    expect(verifyLink(outLocal)).toBe(true);
+  });
 });

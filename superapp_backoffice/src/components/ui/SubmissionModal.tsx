@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/inputs';
 import { STAGE_CATALOG } from '@/components/ui/ValidationReportTab';
@@ -407,7 +407,7 @@ export default function SubmissionModal({
                   <AlertTriangleIcon className="w-7 h-7" />
                 </div>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                     HTTP 503 • BACKEND_SERVICE_DOWN
                   </span>
                 </div>
@@ -423,7 +423,7 @@ export default function SubmissionModal({
                     <ClockIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                     <span>Your form inputs are safely retained</span>
                   </div>
-                  <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">
                     Once the backend server finishes starting up, you can submit again without re-entering your configuration.
                   </p>
                 </div>
@@ -487,10 +487,10 @@ export default function SubmissionModal({
                 {state.createdId && (
                   <Button
                     className="flex-1 h-10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-                    onClick={() => router.push(`/miniapps/${state.createdId}`)}
+                    onClick={() => router.push(`/miniapps/${state.createdId}/security`)}
                   >
                     <ClipboardCheckIcon className="w-4 h-4" />
-                    <span>View Full Report</span>
+                    <span>View Security Report</span>
                   </Button>
                 )}
               </div>

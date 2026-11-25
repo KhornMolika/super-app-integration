@@ -73,8 +73,18 @@ export function isSuperAdmin(user: AccessSubject | null | undefined): boolean {
   return roleNames(user).includes('SUPER_ADMIN');
 }
 
+export function isPlatformAdmin(user: AccessSubject | null | undefined): boolean {
+  const roles = roleNames(user);
+  return roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
+}
+
 export function isOrgAdmin(user: AccessSubject | null | undefined): boolean {
-  return roleNames(user).includes('ADMIN');
+  const roles = roleNames(user);
+  return (
+    roles.includes('ORG_ADMIN') ||
+    roles.includes('ADMIN') ||
+    roles.includes('ORGANIZATION_ADMIN')
+  );
 }
 
 /**
@@ -88,6 +98,12 @@ export function resolveMiniAppAccess(
 ): MiniAppAccess {
   if (!user || !app) return MiniAppAccess.NONE;
   if (isSuperAdmin(user)) return MiniAppAccess.ADMIN;
+
+  const names = roleNames(user);
+  // Platform App Reviewer can inspect diff deck, approve, and reject
+  if (names.includes('APP_REVIEWER') || names.includes('REVIEWER')) {
+    return MiniAppAccess.ADMIN;
+  }
 
   const userOrg = user.organizationId || null;
   const appOrg = app.organizationId || null;
@@ -117,7 +133,14 @@ export function scopeMiniAppQuery<T extends ObjectLiteral>(
   user: AccessSubject | null | undefined,
 ): boolean {
   if (!user) return false;
-  if (isSuperAdmin(user)) return true;
+  const names = roleNames(user);
+  if (
+    isSuperAdmin(user) ||
+    names.includes('PLATFORM_ADMIN') ||
+    names.includes('APP_REVIEWER')
+  ) {
+    return true;
+  }
 
   const userOrg = user.organizationId || null;
   if (!userOrg) return false;
@@ -126,7 +149,9 @@ export function scopeMiniAppQuery<T extends ObjectLiteral>(
   qb.andWhere(`${alias}.organizationId = :accessOrgId`, {
     accessOrgId: userOrg,
   });
-  if (isOrgAdmin(user)) return true;
+  if (isOrgAdmin(user)) {
+    return true;
+  }
 
   const me = subjectId(user);
   if (!me) return false;

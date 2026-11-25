@@ -200,7 +200,7 @@ export function DomainTokenGeneratorCard() {
 
         <div className="space-y-1.5">
           <Label htmlFor="pre-appid" className="text-xs font-semibold">
-            App ID / Package Slug <span className="text-slate-400 text-[11px]">(Optional)</span>
+            App ID / Package Slug <span className="text-slate-400 text-xs">(Optional)</span>
           </Label>
           <Input
             id="pre-appid"
@@ -218,7 +218,7 @@ export function DomainTokenGeneratorCard() {
       {/* Challenge Token Banner */}
       <div className="p-4 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
             Active Challenge Token
           </span>
           <code className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-slate-100 break-all select-all">
@@ -285,9 +285,9 @@ export function DomainTokenGeneratorCard() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="space-y-1">
-                <span className="text-[11px] font-bold text-slate-500">Record Name / Host</span>
+                <span className="text-xs font-bold text-slate-500">Record Name / Host</span>
                 <div className="flex items-center gap-1.5">
-                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] truncate">
+                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-xs truncate">
                     {`_superapp-challenge.${host}`}
                   </code>
                   <button
@@ -301,9 +301,9 @@ export function DomainTokenGeneratorCard() {
               </div>
 
               <div className="space-y-1">
-                <span className="text-[11px] font-bold text-slate-500">TXT Record Value</span>
+                <span className="text-xs font-bold text-slate-500">TXT Record Value</span>
                 <div className="flex items-center gap-1.5">
-                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-emerald-400 font-mono text-[11px] truncate">
+                  <code className="flex-1 p-2 rounded-lg bg-slate-900 text-emerald-400 font-mono text-xs truncate">
                     {`superapp-site-verification=${token}`}
                   </code>
                   <button
@@ -424,7 +424,7 @@ export function DomainTokenGeneratorCard() {
           {verifyResult.success ? (
             <CheckIcon className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           ) : (
-            <span className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+            <span className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
               !
             </span>
           )}

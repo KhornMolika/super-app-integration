@@ -253,12 +253,12 @@ export function TelegramConfigModal({
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                     <span>Telegram Bot Whereabouts</span>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Online
                     </span>
                   </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Detect where @{botUsername} is present and select a channel
                   </p>
                 </div>
@@ -285,12 +285,12 @@ export function TelegramConfigModal({
 
             {/* 1-Click Bot Setup Actions */}
             <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-sky-200/60 dark:border-sky-800/60 text-xs">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Quick Connect:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Quick Connect:</span>
               <a
                 href={`https://t.me/${botUsername}?start=${user.id}`}
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-[11px] shadow-xs inline-flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs shadow-xs inline-flex items-center gap-1 transition-colors"
                 title="Open personal chat with the bot and tap START"
               >
                 <span>Open Bot (@{botUsername})</span>
@@ -302,7 +302,7 @@ export function TelegramConfigModal({
                 href={`https://t.me/${botUsername}?startgroup=true&admin=post_messages+manage_chat`}
                 target="_blank"
                 rel="noreferrer"
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] shadow-xs inline-flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs inline-flex items-center gap-1 transition-colors"
                 title="Add bot to an alert group as Admin automatically"
               >
                 <span>Add Bot to Group</span>
@@ -315,7 +315,7 @@ export function TelegramConfigModal({
             {/* Detected Chats List */}
             {detectedChats.length > 0 ? (
               <div className="space-y-2 pt-2 border-t border-sky-200/60 dark:border-sky-800/60">
-                <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-700 dark:text-slate-300">
                     Detected Bot Locations ({detectedChats.length}):
                   </span>
@@ -367,7 +367,7 @@ export function TelegramConfigModal({
                             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                               {chat.name}
                             </div>
-                            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                               <span>ID: {chat.chatId}</span>
                               {chat.username && (
                                 <span className="text-sky-600 dark:text-sky-400">
@@ -380,7 +380,7 @@ export function TelegramConfigModal({
 
                         <div className="flex items-center gap-2 shrink-0">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                            className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
                               isGroup
                                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
                                 : isChannel
@@ -402,7 +402,7 @@ export function TelegramConfigModal({
                 </div>
               </div>
             ) : hasScanned && !isScanning ? (
-              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-1">
                 <span className="font-semibold text-slate-700 dark:text-slate-300 block">
                   No active chats recorded yet.
                 </span>
@@ -423,7 +423,7 @@ export function TelegramConfigModal({
                 <button
                   type="button"
                   onClick={handleClearTelegram}
-                  className="text-[11px] text-rose-500 hover:text-rose-600 font-medium hover:underline cursor-pointer"
+                  className="text-xs text-rose-500 hover:text-rose-600 font-medium hover:underline cursor-pointer"
                 >
                   Unlink Telegram
                 </button>
@@ -441,7 +441,7 @@ export function TelegramConfigModal({
                     href={`https://t.me/${cleanTelegram}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
                   >
                     <span>Open t.me/{cleanTelegram}</span>
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -476,7 +476,7 @@ export function TelegramConfigModal({
                     type="button"
                     onClick={handleValidateChatId}
                     disabled={validatingChatId}
-                    className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1"
+                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1"
                   >
                     {validatingChatId ? 'Verifying...' : 'Verify ID with Bot ↗'}
                   </button>
@@ -510,7 +510,7 @@ export function TelegramConfigModal({
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 Direct user chat ID or group channel ID (with leading <code>-100</code>).
               </p>
             </div>

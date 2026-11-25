@@ -52,6 +52,7 @@ function RegisterMiniAppContent() {
     hasRestoredDraft,
     draftSavedAt,
     handleDiscardDraft,
+    allowedCapabilityKeys,
   } = useMiniAppRegister();
 
   return (
@@ -135,6 +136,7 @@ function RegisterMiniAppContent() {
         setModalState={setModalState}
         onConfirmUnsupported={handleConfirmUnsupported}
         onFixLater={handleFixLater}
+        allowedCapabilityKeys={allowedCapabilityKeys}
       />
     </>
   );

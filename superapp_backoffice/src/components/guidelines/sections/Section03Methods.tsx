@@ -37,57 +37,50 @@ export function Section03Methods({
             </p>
           </div>
 
-          {/* Dedicated Domain Verification Callout */}
-          <section id="domain-verification" className="scroll-mt-28 space-y-4">
-            <div className="p-6 rounded-2xl border-2 border-brand-500/40 dark:border-brand-500/30 bg-gradient-to-br from-brand-50/70 via-slate-50 to-white dark:from-brand-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                    <GlobeIcon />
-                  </div>
-                  <div>
-                    <h5 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Mandatory Domain Ownership Verification
-                    </h5>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                      MiniApps serving web content must cryptographically prove domain ownership before staging submission.
-                    </p>
-                  </div>
+          {/* Dedicated Domain Verification Section */}
+          <section id="domain-verification" className="scroll-mt-28 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Mandatory Domain Ownership Verification
+                </h5>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  MiniApps serving web content must cryptographically prove domain ownership before staging submission.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shrink-0">
+                Automated Pre-flight Gate
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div className="space-y-2.5">
+                <strong className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <TagIcon className="w-4 h-4 text-brand-500" />
+                  Method A: DNS TXT Record (Recommended)
+                </strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Add a TXT record to your root or subdomain DNS zone. Verification is cached and automatically checked during pre-flight.
+                </p>
+                <div className="p-3.5 bg-slate-900 text-slate-100 font-mono rounded-xl text-xs space-y-1 border border-slate-800">
+                  <p className="text-slate-400"># Host / Name:</p>
+                  <p className="text-brand-300">_superapp-challenge.yourdomain.com</p>
+                  <p className="text-slate-400 mt-2"># Value / Content:</p>
+                  <p className="text-brand-300">superapp-site-verification=&lt;token&gt;</p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30">
-                  Automated Pre-flight Gate
-                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
-                  <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <TagIcon className="w-4 h-4 text-brand-500" />
-                    Method A: DNS TXT Record (Recommended)
-                  </strong>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Add a TXT record to your root or subdomain DNS zone. Verification is cached and automatically checked during pre-flight.
-                  </p>
-                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                    <p className="text-slate-400"># Host / Name:</p>
-                    <p className="text-brand-300">_superapp-challenge.yourdomain.com</p>
-                    <p className="text-slate-400 mt-2"># Value / Content:</p>
-                    <p className="text-brand-300">superapp-site-verification=&lt;token&gt;</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
-                  <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                    <HashIcon className="w-4 h-4 text-brand-500" />
-                    Method B: HTML Meta Tag
-                  </strong>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Place a verification meta tag in the <code>&lt;head&gt;</code> section of your production URL homepage.
-                  </p>
-                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                    <p className="text-slate-400">&lt;!-- Inside &lt;head&gt; of index.html --&gt;</p>
-                    <p className="text-brand-300">&lt;meta name=&quot;superapp-site-verification&quot; content=&quot;&lt;token&gt;&quot; /&gt;</p>
-                  </div>
+              <div className="space-y-2.5">
+                <strong className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <HashIcon className="w-4 h-4 text-brand-500" />
+                  Method B: HTML Meta Tag
+                </strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Place a verification meta tag in the <code className="font-mono text-xs">&lt;head&gt;</code> section of your production URL homepage.
+                </p>
+                <div className="p-3.5 bg-slate-900 text-slate-100 font-mono rounded-xl text-xs space-y-1 border border-slate-800">
+                  <p className="text-slate-400">&lt;!-- Inside &lt;head&gt; of index.html --&gt;</p>
+                  <p className="text-brand-300 break-all">&lt;meta name=&quot;superapp-site-verification&quot; content=&quot;&lt;token&gt;&quot; /&gt;</p>
                 </div>
               </div>
             </div>
@@ -221,8 +214,8 @@ export function Section03Methods({
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                 Upload your compiled <code>.aar</code> binary. In the registration form, specify the Android Package Name (e.g. <code>com.fsa.enterprise.hr</code>) and Plugin Entry Class (e.g. <code>MiniAppPlugin</code>).
               </p>
-              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                <p className="text-slate-400">// Kotlin Implementation</p>
+              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
+                <p className="text-slate-400">{'// Kotlin Implementation'}</p>
                 <p className="text-brand-300">class MiniAppPlugin : FSAMiniAppNativePlugin &#123;</p>
                 <p className="text-slate-300 pl-4">override fun initialize(context: Context, appCtx: MiniAppNativeContext) &#123; ... &#125;</p>
                 <p className="text-brand-300">&#125;</p>
@@ -242,8 +235,8 @@ export function Section03Methods({
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                 Upload a <code>.zip</code> archive containing your compiled <code>.xcframework</code> or <code>.framework</code>. Specify the iOS Module Name (e.g. <code>FsaHrMiniApp</code>) and Entry Type (e.g. <code>MiniAppPlugin</code>).
               </p>
-              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                <p className="text-slate-400">// Swift Implementation</p>
+              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
+                <p className="text-slate-400">{'// Swift Implementation'}</p>
                 <p className="text-brand-300">@objc public class MiniAppPlugin: NSObject, FSASuperAppMiniAppNativeProtocol &#123;</p>
                 <p className="text-slate-300 pl-4">public static func initialize(with context: MiniAppNativeContext) &#123; ... &#125;</p>
                 <p className="text-brand-300">&#125;</p>

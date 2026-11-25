@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CapabilityDefinition } from './entities/capability-definition.entity';
 import { SuperAppCapability } from '../super-app/entities/super-app-capability.entity';
+import { collectDefinitionKeys } from './capability-aliases';
 
 /**
  * ADR-004 Section 5 — "disable, don't fail".
@@ -47,7 +48,7 @@ export interface CapabilityAvailability {
 
 export interface CapabilityGateFinding {
   id: string;
-  severity: 'MEDIUM' | 'LOW';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   category: string;
   title: string;
   description: string;
@@ -167,7 +168,7 @@ export function capabilityFindings(availability: CapabilityAvailability): Capabi
       c.required
         ? {
             id: `CAP_UNSUPPORTED_${c.key.toUpperCase()}`,
-            severity: 'MEDIUM' as const,
+            severity: 'HIGH' as const,
             category: 'Capability Compliance',
             title: `Required capability "${c.key}" is unavailable: Mini App will not be launchable`,
             description: `The Mini App marks "${c.key}" as required, and it ${describe(c)}. Registration continues, but the Mini App stays hidden from launch (${availability.unavailableReason}) until the host supports it.`,
@@ -200,8 +201,25 @@ export class CapabilityGateService {
       this.definitions.find(),
       this.releases.find({ order: { createdAt: 'DESC' }, take: 1 }),
     ]);
+    const byKey = new Map<string, CapabilityDefinition>();
+    // Register exact keys first, then DB-stored aliases/requiredPermissions so exact matches always win
+    for (const d of defs) {
+      byKey.set(d.key.toLowerCase(), d);
+    }
+    for (const d of defs) {
+      for (const alias of collectDefinitionKeys(d)) {
+        const existing = byKey.get(alias);
+        if (
+          !existing ||
+          (!existing.isActive && d.isActive) ||
+          (existing.isAllowed === false && d.isAllowed !== false)
+        ) {
+          byKey.set(alias, d);
+        }
+      }
+    }
     return {
-      byKey: new Map(defs.map((d) => [d.key.toLowerCase(), d])),
+      byKey,
       hostVersion: latest[0]?.superAppVersion ?? null,
     };
   }
@@ -235,16 +253,17 @@ export class CapabilityGateService {
 
     const total = availability.capabilities.length;
     const unsupported = availability.capabilities.filter((c) => !c.supported);
-    stages.capability_gate.status = 'COMPLETED';
+    const hasBlocking = !availability.launchable;
+    stages.capability_gate.status = hasBlocking ? 'FAILED' : 'COMPLETED';
     stages.capability_gate.details = !total
       ? 'No host capabilities declared.'
       : !unsupported.length
         ? `All ${total} declared capabilities are supported by the Super App host.`
-        : !availability.launchable
+        : hasBlocking
           ? `${unsupported.length} of ${total} capabilities unsupported. ${availability.unavailableReason}.`
           : `${unsupported.length} of ${total} optional capabilities unsupported; they stay disabled until the host supports them.`;
     checks.capability_gate = {
-      passed: true,
+      passed: !hasBlocking,
       details: stages.capability_gate.details,
       launchable: availability.launchable,
       unavailableReason: availability.unavailableReason,

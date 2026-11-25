@@ -190,7 +190,7 @@ export default function BuildProgressModal({
                         }`}>
                           {st.name}
                         </span>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider ${
+                        <span className={`text-xs px-2 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider ${
                           isRunning
                             ? 'bg-accent-100 text-accent-800 dark:bg-accent-900/50 dark:text-accent-200 animate-pulse'
                             : isCompleted

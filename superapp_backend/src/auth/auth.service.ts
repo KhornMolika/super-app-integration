@@ -67,6 +67,10 @@ export const BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS =
 export const BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS =
   Number(process.env.BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS) || 7 * 24 * 60 * 60; // 7 days
 
+/** Absolute maximum session lifetime across sliding rotations (default 30 days) */
+export const BACK_OFFICE_MAX_SESSION_TTL_SECONDS =
+  Number(process.env.BACK_OFFICE_MAX_SESSION_TTL_SECONDS) || 30 * 24 * 60 * 60; // 30 days
+
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
@@ -297,7 +301,43 @@ export class AuthService implements OnModuleInit {
           'settings:manage',
         ].forEach((p) => permissions.add(p));
       }
-      if (roles.includes('ADMIN')) {
+      if (roles.includes('PLATFORM_ADMIN')) {
+        [
+          'miniapp:read',
+          'miniapp:suspend',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'permission_proposal:approve',
+          'super_app:read',
+          'user:read',
+          'user:manage',
+          'role:read',
+          'permission:read',
+          'permission:manage',
+          'organization:read',
+          'organization:manage',
+          'audit_log:read',
+          'settings:manage',
+        ].forEach((p) => permissions.add(p));
+      }
+      if (roles.includes('APP_REVIEWER')) {
+        [
+          'miniapp:read',
+          'miniapp:approve',
+          'miniapp:reject',
+          'miniapp:suspend',
+          'miniapp_permission:approve',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'super_app:read',
+          'permission:read',
+          'organization:read',
+          'audit_log:read',
+        ].forEach((p) => permissions.add(p));
+      }
+      if (roles.includes('ORG_ADMIN') || roles.includes('ADMIN')) {
         [
           'miniapp:create',
           'miniapp:read',
@@ -318,7 +358,7 @@ export class AuthService implements OnModuleInit {
           'audit_log:read',
         ].forEach((p) => permissions.add(p));
       }
-      if (roles.includes('MA_DEVELOPER')) {
+      if (roles.includes('MA_DEVELOPER') || roles.includes('DEVELOPER')) {
         [
           'miniapp:create',
           'miniapp:read',
@@ -659,9 +699,25 @@ export class AuthService implements OnModuleInit {
         [rec.id],
       );
     }
+    const startedAt = new Date(rec.familyStartedAt ?? rec.createdAt);
+    if (
+      Date.now() - startedAt.getTime() >
+      BACK_OFFICE_MAX_SESSION_TTL_SECONDS * 1000
+    ) {
+      await this.revokeSession(rec.familyId);
+      throw new UnauthorizedException(
+        'Session maximum lifetime reached. Please sign in again.',
+      );
+    }
+
+    // Opportunistically prune expired or stale-revoked refresh tokens
+    db.query(
+      `DELETE FROM "refresh_tokens" WHERE "expiresAt" < now() OR ("revokedAt" IS NOT NULL AND "revokedAt" < now() - interval '7 days')`,
+    ).catch(() => undefined);
+
     return {
       familyId: rec.familyId,
-      startedAt: new Date(rec.familyStartedAt ?? rec.createdAt),
+      startedAt,
     };
   }
 
@@ -1312,15 +1368,27 @@ export function platformRoles(user: any): string[] {
       list
         .map((r: any) => (typeof r === 'string' ? r : r?.name))
         .filter(Boolean)
-        .map((r: string) =>
-          ['MINI_APP_DEVELOPER', 'DEVELOPER', 'QA_TESTER', 'AUDITOR'].includes(
-            r,
-          )
-            ? 'MA_DEVELOPER'
-            : r,
-        )
+        .map((r: string) => {
+          const upper = r.toUpperCase().trim();
+          if (upper === 'ORGANIZATION_ADMIN') return 'ORG_ADMIN';
+          if (['MINI_APP_DEVELOPER', 'DEVELOPER'].includes(upper))
+            return 'MA_DEVELOPER';
+          if (['REVIEWER', 'APP_REVIEW'].includes(upper))
+            return 'APP_REVIEWER';
+          if (['PLATFORM_ADMINISTRATOR', 'OPS_ADMIN'].includes(upper))
+            return 'PLATFORM_ADMIN';
+          return upper;
+        })
         .filter((r: string) =>
-          ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r),
+          [
+            'SUPER_ADMIN',
+            'PLATFORM_ADMIN',
+            'APP_REVIEWER',
+            'ORG_ADMIN',
+            'ADMIN',
+            'MA_DEVELOPER',
+            'STAFF',
+          ].includes(r),
         ),
     ),
   );
@@ -1332,6 +1400,9 @@ export function platformRoles(user: any): string[] {
  */
 export const BACKOFFICE_ROLES = [
   'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'APP_REVIEWER',
+  'ORG_ADMIN',
   'ADMIN',
   'MA_DEVELOPER',
 ] as const;

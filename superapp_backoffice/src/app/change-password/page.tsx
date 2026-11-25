@@ -46,6 +46,7 @@ export default function ChangePasswordPage() {
       await authApi.changePassword({ oldPassword: current, newPassword: next });
       toast.success('Your password is set. Welcome!', 'Password updated');
       // Full load: the new session cookies and the cleared flag apply everywhere
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/miniapps';
     } catch (err: any) {
       setError(err?.message || 'The password could not be changed. Please try again.');

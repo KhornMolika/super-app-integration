@@ -188,7 +188,7 @@ export default function SandboxBuildStatusIndicator() {
         mounted &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-            <div className="w-full max-w-3xl my-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-750/80 overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-white/10">
+            <div className="w-full max-w-3xl my-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700/80 overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-white/10">
             
             {/* Terminal Top Window Chrome */}
             <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-4">
@@ -216,7 +216,7 @@ export default function SandboxBuildStatusIndicator() {
                         SuperApp Sandbox Build Pipeline
                       </h3>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
                           status.state === 'BUILDING'
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse'
                             : status.state === 'SUCCESS'
@@ -227,7 +227,7 @@ export default function SandboxBuildStatusIndicator() {
                         {status.state}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 font-mono">
+                    <p className="text-xs text-slate-400 font-mono">
                       Target: super-app (Flutter Web) • Base Href: /superapp-sandbox/
                     </p>
                   </div>
@@ -239,7 +239,7 @@ export default function SandboxBuildStatusIndicator() {
                 <button
                   type="button"
                   onClick={handleCopyLogs}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer shadow-xs"
                   title="Copy logs to clipboard"
                 >
                   {copied ? (
@@ -333,7 +333,7 @@ export default function SandboxBuildStatusIndicator() {
                           : 'text-slate-300'
                       }`}
                     >
-                      <span className="text-[10px] text-slate-600 select-none w-7 text-right flex-shrink-0 pt-0.5">
+                      <span className="text-xs text-slate-600 select-none w-7 text-right flex-shrink-0 pt-0.5">
                         {idx + 1}
                       </span>
                       <span className="leading-relaxed break-all flex-1">
@@ -363,7 +363,7 @@ export default function SandboxBuildStatusIndicator() {
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-1 text-[11px] text-emerald-400">
+                <div className="flex items-center gap-1 text-xs text-emerald-400">
                   <ShieldCheckIcon className="w-3.5 h-3.5" />
                   <span>CI Sync Active</span>
                 </div>

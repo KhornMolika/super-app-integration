@@ -76,14 +76,14 @@ export function Section06UxUiGuidelines() {
                 }`}
               >
                 {/* 1. Status Bar + Dynamic Island */}
-                <div className="h-10 pt-2 px-6 flex items-center justify-between shrink-0 relative z-10 text-[11px] font-semibold">
+                <div className="h-10 pt-2 px-6 flex items-center justify-between shrink-0 relative z-10 text-xs font-semibold">
                   <span>9:41</span>
                   {/* Dynamic Island pill */}
                   <div className="w-24 h-5 rounded-full bg-black mx-auto absolute left-1/2 -translate-x-1/2 top-2 flex items-center justify-end pr-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-800" />
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px]">5G</span>
+                    <span className="text-xs">5G</span>
                     <div className="w-5 h-2.5 rounded-sm border border-current p-0.5 flex items-center">
                       <div className="w-3 h-full bg-current rounded-2xs" />
                     </div>
@@ -112,7 +112,7 @@ export function Section06UxUiGuidelines() {
                 </div>
 
                 {/* Capsule Reserved Zone Callout Box (Visual Overlay) */}
-                <div className="absolute right-2 top-10 border border-dashed border-rose-500 bg-rose-500/10 rounded-lg px-2 py-0.5 text-[9px] font-bold text-rose-600 dark:text-rose-400 z-20 pointer-events-none">
+                <div className="absolute right-2 top-10 border border-dashed border-rose-500 bg-rose-500/10 rounded-lg px-2 py-0.5 text-xs font-bold text-rose-600 dark:text-rose-400 z-20 pointer-events-none">
                   Reserved Capsule Zone (96×40pt)
                 </div>
 
@@ -120,23 +120,23 @@ export function Section06UxUiGuidelines() {
                 <div className="flex-1 p-4 space-y-3 overflow-y-auto text-xs relative">
                   {/* Banner */}
                   <div className="h-20 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 p-3 text-white flex flex-col justify-end">
-                    <span className="text-[10px] font-medium opacity-80">Partner MiniApp Viewport</span>
+                    <span className="text-xs font-medium opacity-80">Partner MiniApp Viewport</span>
                     <span className="font-bold text-sm">Your Custom Business UI</span>
                   </div>
 
                   {/* Mock content blocks */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-                      <span className="text-[10px] text-slate-400 block">Catalog Item</span>
+                      <span className="text-xs text-slate-400 block">Catalog Item</span>
                       <span className="font-semibold text-xs">$49.00</span>
                     </div>
                     <div className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
-                      <span className="text-[10px] text-slate-400 block">Catalog Item</span>
+                      <span className="text-xs text-slate-400 block">Catalog Item</span>
                       <span className="font-semibold text-xs">$79.00</span>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-[11px] leading-relaxed text-slate-500">
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-xs leading-relaxed text-slate-500">
                     Use your brand colors, cards, and typography inside this canvas.
                   </div>
                 </div>

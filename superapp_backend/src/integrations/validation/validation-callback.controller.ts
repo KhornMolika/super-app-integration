@@ -278,6 +278,22 @@ export class ValidationCallbackController {
       type: 'SECURITY_CHECK',
     });
 
+    if (dto.checks?.capability_gate?.passed === true) {
+      await this.issueRepository
+        .createQueryBuilder()
+        .delete()
+        .from(MiniAppIssue)
+        .where('"miniAppId" = :appId', { appId: app.id })
+        .andWhere(
+          '(LOWER(description) LIKE :capNotRec OR LOWER(description) LIKE :capNotSup)',
+          {
+            capNotRec: '%capability%not recognized%',
+            capNotSup: '%capability%not supported%',
+          },
+        )
+        .execute();
+    }
+
     // The commit the scan checked out: the build uses the same one (gitRefOf).
     // Only a full SHA, on the config that was scanned (the new version's, if any).
     if (dto.commitSha && /^[0-9a-f]{40}$/i.test(dto.commitSha)) {
@@ -331,9 +347,28 @@ export class ValidationCallbackController {
           3 * count('MEDIUM') -
           count('LOW'),
       );
-      finalStatus = Object.values(finalChecks || {}).every((c: any) => c.passed)
+      finalStatus = (Object.values(finalChecks || {}).every((c: any) => c.passed) && count('CRITICAL') === 0 && count('HIGH') === 0)
         ? 'PASSED'
         : 'FAILED';
+    }
+
+    const hasBlockingFindings = finalFindings.some(
+      (f: any) =>
+        (f.severity || '').toUpperCase() === 'CRITICAL' ||
+        (f.severity || '').toUpperCase() === 'HIGH',
+    );
+    const hasFailedCheck = Object.values(finalChecks || {}).some(
+      (c: any) => c.passed === false,
+    );
+    const hasBlockingIssues = (app.issues || []).some(
+      (iss: any) =>
+        (iss.severity || '').toUpperCase() === 'CRITICAL' ||
+        ((iss.severity || '').toUpperCase() === 'HIGH' && iss.type === 'VALIDATION_ERROR'),
+    );
+
+    if (hasBlockingFindings || hasFailedCheck || hasBlockingIssues) {
+      finalStatus = 'FAILED';
+      finalScore = Math.min(finalScore ?? 45, 45);
     }
 
     app.validationReport = {

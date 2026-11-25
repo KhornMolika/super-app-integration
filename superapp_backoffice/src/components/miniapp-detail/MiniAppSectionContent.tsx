@@ -197,6 +197,8 @@ export function MiniAppSectionContent({
             ownerName={formData.ownerName || (formData as any)?.owner?.name || (formData as any)?.owner?.fullName}
             ownerEmail={formData.ownerEmail || (formData as any)?.owner?.email}
             teamName={formData.teamName}
+            integrationMethod={formData.integrationMethod}
+            integrationConfig={formData.integrationConfig}
           />
         </div>
       )}

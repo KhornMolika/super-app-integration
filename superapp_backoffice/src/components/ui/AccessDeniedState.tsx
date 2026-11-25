@@ -65,7 +65,7 @@ export function AccessDeniedState({
                   <KeyRound className="w-3 h-3 text-slate-400" />
                   <span>Required Role:</span>
                 </span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded text-[11px]">
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded text-xs">
                   {formattedRequiredRole}
                 </span>
               </div>
@@ -76,7 +76,7 @@ export function AccessDeniedState({
                   <Lock className="w-3 h-3 text-slate-400" />
                   <span>Permission:</span>
                 </span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded text-[11px]">
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded text-xs">
                   {requiredPermission}
                 </span>
               </div>
@@ -84,7 +84,7 @@ export function AccessDeniedState({
             {userRole && (
               <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
                 <span className="text-slate-400 font-medium">Your Current Role:</span>
-                <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
+                <span className="font-mono text-slate-500 dark:text-slate-400 text-xs">
                   {userRole}
                 </span>
               </div>

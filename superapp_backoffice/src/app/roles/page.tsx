@@ -21,6 +21,9 @@ import { useAuth } from '@/lib/auth';
 import { rolesApi, Role } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Pagination } from '@/components/ui/Pagination';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
@@ -40,6 +43,8 @@ function RolesPageContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'SYSTEM' | 'CUSTOM'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -115,52 +120,42 @@ function RolesPageContent() {
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-            <Shield className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Roles Directory
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Define administrative authorization tiers, assign security boundaries, and govern custom roles
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-            title="Refresh Roles"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <Link
-            href="/permissions"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span>Permissions Matrix</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-          </Link>
-
-          {canManageRoles && (
-            <Link
-              href="/roles/create"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+      <PageHeader
+        title="Roles Directory"
+        description="Define administrative authorization tiers, assign security boundaries, and govern custom roles"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              title="Refresh Roles"
             >
-              <Plus className="w-4 h-4" />
-              <span>Create Custom Role</span>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+
+            <Link
+              href="/permissions"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              <span>Permissions Matrix</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </Link>
-          )}
-        </div>
-      </div>
+
+            {canManageRoles && (
+              <Link
+                href="/roles/create"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Custom Role</span>
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -172,7 +167,7 @@ function RolesPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {roles.length}
           </div>
-          <span className="text-[11px] text-slate-400">Configured in ecosystem</span>
+          <span className="text-xs text-slate-400">Configured in ecosystem</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
@@ -183,7 +178,7 @@ function RolesPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {systemRolesCount}
           </div>
-          <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">Protected core tiers</span>
+          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Protected core tiers</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
@@ -194,7 +189,7 @@ function RolesPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {customRolesCount}
           </div>
-          <span className="text-[11px] text-brand-600 dark:text-brand-400 font-medium">Organization customized</span>
+          <span className="text-xs text-brand-600 dark:text-brand-400 font-medium">Organization customized</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
@@ -205,35 +200,43 @@ function RolesPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {TOTAL_PERMISSIONS_COUNT}
           </div>
-          <span className="text-[11px] text-slate-400">Across 4 governance categories</span>
+          <span className="text-xs text-slate-400">Across 4 governance categories</span>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search roles by identifier or description..."
-            className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="ALL">All Role Types</option>
-            <option value="SYSTEM">System Roles Only</option>
-            <option value="CUSTOM">Custom Roles Only</option>
-          </select>
-        </div>
-      </div>
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(val) => {
+          setSearchQuery(val);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder="Search roles by identifier or description..."
+        filters={[
+          {
+            id: 'type',
+            label: 'Type',
+            value: typeFilter,
+            onChange: (val) => {
+              setTypeFilter(val as any);
+              setCurrentPage(1);
+            },
+            options: [
+              { value: 'ALL', label: 'All Role Types' },
+              { value: 'SYSTEM', label: 'System Roles Only' },
+              { value: 'CUSTOM', label: 'Custom Roles Only' },
+            ],
+            dropdownWidth: 'w-52',
+            align: 'right',
+          },
+        ]}
+        isFiltered={searchQuery.trim() !== '' || typeFilter !== 'ALL'}
+        onResetFilters={() => {
+          setSearchQuery('');
+          setTypeFilter('ALL');
+          setCurrentPage(1);
+        }}
+      />
 
       {/* Roles Directory Table */}
       <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs overflow-hidden">
@@ -262,7 +265,7 @@ function RolesPageContent() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200/80 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                <tr className="border-b border-slate-200/80 dark:border-slate-700/60 bg-slate-50/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider text-xs">
                   <th className="py-3 px-4">Role Identifier</th>
                   <th className="py-3 px-4">Description</th>
                   <th className="py-3 px-4">Role Type</th>
@@ -272,7 +275,9 @@ function RolesPageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {filteredRoles.map((role) => {
+                {filteredRoles
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((role) => {
                   const isSystem = isSystemRole(role.name);
                   const theme = getRoleTheme(role.name);
                   const permCount = role.permissions?.length || 0;
@@ -295,7 +300,7 @@ function RolesPageContent() {
                             <span className="font-bold text-slate-900 dark:text-white block font-mono text-xs">
                               {role.name}
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-xs text-slate-400">
                               {theme.label}
                             </span>
                           </div>
@@ -312,12 +317,12 @@ function RolesPageContent() {
                       {/* Type: System vs Custom */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {isSystem ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
                             <Lock className="w-3 h-3" />
                             <span>System</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400 border border-brand-200 dark:border-brand-900/50">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400 border border-brand-200 dark:border-brand-900/50">
                             <Shield className="w-3 h-3" />
                             <span>Custom</span>
                           </span>
@@ -330,7 +335,7 @@ function RolesPageContent() {
                           <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                             {permCount} / {TOTAL_PERMISSIONS_COUNT}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          <span className="text-xs px-1.5 py-0.2 rounded font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                             {coveragePercent}%
                           </span>
                         </div>
@@ -339,7 +344,7 @@ function RolesPageContent() {
                       {/* Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                             role.isActive !== false
                               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50'
                               : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
@@ -393,6 +398,23 @@ function RolesPageContent() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && filteredRoles.length >= 5 && (
+          <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-700/60">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRoles.length}
+              pageSize={pageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              showPageSizeSelector
+              showTotal
+            />
           </div>
         )}
       </div>

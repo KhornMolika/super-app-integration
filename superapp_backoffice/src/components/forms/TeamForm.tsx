@@ -196,6 +196,11 @@ export default function TeamForm({
   };
 
   // Fetch Telegram status & profile info on mount
+  const latestTeamDefaultsRef = React.useRef({ formData, updateField });
+  useEffect(() => {
+    latestTeamDefaultsRef.current = { formData, updateField };
+  });
+
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -203,25 +208,26 @@ export default function TeamForm({
         const data = await telegramApi.getStatus();
         if (data) {
           setTelegramStatus(data);
+          const { formData: currentFormData, updateField: applyField } = latestTeamDefaultsRef.current;
 
           // Auto-populate if fields are empty
-          if (!formData.ownerName && data.user?.name) {
-            updateField('ownerName', data.user.name);
+          if (!currentFormData.ownerName && data.user?.name) {
+            applyField('ownerName', data.user.name);
           }
-          if (!formData.ownerEmail && data.user?.email) {
-            updateField('ownerEmail', data.user.email);
+          if (!currentFormData.ownerEmail && data.user?.email) {
+            applyField('ownerEmail', data.user.email);
           }
-          if (!formData.supportEmail && data.user?.email) {
-            updateField('supportEmail', data.user.email);
+          if (!currentFormData.supportEmail && data.user?.email) {
+            applyField('supportEmail', data.user.email);
           }
-          if (!formData.alertTelegramChatId && !formData.teamTelegramChatId) {
+          if (!currentFormData.alertTelegramChatId && !currentFormData.teamTelegramChatId) {
             const defaultChat =
               data.user?.alertTelegramChatId ||
               data.user?.teamTelegramChatId ||
               data.user?.telegramChatId;
             if (defaultChat) {
-              updateField('alertTelegramChatId', defaultChat);
-              updateField('teamTelegramChatId', defaultChat);
+              applyField('alertTelegramChatId', defaultChat);
+              applyField('teamTelegramChatId', defaultChat);
             }
           }
           if (data.user?.teamTelegramChatId || data.user?.alertTelegramChatId) {

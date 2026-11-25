@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapItem } from './client';
 
 export interface LoginPayload {
   email: string;
@@ -115,7 +115,7 @@ export const authApi = {
     }>('/api/auth/request-otp', {
       method: 'POST',
       body: data,
-    }),
+    }).then((res) => unwrapItem(res)),
 
   verifyOtp: (data: {
     email: string;
@@ -132,7 +132,7 @@ export const authApi = {
     }>('/api/auth/verify-otp', {
       method: 'POST',
       body: data,
-    }),
+    }).then((res) => unwrapItem(res)),
 
   requestRecoveryOtp: (email: string) =>
     apiClient<{
@@ -143,7 +143,7 @@ export const authApi = {
     }>('/api/auth/forgot-password', {
       method: 'POST',
       body: { email, purpose: 'PASSWORD_RESET' },
-    }),
+    }).then((res) => unwrapItem(res)),
 
   verifyRecoveryOtp: (email: string, code: string) =>
     apiClient<{
@@ -153,7 +153,7 @@ export const authApi = {
     }>('/api/auth/verify-otp', {
       method: 'POST',
       body: { email, code, purpose: 'PASSWORD_RESET' },
-    }),
+    }).then((res) => unwrapItem(res)),
 
   resetPassword: (resetToken: string, newPassword: string) =>
     apiClient<{
@@ -164,6 +164,6 @@ export const authApi = {
     }>('/api/auth/reset-password', {
       method: 'POST',
       body: { resetToken, newPassword },
-    }),
+    }).then((res) => unwrapItem(res)),
 };
 

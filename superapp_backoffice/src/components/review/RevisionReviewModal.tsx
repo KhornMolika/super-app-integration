@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import { DotBadge, ZapIcon, ExternalLinkIcon } from '@/components/ui/Icons';
@@ -34,6 +35,11 @@ export function RevisionReviewModal({
   const canReject = can('miniapp:reject');
   const [diffData, setDiffData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [activeTab, setActiveTab] = useState<'DIFF' | 'PERMISSIONS' | 'NETWORK' | 'METADATA'>('DIFF');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonModalState, setReasonModalState] = useState<{
@@ -47,7 +53,7 @@ export function RevisionReviewModal({
     placeholder: string;
   } | null>(null);
 
-  const fetchDiff = async () => {
+  const fetchDiff = React.useCallback(async () => {
     if (!miniAppId) return;
     setLoading(true);
     try {
@@ -58,13 +64,13 @@ export function RevisionReviewModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [miniAppId, baseVersion, targetVersion]);
 
   useEffect(() => {
     if (isOpen && miniAppId) {
       fetchDiff();
     }
-  }, [isOpen, miniAppId, baseVersion, targetVersion]);
+  }, [isOpen, miniAppId, fetchDiff]);
 
   if (!isOpen) return null;
 
@@ -140,9 +146,11 @@ export function RevisionReviewModal({
   const removedDomains = d?.integration?.allowedDomains?.removed || [];
   const metaDiff = d?.metadata || {};
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl my-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40">
           <div className="flex items-center gap-3.5">
@@ -281,7 +289,7 @@ export function RevisionReviewModal({
                   >
                     <span>{t.label}</span>
                     {t.count > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 dark:bg-slate-800 font-bold">
+                      <span className="px-1.5 py-0.2 rounded-full text-xs bg-slate-100 dark:bg-slate-800 font-bold">
                         {t.count}
                       </span>
                     )}
@@ -318,7 +326,7 @@ export function RevisionReviewModal({
                               <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                 <span className="font-mono">{p.type}</span>
                                 <span
-                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                  className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
                                     p.riskLevel === 'HIGH'
                                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
                                       : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
@@ -327,7 +335,7 @@ export function RevisionReviewModal({
                                   {p.riskLevel} RISK
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                                 {p.purpose || 'Required for MiniApp runtime integration'}
                               </p>
                             </div>
@@ -382,11 +390,11 @@ export function RevisionReviewModal({
                       </span>
                       <div className="grid grid-cols-2 gap-2 mt-1">
                         <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Live Base URL</span>
+                          <span className="text-xs text-slate-400 uppercase font-bold block">Live Base URL</span>
                           <span className="font-mono text-slate-600 dark:text-slate-400 break-all">{d.integration.productionUrl.base || 'None'}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700">
-                          <span className="text-[10px] text-emerald-600 uppercase font-bold block">New Proposed URL</span>
+                          <span className="text-xs text-emerald-600 uppercase font-bold block">New Proposed URL</span>
                           <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold break-all">{d.integration.productionUrl.target}</span>
                         </div>
                       </div>
@@ -578,6 +586,7 @@ export function RevisionReviewModal({
           }}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

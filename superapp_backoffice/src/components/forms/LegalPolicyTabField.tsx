@@ -61,11 +61,17 @@ export default function LegalPolicyTabField({
   const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const latestTabSyncRef = useRef({ isNativeOrPackage, urlValue, descValue });
+  useEffect(() => {
+    latestTabSyncRef.current = { isNativeOrPackage, urlValue, descValue };
+  });
+
   // Sync tab preference when integration method switches and fields are blank
   useEffect(() => {
-    if (isNativeOrPackage && !urlValue && (!descValue || descValue.length < 50)) {
+    const { isNativeOrPackage: nativeOrPkg, urlValue: url, descValue: desc } = latestTabSyncRef.current;
+    if (nativeOrPkg && !url && (!desc || desc.length < 50)) {
       setActiveTab('document');
-    } else if (!isNativeOrPackage && !descValue && !urlValue) {
+    } else if (!nativeOrPkg && !desc && !url) {
       setActiveTab('url');
     }
   }, [integrationMethod]);

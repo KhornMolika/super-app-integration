@@ -79,7 +79,7 @@ export function RoleSwitcher() {
 
       {isOpen && (
         <div className="absolute right-0 mt-1.5 w-44 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5 animate-in fade-in-0 zoom-in-95 duration-150">
-          <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <div className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Switch Role
           </div>
           {roles.map((r) => {

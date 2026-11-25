@@ -207,7 +207,7 @@ export function ValidatedUrlInput({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [value, label, isOptional]);
+  }, [value, label, isOptional, optional]);
 
   return (
     <div>

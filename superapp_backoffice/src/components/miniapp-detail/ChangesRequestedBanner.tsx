@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   ShieldAlert,
@@ -19,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/inputs';
 
@@ -99,12 +101,26 @@ export default function ChangesRequestedBanner({
 }: ChangesRequestedBannerProps) {
   const isRejected = status === 'REJECTED';
   const isReviewOrHistory = status !== 'CHANGES_REQUESTED' && status !== 'REJECTED';
-  const rawList = structuredFeedback?.checklist || [];
 
   const [checklistState, setChecklistState] = useState<StructuredChecklistItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(!compact || isStandalonePage);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!compact || !isExpanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsExpanded(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [compact, isExpanded]);
+
+  useEffect(() => {
+    const rawList = structuredFeedback?.checklist || [];
     if (rawList.length > 0) {
       setChecklistState(
         rawList.map((item) => ({
@@ -135,13 +151,20 @@ export default function ChangesRequestedBanner({
 
   const updateResolutionNote = (id: string, note: string) => {
     setChecklistState((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, resolutionNote: note } : item))
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              resolutionNote: note,
+              resolved: note.trim().length > 0 ? true : false,
+            }
+          : item
+      )
     );
   };
 
-  // An item is addressed if marked resolved OR has an explanatory resolution note
-  const isAddressed = (item: StructuredChecklistItem) =>
-    item.resolved || Boolean(item.resolutionNote && item.resolutionNote.trim().length > 0);
+  // Only checked (resolved) items count as addressed and unlock resubmission
+  const isAddressed = (item: StructuredChecklistItem) => Boolean(item.resolved);
 
   const addressedCount = checklistState.filter(isAddressed).length;
   const totalCount = checklistState.length;
@@ -163,88 +186,290 @@ export default function ChangesRequestedBanner({
     );
   };
 
-  if (compact && !isExpanded) {
+  // Compact mode: always render a 1-line strip on the page and open details in a right-side Slide-Over Drawer
+  if (compact) {
     return (
-      <div
-        className={`mb-6 px-4 py-3 rounded-2xl border shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
-          isRejected
-            ? 'bg-rose-50/50 dark:bg-rose-950/25 border-rose-200/80 dark:border-rose-900/60'
-            : isReviewOrHistory
-            ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
-            : 'bg-amber-50/50 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-900/60'
-        }`}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-              isRejected
-                ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                : isReviewOrHistory
-                ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-            }`}
-          >
-            {isRejected ? (
-              <ShieldAlert className="w-4 h-4" />
-            ) : isReviewOrHistory ? (
-              <CheckCircle2 className="w-4 h-4" />
-            ) : (
-              <AlertTriangle className="w-4 h-4" />
-            )}
-          </div>
-
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                {isRejected
-                  ? 'Submission Rejected'
+      <>
+        <div
+          className={`mb-5 px-4 py-3 rounded-2xl border shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
+            isRejected
+              ? 'bg-rose-50/50 dark:bg-rose-950/25 border-rose-200/80 dark:border-rose-900/60'
+              : isReviewOrHistory
+              ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+              : 'bg-amber-50/50 dark:bg-amber-950/25 border-amber-200/80 dark:border-amber-900/60'
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                isRejected
+                  ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                   : isReviewOrHistory
-                  ? 'Remediation Review'
-                  : 'Changes Requested Before Approval'}
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${categoryInfo.tone}`}
-              >
-                {categoryInfo.label}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                ({addressedCount}/{totalCount} items addressed)
-              </span>
+                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+              }`}
+            >
+              {isRejected ? (
+                <ShieldAlert className="w-4 h-4" />
+              ) : isReviewOrHistory ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <AlertTriangle className="w-4 h-4" />
+              )}
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-xl">
-              {structuredFeedback?.notes || legacyReason || 'Review the requested modifications before resubmission.'}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-          {miniAppId && (
-            <Link
-              href={`/miniapps/${miniAppId}/remediation`}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-colors ${
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  {isRejected
+                    ? 'Submission Rejected'
+                    : isReviewOrHistory
+                    ? 'Remediation Review'
+                    : 'Changes Requested'}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${categoryInfo.tone}`}
+                >
+                  {categoryInfo.label}
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  ({addressedCount}/{totalCount} addressed)
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-2xl">
+                {structuredFeedback?.notes || legacyReason || 'Review the requested modifications before resubmission.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-colors ${
                 isRejected
                   ? 'bg-rose-600 hover:bg-rose-700 text-white'
                   : isReviewOrHistory
-                  ? 'bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900'
-                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-amber-500 hover:bg-amber-600 text-white'
               }`}
             >
-              <span>Open Remediation Workspace</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 transition-colors"
-            title="Expand checklist on this page"
-          >
-            <span>Details</span>
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
+              <span>View Feedback</span>
+              <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+            </button>
+          </div>
         </div>
-      </div>
+
+        {/* Right-Side Slide-Over Remediation Drawer */}
+        {mounted &&
+          isExpanded &&
+          createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Reviewer Feedback & Remediation Checklist"
+              className="fixed inset-0 z-[950] flex justify-end bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150"
+            >
+              <div className="fixed inset-0" onClick={() => setIsExpanded(false)} />
+              <div className="relative z-10 w-full max-w-xl h-full bg-white dark:bg-[#0B1120] border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+                {/* Drawer Header */}
+                <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex items-start justify-between gap-4 shrink-0">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${categoryInfo.tone}`}
+                      >
+                        <CategoryIcon className="w-3 h-3" />
+                        <span>{structuredFeedback?.category ? categoryInfo.label : isRejected ? 'Rejected' : isReviewOrHistory ? 'Remediation Review' : 'Changes Requested'}</span>
+                      </span>
+                      {structuredFeedback?.createdAt && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          <span>{new Date(structuredFeedback.createdAt).toLocaleDateString()}</span>
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      {isRejected
+                        ? 'Submission Rejected'
+                        : isReviewOrHistory
+                        ? 'Remediation Checklist & History'
+                        : 'Reviewer Feedback & Checklist'}
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(false)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
+                    aria-label="Close drawer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Drawer Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  {/* Reviewer Notes */}
+                  <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Reviewer Notes
+                    </span>
+                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+                      {structuredFeedback?.notes || legacyReason || 'Review the requested modifications below.'}
+                    </p>
+                    {structuredFeedback?.targetFiles && structuredFeedback.targetFiles.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target Files:</span>
+                        {structuredFeedback.targetFiles.map((file, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-slate-700 dark:text-slate-300"
+                          >
+                            <FileText className="w-3 h-3 text-slate-400" />
+                            <span>{file}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Checklist Progress */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                        Remediation Checklist
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          allAddressed
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                            : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        {addressedCount} of {totalCount} Addressed ({progressPercent}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${allAddressed ? 'bg-emerald-500' : 'bg-brand-500'}`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {checklistState.map((item, idx) => {
+                        const addressed = isAddressed(item);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-3.5 rounded-xl border transition-all ${
+                              addressed
+                                ? 'bg-emerald-50/30 dark:bg-emerald-950/15 border-emerald-200 dark:border-emerald-900/50'
+                                : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <button
+                                type="button"
+                                disabled={!isOwnerOrMaintainer || isReviewOrHistory}
+                                onClick={() => toggleResolved(item.id)}
+                                className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors border ${
+                                  item.resolved
+                                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                                    : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-transparent hover:border-brand-500'
+                                }`}
+                                aria-label="Toggle resolved status"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="flex-1 min-w-0 space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <span
+                                    className={`text-xs font-semibold leading-relaxed ${
+                                      item.resolved
+                                        ? 'line-through text-slate-400 dark:text-slate-500'
+                                        : 'text-slate-900 dark:text-slate-100'
+                                    }`}
+                                  >
+                                    {idx + 1}. {item.description}
+                                  </span>
+                                  <span
+                                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                                      item.resolved
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                        : item.resolutionNote?.trim()
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                    }`}
+                                  >
+                                    {item.resolved ? 'Resolved' : item.resolutionNote?.trim() ? 'Note Added' : 'Pending'}
+                                  </span>
+                                </div>
+                                {isReviewOrHistory ? (
+                                  item.resolutionNote?.trim() ? (
+                                    <p className="text-xs text-slate-600 dark:text-slate-400 italic">
+                                      Developer note: &ldquo;{item.resolutionNote}&rdquo;
+                                    </p>
+                                  ) : null
+                                ) : isOwnerOrMaintainer ? (
+                                  <input
+                                    type="text"
+                                    value={item.resolutionNote || ''}
+                                    onChange={(e) => updateResolutionNote(item.id, e.target.value)}
+                                    placeholder="Add brief resolution note..."
+                                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 transition-colors"
+                                  />
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Drawer Footer */}
+                <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex items-center justify-between gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Close
+                  </button>
+
+                  {isOwnerOrMaintainer && !isReviewOrHistory && (
+                    <Button
+                      type="button"
+                      onClick={handleResubmitClick}
+                      disabled={!allAddressed || isSubmitting}
+                      className={`text-xs px-5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm ${
+                        allAddressed
+                          ? 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border-0'
+                      }`}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Resubmitting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Resubmit for Review</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+      </>
     );
   }
 
@@ -289,13 +514,13 @@ export default function ChangesRequestedBanner({
               </span>
 
               {structuredFeedback?.createdAt && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                   <Clock className="w-3 h-3" />
                   <span>Requested: {new Date(structuredFeedback.createdAt).toLocaleDateString()}</span>
                 </span>
               )}
               {isReviewOrHistory && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                <span className="px-2 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
                   Remediated by Developer
                 </span>
               )}
@@ -316,11 +541,11 @@ export default function ChangesRequestedBanner({
             {/* Target Files chips */}
             {structuredFeedback?.targetFiles && structuredFeedback.targetFiles.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target Files:</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Target Files:</span>
                 {structuredFeedback.targetFiles.map((file, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-slate-700 dark:text-slate-300 shadow-2xs"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs text-slate-700 dark:text-slate-300 shadow-2xs"
                   >
                     <FileText className="w-3 h-3 text-slate-400" />
                     <span>{file}</span>
@@ -439,7 +664,7 @@ export default function ChangesRequestedBanner({
                         </span>
 
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
                             item.resolved
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                               : item.resolutionNote?.trim()
@@ -477,7 +702,7 @@ export default function ChangesRequestedBanner({
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 <span>All {totalCount} requested modifications were addressed by the developer.</span>
               </span>
-              <span className="text-[11px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-mono">
+              <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-mono">
                 SuperAdmin Verification Required
               </span>
             </div>

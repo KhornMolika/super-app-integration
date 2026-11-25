@@ -67,9 +67,7 @@ export default function CapabilityDetailPage({
 
   useEffect(() => {
     const fromUrl = searchParams.get('tab') || 'specs';
-    if (fromUrl !== activeTab) {
-      setActiveTab(fromUrl);
-    }
+    setActiveTab((prev) => (prev !== fromUrl ? fromUrl : prev));
   }, [searchParams]);
 
   useEffect(() => {
@@ -201,9 +199,13 @@ export default function CapabilityDetailPage({
         description: editForm.description,
         category: editForm.category,
         isActive: editForm.isActive,
+        isAllowed: editForm.isAllowed,
         isDeprecated: editForm.isDeprecated,
         minSuperAppVersion: editForm.minSuperAppVersion,
         maxSuperAppVersion: editForm.maxSuperAppVersion,
+        aliases: editForm.aliases || [],
+        detectionRules: editForm.detectionRules || {},
+        storeMapping: editForm.storeMapping || {},
         metadata: parsedMetadata,
       });
 
@@ -368,7 +370,7 @@ export default function CapabilityDetailPage({
                   type="button"
                   onClick={() => handleCopy(capability.key || '', 'Capability Key')}
                   title="Click to copy unique key"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 >
                   <span>#{capability.key}</span>
                   <Copy className="w-3 h-3 opacity-60" />
@@ -480,7 +482,7 @@ export default function CapabilityDetailPage({
               <Layers className="w-4 h-4" />
               <span>{view.text.appsUsingIt}</span>
               <span
-                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === 'apps'
                     ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300'
                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
@@ -602,7 +604,7 @@ export default function CapabilityDetailPage({
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
                         Authorizes MiniApps to declare and bind this capability during security scans.
                       </span>
                     </div>
@@ -629,7 +631,7 @@ export default function CapabilityDetailPage({
                       )}
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                           capability.isAllowed !== false
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -660,7 +662,7 @@ export default function CapabilityDetailPage({
                       {requiredPermissions.map((perm: string) => (
                         <span
                           key={perm}
-                          className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
+                          className="font-mono text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
                         >
                           {perm}
                         </span>
@@ -689,7 +691,7 @@ export default function CapabilityDetailPage({
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
                         Authorizes MiniApps to declare and bind this capability during security scans.
                       </span>
                     </div>
@@ -716,7 +718,7 @@ export default function CapabilityDetailPage({
                       )}
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                           capability.isAllowed !== false
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -848,7 +850,7 @@ export default function CapabilityDetailPage({
                           <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-600 transition-colors">
                             {app.name}
                           </h4>
-                          <span className="font-mono text-[11px] text-slate-400 block truncate">
+                          <span className="font-mono text-xs text-slate-400 block truncate">
                             {app.appId}
                           </span>
                         </div>
@@ -860,7 +862,7 @@ export default function CapabilityDetailPage({
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                         v{app.version || '1.0.0'}
                       </span>
                       <Link
@@ -877,7 +879,7 @@ export default function CapabilityDetailPage({
             )}
 
             {/* Pagination Controls */}
-            {totalAppsItems > 0 && (
+            {totalAppsItems >= 5 && (
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
                 <Pagination
                   currentPage={safeAppsPage}
@@ -929,7 +931,7 @@ export default function CapabilityDetailPage({
                 <div>
                   <Label>Capability Unique Key</Label>
                   <Input value={capability.key || ''} disabled className="bg-slate-50 dark:bg-slate-800/50 font-mono text-xs" />
-                  <p className="text-[11px] text-slate-400 mt-1">Unique platform bridge identifier (immutable).</p>
+                  <p className="text-xs text-slate-400 mt-1">Unique platform bridge identifier (immutable).</p>
                 </div>
 
                 <div>
@@ -986,12 +988,199 @@ export default function CapabilityDetailPage({
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={editForm.isAllowed !== false}
+                      onChange={(e) => setEditForm({ ...editForm, isAllowed: e.target.checked })}
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Allowed by Host Policy</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
                       checked={Boolean(editForm.isDeprecated)}
                       onChange={(e) => setEditForm({ ...editForm, isDeprecated: e.target.checked })}
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer"
                     />
                     <span>Mark as Deprecated</span>
                   </label>
+                </div>
+
+                {/* Dynamic Rule Configuration */}
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="md:col-span-2">
+                    <Label>Aliases (comma-separated)</Label>
+                    <Input
+                      value={(editForm.aliases || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          aliases: e.target.value
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. camera, photo, camera_access"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Pubspec Packages (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.pubspecPackages || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            pubspecPackages: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. camera, image_picker"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>JS Bridge Keywords (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.jsBridgeKeywords || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            jsBridgeKeywords: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. takePhoto, getUserMedia"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Android Manifest Permissions (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.androidPermissions || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            androidPermissions: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. android.permission.CAMERA"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>iOS Info.plist Keys (comma-separated)</Label>
+                    <Input
+                      value={(editForm.detectionRules?.iosPlistKeys || []).join(', ')}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            iosPlistKeys: e.target.value
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="e.g. NSCameraUsageDescription"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Default Purpose Template</Label>
+                    <Input
+                      value={editForm.detectionRules?.defaultPurpose || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          detectionRules: {
+                            ...(editForm.detectionRules || {}),
+                            defaultPurpose: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs"
+                      placeholder="e.g. capture verification photos and upload documents"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Store Mapping: iOS Key</Label>
+                    <Input
+                      value={editForm.storeMapping?.iosKey || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            iosKey: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="NSCameraUsageDescription"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Store Mapping: Android Permission</Label>
+                    <Input
+                      value={editForm.storeMapping?.androidPermission || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            androidPermission: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs font-mono"
+                      placeholder="android.permission.CAMERA"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Store Mapping: Default Action</Label>
+                    <Input
+                      value={editForm.storeMapping?.defaultAction || ''}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          storeMapping: {
+                            ...(editForm.storeMapping || {}),
+                            defaultAction: e.target.value,
+                          },
+                        })
+                      }
+                      className="text-xs"
+                      placeholder="e.g. photograph evidence and upload documents"
+                    />
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
@@ -1002,7 +1191,7 @@ export default function CapabilityDetailPage({
                     rows={8}
                     className="font-mono text-xs leading-relaxed"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     Advanced configuration including Flutter plugin, iOS usage strings, and Android permissions.
                   </p>
                 </div>

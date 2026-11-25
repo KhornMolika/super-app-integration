@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon, LockIcon, GlobeIcon, AndroidIcon, AppleIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { CreateMiniAppDto, HOME_WIDGET_FIELD, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
@@ -116,22 +117,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             {/* Logo Display */}
-            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-md flex items-center justify-center shrink-0">
-              {formData.logo ? (
-                <img
-                  src={formData.logo}
-                  alt={formData.name || 'Logo'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-brand-800 flex items-center justify-center text-white font-bold text-2xl">
-                  {formData.name ? formData.name.charAt(0).toUpperCase() : 'M'}
-                </div>
-              )}
-            </div>
+            <AppLogoAvatar logo={formData.logo} name={formData.name || 'M'} size="xl" />
 
             {/* Title & Identifiers */}
             <div>
@@ -230,7 +216,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
               </svg>
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                 App Registrant &amp; Technical Ownership
               </span>
               <div className="flex items-center gap-2 flex-wrap">
@@ -401,7 +387,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     href={formData.termsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                    className="text-xs font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
                   >
                     <span>{formData.termsUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,9 +395,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </svg>
                   </a>
                 ) : formData.termsDescription ? (
-                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Default Container Terms</span>
+                  <span className="text-xs text-slate-400">Default Container Terms</span>
                 )}
               </div>
               {formData.termsDescription && (
@@ -433,7 +419,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     href={formData.privacyPolicyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                    className="text-xs font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
                   >
                     <span>{formData.privacyPolicyUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,9 +427,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </svg>
                   </a>
                 ) : formData.privacyPolicyDescription ? (
-                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Default Container Privacy</span>
+                  <span className="text-xs text-slate-400">Default Container Privacy</span>
                 )}
               </div>
               {formData.privacyPolicyDescription && (
@@ -630,10 +616,10 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 <div className="p-3 bg-slate-50/80 dark:bg-slate-950/40 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 font-semibold">
                     <ShieldCheckIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    <span>Isolated MinIO Quarantine Staging</span>
+                    <span>Isolated Package Quarantine Staging</span>
                   </span>
-                  <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                    Zero-Bytes to Nexus Pre-Approval
+                  <span className="font-mono text-xs bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                    Pre-Approval Verification
                   </span>
                 </div>
 
@@ -644,11 +630,11 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       <AppleIcon className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
                       <span>iOS Framework Target</span>
                     </span>
-                    <span className="font-mono text-[11px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       {formData.integrationConfigNativeSdk?.iosArtifactFilename || '-'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-slate-400 block">Module:</span>
                       <code className="font-mono font-bold text-slate-800 dark:text-slate-200">
@@ -671,11 +657,11 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       <AndroidIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Android Maven Artifact Target</span>
                     </span>
-                    <span className="font-mono text-[11px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       {formData.integrationConfigNativeSdk?.androidArtifactFilename || '-'}
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-[11px]">
+                  <div className="space-y-1.5 text-xs">
                     <div>
                       <span className="text-slate-400 block">Maven Coordinates:</span>
                       <code className="font-mono font-bold text-brand-700 dark:text-brand-300">
@@ -861,7 +847,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                           <span className="font-bold text-sm text-slate-900 dark:text-slate-100 capitalize">
                             {p.type}
                           </span>
-                          <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          <span className="text-xs font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                             Required
                           </span>
                         </div>
@@ -891,7 +877,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h4 className="font-bold text-base text-slate-900 dark:text-white">Security scans</h4>
+              <h4 className="font-bold text-base text-slate-900 dark:text-white">Security profile</h4>
             </div>
             {onEditStep && (
               <button

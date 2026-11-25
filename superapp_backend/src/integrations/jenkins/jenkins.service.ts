@@ -722,6 +722,8 @@ export class JenkinsService {
     consoleText?: string;
     /** Which mini app this build scanned (its MINIAPP_ID parameter), when it has one. */
     miniAppId?: string;
+    buildNumber?: number;
+    buildUrl?: string;
   }> {
     const statusUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/api/json`;
     const consoleUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/consoleText`;
@@ -751,6 +753,8 @@ export class JenkinsService {
         result: data.result ?? null,
         duration: data.duration ?? 0,
         consoleText,
+        buildNumber: data.number,
+        buildUrl: data.url,
         // Only MINIAPP_ID is read: the other parameters include secrets
         miniAppId: (data.actions || [])
           .flatMap((a: any) => (Array.isArray(a?.parameters) ? a.parameters : []))

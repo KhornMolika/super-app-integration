@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
@@ -18,6 +18,7 @@ import { ProposalReviewModal } from '@/components/capabilities/ProposalReviewMod
 import { ProposalProgressModal } from '@/components/capabilities/ProposalProgress';
 import { useCapabilityView } from '@/components/capabilities/capability-view';
 import { CreateProposalModal } from '@/components/capabilities/CreateProposalModal';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/inputs';
 import {
   Zap,
@@ -57,12 +58,8 @@ function CapabilitiesContent() {
     const tabFromUrl = parseTab(searchParams?.get('tab'));
     const filterFromUrl = parseFilter(searchParams?.get('filter'));
 
-    if (tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-    if (filterFromUrl !== proposalSubFilter) {
-      setProposalSubFilter(filterFromUrl);
-    }
+    setActiveTab((prev) => (prev !== tabFromUrl ? tabFromUrl : prev));
+    setProposalSubFilter((prev) => (prev !== filterFromUrl ? filterFromUrl : prev));
   }, [searchParams]);
 
   useEffect(() => {
@@ -126,7 +123,7 @@ function CapabilitiesContent() {
   const [isSyncingGitLab, setIsSyncingGitLab] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [capData, propData] = await Promise.all([
@@ -140,7 +137,7 @@ function CapabilitiesContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [view.canSeeRequests]);
 
   const handleSyncGitLab = async () => {
     try {
@@ -164,7 +161,7 @@ function CapabilitiesContent() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const pendingProposalsCount = proposals.filter((p) => p.status === 'PENDING_REVIEW').length;
 
@@ -234,53 +231,49 @@ function CapabilitiesContent() {
     <ProtectedRoute permission="permission:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-500 pb-12">
         {/* Sleek Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-              <div className="p-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400">
-                <Zap className="w-5 h-5" />
-              </div>
-              Capabilities
-              {view.audience === 'overseer' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  <Eye className="w-3 h-3" />
-                  View only
-                </span>
+        <PageHeader
+          title="Capabilities"
+          description={view.text.subtitle}
+          badge={
+            view.audience === 'overseer' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <Eye className="w-3 h-3" />
+                View only
+              </span>
+            ) : undefined
+          }
+          actions={
+            <>
+              {view.canSync && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncGitLab}
+                  disabled={isSyncingGitLab || loading}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+                  title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
+                </Button>
               )}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">{view.text.subtitle}</p>
-          </div>
 
-          <div className="flex items-center gap-2.5">
-            {view.canSync && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSyncGitLab}
-                disabled={isSyncingGitLab || loading}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-                title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
-                <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
-              </Button>
-            )}
-
-            {view.canRequest && (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>{view.text.requestButton}</span>
-              </Button>
-            )}
-          </div>
-        </div>
+              {view.canRequest && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>{view.text.requestButton}</span>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Deciders: requests waiting for them */}
         {view.audience === 'decider' && pendingProposalsCount > 0 && (
@@ -317,7 +310,7 @@ function CapabilitiesContent() {
           >
             <Zap className="w-4 h-4" />
             Capabilities
-            <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+            <span className="ml-1 px-1.5 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
               {Array.isArray(capabilities) ? capabilities.length : 0}
             </span>
           </button>
@@ -335,11 +328,11 @@ function CapabilitiesContent() {
             <GitPullRequest className="w-4 h-4" />
             {view.text.requestsTab}
             {pendingProposalsCount > 0 && view.audience === 'decider' ? (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
                 {pendingProposalsCount}
               </span>
             ) : (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
                 {proposals.length}
               </span>
             )}
@@ -355,6 +348,7 @@ function CapabilitiesContent() {
               loading={loading}
               onSyncGitLab={view.canSync ? handleSyncGitLab : undefined}
               isSyncingGitLab={isSyncingGitLab}
+              onCapabilityCreated={loadData}
               getPermissionIcon={getPermissionIcon}
             />
           )}

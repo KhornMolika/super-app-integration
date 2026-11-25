@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Input, Button } from '@/components/ui/inputs';
-import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
+import { Button } from '@/components/ui/inputs';
+import { CleanDropdownOption } from '@/components/ui/CleanDropdown';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { Pagination, PaginationProps } from '@/components/ui/Pagination';
 
 export type SortDirection = 'asc' | 'desc';
@@ -285,81 +286,17 @@ export function DataTable<T>({
     <div className={`space-y-4 ${className}`}>
       {/* 1. Universal Clean Filter & Search Toolbar */}
       {showToolbar && (
-        <div className="flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          {/* Search Input */}
-          {onSearchChange && (
-            <div className="relative w-full lg:w-80">
-              <svg
-                className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchValue || ''}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 pr-8 h-10 text-sm w-full"
-              />
-              {searchValue && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  title="Clear search"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Filters, Counter & Actions */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-            {/* Clean Dropdown Filters */}
-            {filters.map((filter) => (
-              <CleanDropdown
-                key={filter.id}
-                label={filter.label}
-                icon={filter.icon}
-                value={filter.value}
-                options={filter.options}
-                onChange={filter.onChange}
-                align={filter.align || 'left'}
-                dropdownWidth={filter.dropdownWidth || 'w-64'}
-              />
-            ))}
-
-            {/* Reset Filters Button */}
-            {isFiltered && onResetFilters && (
-              <button
-                type="button"
-                onClick={onResetFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors border border-rose-200/60 dark:border-rose-900/40 cursor-pointer"
-                title="Reset all filters"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Reset</span>
-              </button>
-            )}
-
-            {/* Results Count Badge */}
-            {isFiltered && (
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
-                ({filteredCount} of {totalCount})
-              </span>
-            )}
-
-            {/* Custom Action buttons (e.g., Create button) */}
-            {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
-          </div>
-        </div>
+        <SearchFilterBar
+          searchValue={searchValue}
+          onSearchChange={onSearchChange}
+          searchPlaceholder={searchPlaceholder}
+          filters={filters}
+          isFiltered={isFiltered}
+          onResetFilters={onResetFilters}
+          filteredCount={filteredCount}
+          totalCount={totalCount}
+          rightSlot={actions}
+        />
       )}
 
       {/* 2. Structured Data Table Surface */}
@@ -413,7 +350,7 @@ export function DataTable<T>({
         <div className={`${renderMobileCard ? 'hidden sm:block ' : ''}overflow-x-auto min-h-[320px]`}>
           <table className={`w-full text-left border-collapse ${tableClassName}`}>
             {/* Header */}
-            <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               <tr>
                 {columns.map((col) => {
                   const isSortable =
@@ -615,7 +552,7 @@ export function DataTable<T>({
         </div>
 
         {/* 3. Integrated Pagination Footer */}
-        {paginationProps && !loading && sortedData.length > 0 && (
+        {paginationProps && !loading && sortedData.length > 0 && (paginationProps.totalItems ?? sortedData.length) >= 5 && (
           <div className="px-6 py-3.5 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <Pagination {...paginationProps} />
           </div>

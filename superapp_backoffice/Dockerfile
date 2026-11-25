@@ -47,7 +47,8 @@ RUN pnpm exec next build
 # ---------- runtime ----------
 FROM node:20-bullseye-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    BACKEND_API_URL=http://super-app-backend-svc:3000
 RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -m nextjs
 COPY --from=build /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./

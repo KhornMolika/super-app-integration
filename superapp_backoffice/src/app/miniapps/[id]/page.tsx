@@ -17,7 +17,6 @@ import {
   MiniAppDetailHeader,
   MiniAppLifecycleBanners,
   ChangesRequestedBanner,
-  MiniAppDetailTabs,
   MiniAppSectionContent,
   MiniAppDetailBottomBar,
   MiniAppNotFound,
@@ -270,6 +269,7 @@ function ManageMiniAppContent() {
           currentReleaseVersion={formData.currentReleaseVersion || ((formData as any).versionHistory?.find((v: any) => v.type === 'PRODUCTION' && v.status === 'ACTIVE')?.version)}
           draftVersion={formData.pendingRevision?.version || (formData as any).draftVersion || formData.version}
           hasActiveProduction={Boolean(actions.isLive && ((formData as any).versionHistory?.some((v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')) || formData.currentReleaseVersion))}
+          integrationMethod={formData.integrationMethod}
           onOpenBuildModal={() =>
             setBuildModalState({
               isOpen: true,
@@ -285,15 +285,6 @@ function ManageMiniAppContent() {
               appName: formData.name,
             })
           }
-        />
-
-        {/* 9-Tab Navigation (First Image v.2: Inverted-Radius File-Folder Tabs) */}
-        <MiniAppDetailTabs
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          allErrors={allErrors}
-          validationStatus={formData.validationStatus}
-          currentReleaseVersion={formData.currentReleaseVersion}
         />
 
         {/* Section Contents Router with Smooth Enter Animation */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '@/components/ui/inputs';
+import { Button, Select } from '@/components/ui/inputs';
 import {
   Smartphone,
   User,
@@ -108,7 +108,7 @@ function StatusBadge({ proposal }: { proposal: PermissionProposal }) {
     slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   };
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${tones[tone]}`}>
+    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border ${tones[tone]}`}>
       {label}
     </span>
   );
@@ -133,7 +133,7 @@ function StepList({ steps }: { steps?: string[] }) {
   return (
     <ul className="space-y-1 pl-1">
       {steps.map((s) => (
-        <li key={s} className="flex items-start gap-2 text-[11px] leading-relaxed">
+        <li key={s} className="flex items-start gap-2 text-xs leading-relaxed">
           <span className="mt-1 w-3 h-3 rounded border border-current/40 shrink-0" aria-hidden="true" />
           <span>{s}</span>
         </li>
@@ -171,7 +171,7 @@ function CodeChangeResult({
             <ClipboardList className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">Approved. The Super App team has a task to finish it.</p>
-              <p className="text-[11px] mt-0.5 opacity-90">No file had to change automatically; the work below is done by hand.</p>
+              <p className="text-xs mt-0.5 opacity-90">No file had to change automatically; the work below is done by hand.</p>
             </div>
           </div>
           {codeChange.issueUrl && <TaskLink url={codeChange.issueUrl} />}
@@ -189,7 +189,7 @@ function CodeChangeResult({
             <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">Code change ready for review</p>
-              <p className="text-[11px] text-emerald-700/90 dark:text-emerald-400/90 mt-0.5">
+              <p className="text-xs text-emerald-700/90 dark:text-emerald-400/90 mt-0.5">
                 The Super App team reviews and merges it{targetVersion ? ` for release v${targetVersion}` : ''}.
               </p>
             </div>
@@ -207,10 +207,10 @@ function CodeChangeResult({
           )}
         </div>
         {!!codeChange.filesModified?.length && (
-          <ul className="pl-6 space-y-0.5 text-[11px] text-emerald-800/90 dark:text-emerald-300/90">
+          <ul className="pl-6 space-y-0.5 text-xs text-emerald-800/90 dark:text-emerald-300/90">
             {codeChange.filesModified.map((f) => (
               <li key={f}>
-                {fileLabel(f)} <span className="font-mono text-[10px] opacity-70">{f}</span>
+                {fileLabel(f)} <span className="font-mono text-xs opacity-70">{f}</span>
               </li>
             ))}
           </ul>
@@ -218,7 +218,7 @@ function CodeChangeResult({
         {!!codeChange.remainingSteps?.length && (
           <div className="pt-2 border-t border-emerald-500/20 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-[11px]">Still to do by the Super App team</span>
+              <span className="font-semibold text-xs">Still to do by the Super App team</span>
               {codeChange.issueUrl && <TaskLink url={codeChange.issueUrl} />}
             </div>
             <StepList steps={codeChange.remainingSteps} />
@@ -234,7 +234,7 @@ function CodeChangeResult({
         <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
         <div>
           <p className="font-bold">Approved. No code change was needed.</p>
-          {codeChange.message && <p className="text-[11px] mt-0.5 opacity-90">{codeChange.message}</p>}
+          {codeChange.message && <p className="text-xs mt-0.5 opacity-90">{codeChange.message}</p>}
         </div>
       </div>
     );
@@ -246,7 +246,7 @@ function CodeChangeResult({
         <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="font-bold">Approved, but the code change could not be prepared</p>
-          <p className="text-[11px] mt-1 break-words font-mono bg-rose-500/10 rounded-lg px-2 py-1.5">
+          <p className="text-xs mt-1 break-words font-mono bg-rose-500/10 rounded-lg px-2 py-1.5">
             {codeChange.error || codeChange.message || 'Unknown error'}
           </p>
         </div>
@@ -256,7 +256,7 @@ function CodeChangeResult({
           href={codeChange.mrUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold underline underline-offset-2"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold underline underline-offset-2"
         >
           <ExternalLink className="w-3 h-3" />
           View code change
@@ -370,7 +370,7 @@ export function ProposalReviewModal({
     return () => {
       cancelled = true;
     };
-  }, [proposal]);
+  }, [proposal, mayApprove]);
 
   if (!proposal || !mounted) return null;
 
@@ -436,13 +436,13 @@ export function ProposalReviewModal({
                     setCopiedKey(true);
                     setTimeout(() => setCopiedKey(false), 1500);
                   }}
-                  className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 font-mono text-xs px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                   title="Copy capability key"
                 >
                   <span>{proposal.permissionKey}</span>
                   {copiedKey ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 opacity-60" />}
                 </button>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}>
                   {visual.category}
                 </span>
                 <StatusBadge proposal={proposal} />
@@ -462,22 +462,22 @@ export function ProposalReviewModal({
         {/* Who and where */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
               {isPlatform ? <Globe className="w-3 h-3 text-brand-500" /> : <Smartphone className="w-3 h-3 text-brand-500" />}
               <span>Used by</span>
             </span>
             <p className="font-semibold text-slate-800 dark:text-slate-200 truncate mt-1">{miniAppName}</p>
           </div>
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
               <User className="w-3 h-3 text-slate-400" />
               <span>Requested by</span>
             </span>
             <p className="font-semibold text-slate-800 dark:text-slate-200 truncate mt-1">{proposal.requestedBy?.name || 'Developer'}</p>
-            {proposal.requestedBy?.email && <p className="text-[10px] text-slate-400 truncate">{proposal.requestedBy.email}</p>}
+            {proposal.requestedBy?.email && <p className="text-xs text-slate-400 truncate">{proposal.requestedBy.email}</p>}
           </div>
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
               <Tag className="w-3 h-3 text-slate-400" />
               <span>Release</span>
             </span>
@@ -489,7 +489,7 @@ export function ProposalReviewModal({
 
         {proposal.description && (
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border-l-4 border-l-brand-500 border-r border-t border-b border-slate-200/60 dark:border-slate-800 text-xs">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
               Why it is needed
             </span>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">{proposal.description}</p>
@@ -543,11 +543,11 @@ export function ProposalReviewModal({
             <>
               {preview.files.map((f) => (
                 <div key={f.file} className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                  <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2">
+                  <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2">
                     <span>{f.label}</span>
-                    <span className="font-mono text-[10px] text-slate-400 truncate">{f.file}</span>
+                    <span className="font-mono text-xs text-slate-400 truncate">{f.file}</span>
                   </div>
-                  <pre className="p-3 bg-slate-950 font-mono text-[11px] text-emerald-400 overflow-x-auto leading-relaxed">
+                  <pre className="p-3 bg-slate-950 font-mono text-xs text-emerald-400 overflow-x-auto leading-relaxed">
                     {f.lines.map((l) => `+ ${l}`).join('\n')}
                   </pre>
                 </div>
@@ -608,7 +608,7 @@ export function ProposalReviewModal({
             {decisionTab === 'APPROVE' && mayApprove && (
               <div className="space-y-3 animate-in fade-in duration-150">
                 <div className="space-y-1">
-                  <label htmlFor="release-version" className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <label htmlFor="release-version" className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                     <Tag className="w-3 h-3 text-brand-500" />
                     <span>Release it ships in</span>
                   </label>
@@ -627,7 +627,7 @@ export function ProposalReviewModal({
                     }`}
                   />
                   {targetVersion && !versionValid && (
-                    <p className="text-[11px] text-rose-600 dark:text-rose-400">Use the format 1.4.0 (three numbers).</p>
+                    <p className="text-xs text-rose-600 dark:text-rose-400">Use the format 1.4.0 (three numbers).</p>
                   )}
                 </div>
 
@@ -637,7 +637,7 @@ export function ProposalReviewModal({
                     type="button"
                     onClick={() => setShowAdvanced((v) => !v)}
                     aria-expanded={showAdvanced}
-                    className="w-full px-3 py-2 flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                    className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
                   >
                     <span>Advanced</span>
                     <span className="flex items-center gap-1.5 font-normal text-slate-400">
@@ -647,23 +647,25 @@ export function ProposalReviewModal({
                   </button>
                   {showAdvanced && (
                     <div className="px-3 pb-3 space-y-1">
-                      <label htmlFor="target-branch" className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      <label htmlFor="target-branch" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                         Code version to update (git branch)
                       </label>
-                      <select
-                        id="target-branch"
-                        value={targetBranch}
-                        onChange={(e) => setTargetBranch(e.target.value)}
-                        className="w-full sm:w-64 h-9 text-xs px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-mono"
-                      >
-                        {(branches.length ? branches : [targetBranch]).map((b) => (
-                          <option key={b} value={b}>
-                            {b}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="w-full sm:w-64">
+                        <Select
+                          id="target-branch"
+                          value={targetBranch}
+                          onChange={(e) => setTargetBranch(e.target.value)}
+                          className="h-9 text-xs py-1.5 font-mono"
+                        >
+                          {(branches.length ? branches : [targetBranch]).map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                       {branchesFromFallback && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Couldn&apos;t load branches from the code repository; showing defaults.
                         </p>
                       )}
@@ -704,11 +706,11 @@ export function ProposalReviewModal({
               <div className="space-y-3 animate-in fade-in duration-150">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="reject-reason" className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                    <label htmlFor="reject-reason" className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3 text-rose-500" />
                       <span>Reason (required)</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">Sent to the requester</span>
+                    <span className="text-xs text-slate-400">Sent to the requester</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {REJECTION_PRESETS.map((preset) => (
@@ -716,7 +718,7 @@ export function ProposalReviewModal({
                         key={preset}
                         type="button"
                         onClick={() => setRejectReason(preset)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                        className={`text-xs px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
                           rejectReason === preset
                             ? 'bg-rose-500 text-white border-rose-500 font-bold'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-rose-400'
@@ -737,7 +739,7 @@ export function ProposalReviewModal({
                   />
                   <p
                     id="reject-reason-help"
-                    className={`text-[10px] tabular-nums ${
+                    className={`text-xs tabular-nums ${
                       rejectReasonOk ? 'text-slate-400' : 'text-rose-500 dark:text-rose-400'
                     }`}
                   >
@@ -775,7 +777,7 @@ export function ProposalReviewModal({
                   <span>Proposal declined</span>
                 </div>
                 {proposal.adminDecisionReason && (
-                  <p className="text-[11px] text-rose-700 dark:text-rose-400 pl-6">Reason: {proposal.adminDecisionReason}</p>
+                  <p className="text-xs text-rose-700 dark:text-rose-400 pl-6">Reason: {proposal.adminDecisionReason}</p>
                 )}
               </div>
             ) : (

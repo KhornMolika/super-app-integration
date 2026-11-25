@@ -194,9 +194,9 @@ export function RoleForm({
               } ${isSystemRole ? 'opacity-60 cursor-not-allowed' : ''}`}
             />
             {errors.name ? (
-              <p className="text-[11px] text-rose-500 mt-1 font-medium">{errors.name}</p>
+              <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name}</p>
             ) : (
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Unique uppercase identifier for system authorization checks.
               </p>
             )}
@@ -219,7 +219,7 @@ export function RoleForm({
                   {isActive ? 'Role is Active' : 'Role is Inactive (Disabled)'}
                 </span>
               </label>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 Inactive roles cannot be assigned to staff members.
               </span>
             </div>
@@ -260,7 +260,7 @@ export function RoleForm({
 
           {/* Quick Presets */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-slate-400 font-medium mr-1">Presets:</span>
+            <span className="text-xs text-slate-400 font-medium mr-1">Presets:</span>
             <button
               type="button"
               onClick={() => applyPreset('ALL')}
@@ -338,11 +338,11 @@ export function RoleForm({
                           <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                             {group.category}
                           </h4>
-                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          <span className="text-xs font-semibold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                             {selectedCount} / {group.permissions.length}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
                           {group.description}
                         </p>
                       </div>
@@ -352,7 +352,7 @@ export function RoleForm({
                       <button
                         type="button"
                         onClick={() => toggleCategory(groupKeys)}
-                        className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline px-2 py-1 cursor-pointer"
+                        className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline px-2 py-1 cursor-pointer"
                       >
                         {allSelected ? 'Deselect All' : 'Select All'}
                       </button>
@@ -389,10 +389,10 @@ export function RoleForm({
                                 </span>
                                 {getSensitivityBadge(perm.level)}
                               </div>
-                              <div className="text-[11px] font-mono text-brand-600 dark:text-brand-400 pt-0.5">
+                              <div className="text-xs font-mono text-brand-600 dark:text-brand-400 pt-0.5">
                                 {perm.key}
                               </div>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                                 {perm.desc}
                               </p>
                             </div>

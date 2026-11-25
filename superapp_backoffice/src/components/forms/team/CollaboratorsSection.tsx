@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import {
   UserGroupIcon,
   PlusCircleIcon,
@@ -71,7 +72,7 @@ function Avatar({ name }: { name: string }) {
 function RoleChip({ role }: { role: CollaboratorRole }) {
   const Icon = ROLE_ICON[role];
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
       <Icon className="w-3 h-3 text-slate-400" />
       {collaboratorRoleLabel(role)}
     </span>
@@ -118,7 +119,7 @@ export function CollaboratorsSection({
               className="text-sm font-bold text-slate-900 dark:text-slate-100 flex flex-wrap items-center gap-2"
             >
               <span>Team members</span>
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {totalMembers} {totalMembers === 1 ? 'member' : 'members'}
               </span>
             </h4>
@@ -163,7 +164,7 @@ export function CollaboratorsSection({
                   {ownerName}
                   {isMeOwner && <span className="font-normal text-slate-500"> (you)</span>}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 dark:bg-brand-500/15 border border-brand-600/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand-700 dark:text-brand-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 dark:bg-brand-500/15 border border-brand-600/20 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:text-brand-300">
                   <ShieldIcon className="w-3 h-3" />
                   Owner
                 </span>
@@ -232,21 +233,20 @@ export function CollaboratorsSection({
 
                 <div className="flex items-center gap-2 sm:shrink-0">
                   {canEditRow ? (
-                    <label className="flex-1 sm:flex-none">
-                      <span className="sr-only">Role of {displayName}</span>
-                      <select
+                    <div className="flex-1 sm:flex-none">
+                      <CleanDropdown
+                        label=""
                         value={role}
-                        disabled={isChanging || isRemoving}
-                        onChange={(e) => onChangeRole(collab, e.target.value as CollaboratorRole)}
-                        className="w-full sm:w-auto h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-2.5 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-60 cursor-pointer"
-                      >
-                        {COLLABORATOR_ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={(val) => onChangeRole(collab, val as CollaboratorRole)}
+                        options={COLLABORATOR_ROLES.map((r) => ({
+                          value: r.value,
+                          label: r.label,
+                        }))}
+                        buttonClassName="h-8 px-2.5 py-1 rounded-lg"
+                        dropdownWidth="w-40"
+                        align="right"
+                      />
+                    </div>
                   ) : (
                     <RoleChip role={role} />
                   )}
@@ -297,7 +297,7 @@ export function CollaboratorsSection({
                 </div>
                 <ul className="mt-1.5 space-y-1">
                   {r.grants.map((g) => (
-                    <li key={g} className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                    <li key={g} className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
                       {g}
                     </li>
                   ))}
@@ -306,7 +306,7 @@ export function CollaboratorsSection({
             );
           })}
         </div>
-        <p className="px-3 pb-3 text-[11px] text-slate-500 dark:text-slate-400">
+        <p className="px-3 pb-3 text-xs text-slate-500 dark:text-slate-400">
           The owner and organization admins can also delete the MiniApp and transfer ownership.
         </p>
       </details>

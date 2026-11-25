@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
@@ -10,6 +11,7 @@ import { Select } from '@/components/ui/inputs';
 import { DotBadge } from '@/components/ui/Icons';
 import { useAuth } from '@/lib/auth';
 import { copyText } from '@/lib/clipboard';
+import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
 
 export interface VersionRecord {
   id?: string;
@@ -34,6 +36,9 @@ export interface VersionRecord {
   createdAt?: string | null;
   releasedBy?: string;
   buildNumber?: number;
+  endpointUrl?: string | null;
+  urlScheme?: string | null;
+  integrationConfig?: any;
 }
 
 export interface VersionHistoryData {
@@ -62,13 +67,8 @@ export interface VersionHistoryTabProps {
   ownerEmail?: string;
   teamName?: string;
   onOpenReviewDiff?: () => void;
-}
-
-interface VersionCapability {
-  key: string;
-  required: boolean;
-  purpose: string | null;
-  status: 'REQUESTED' | 'APPROVED';
+  integrationMethod?: string;
+  integrationConfig?: any;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -155,26 +155,6 @@ function formatShortHash(hash?: string | null): string {
   return hash;
 }
 
-/** The capabilities a version asks for; amber only for ones still waiting for review. */
-function VersionCapabilities({ caps }: { caps?: VersionCapability[] }) {
-  if (!caps) return <span className="text-xs text-slate-400">—</span>;
-  if (caps.length === 0) return <span className="text-xs text-slate-500 dark:text-slate-400">None</span>;
-  const waiting = caps.filter((c) => c.status !== 'APPROVED').length;
-  return (
-    <div className="max-w-[220px] space-y-0.5">
-      <p
-        className="text-xs text-slate-700 dark:text-slate-300 truncate"
-        title={caps.map((c) => `${c.key}${c.required ? ' (required)' : ''}${c.purpose ? `: ${c.purpose}` : ''}`).join(', ')}
-      >
-        {caps.map((c) => c.key).join(', ')}
-      </p>
-      <p className={`text-[11px] ${waiting ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-        {waiting ? `${waiting} waiting for review` : 'Approved'}
-      </p>
-    </div>
-  );
-}
-
 export default function VersionHistoryTab({
   miniAppId,
   miniAppName,
@@ -186,17 +166,24 @@ export default function VersionHistoryTab({
   ownerEmail,
   teamName,
   onOpenReviewDiff,
+  integrationMethod,
+  integrationConfig,
 }: VersionHistoryTabProps) {
   // Rolling back changes what users get: admins only, and never on an archived app
   const { role, can } = useAuth();
   const canRollback = (role === 'SUPER_ADMIN' || can?.('miniapp:approve')) && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
-  const [capsByVersion, setCapsByVersion] = useState<Record<string, VersionCapability[]>>({});
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST' | 'DRAFT'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
   const [copiedChecksum, setCopiedChecksum] = useState<string | null>(null);
   const [copiedGitRef, setCopiedGitRef] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [compareModalState, setCompareModalState] = useState<{
     isOpen: boolean;
     baseVersion?: string;
@@ -251,16 +238,8 @@ export default function VersionHistoryTab({
     if (!miniAppId) return;
     setLoading(true);
     try {
-      const [result, versionCaps] = await Promise.all([
-        miniappsApi.getVersions(miniAppId),
-        miniappsApi.getVersionCapabilities(miniAppId).catch(() => []),
-      ]);
+      const result = await miniappsApi.getVersions(miniAppId);
       setData(result as any);
-      const byVersion: Record<string, VersionCapability[]> = {};
-      for (const v of versionCaps as any[]) {
-        if (!byVersion[v.version]) byVersion[v.version] = v.capabilities || [];
-      }
-      setCapsByVersion(byVersion);
     } catch (err) {
       console.error('Failed to load version history:', err);
     } finally {
@@ -286,6 +265,13 @@ export default function VersionHistoryTab({
     setTimeout(() => setCopiedGitRef(null), 2500);
   };
 
+  const handleCopyUrl = (url: string, label: string = 'URL') => {
+    copyText(url);
+    setCopiedUrl(url);
+    toast.info(`${label} copied to clipboard`, 'Copied');
+    setTimeout(() => setCopiedUrl(null), 2500);
+  };
+
   const handleDownload = (ver: string, type: 'test' | 'release') => {
     const downloadUrl = `/api/mini-apps/${miniAppId}/artifacts/${type === 'release' ? 'release-apk' : 'test-apk'}?version=${encodeURIComponent(ver)}`;
     window.open(downloadUrl, '_blank');
@@ -305,6 +291,33 @@ export default function VersionHistoryTab({
     if (filterType === 'ALL') return versionsList;
     return versionsList.filter((v) => v.type === filterType);
   }, [versionsList, filterType]);
+
+  const versionFilterOptions: CleanDropdownOption[] = useMemo(() => [
+    {
+      value: 'ALL',
+      label: 'All Versions',
+      count: versionsList.length,
+      dotColor: 'bg-slate-400',
+    },
+    {
+      value: 'PRODUCTION',
+      label: 'Releases',
+      count: versionsList.filter((v) => v.type === 'PRODUCTION').length,
+      dotColor: 'bg-emerald-500',
+    },
+    {
+      value: 'TEST',
+      label: 'Test / Staging',
+      count: versionsList.filter((v) => v.type === 'TEST').length,
+      dotColor: 'bg-sky-500',
+    },
+    {
+      value: 'DRAFT',
+      label: 'Drafts & Revisions',
+      count: versionsList.filter((v) => v.type === 'DRAFT').length,
+      dotColor: 'bg-amber-500',
+    },
+  ], [versionsList]);
 
   const baseOptions = useMemo(() => {
     if (versionsList.length === 0) {
@@ -391,18 +404,18 @@ export default function VersionHistoryTab({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                     MiniApp Current Version
                   </span>
                   {data?.packageName && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+                    <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
                       {data.packageName}
                     </span>
                   )}
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{data?.currentReleaseVersion || '1.0.0'}</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase ${
                     currentStatus === 'ACTIVE'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                       : currentStatus === 'IN_REVIEW'
@@ -422,7 +435,7 @@ export default function VersionHistoryTab({
           </p>
 
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Ref: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.gitRef || 'Tag: ' + (data?.currentReleaseVersion || 'v1.0.0')}</strong>
             </span>
             <div className="flex items-center gap-1.5">
@@ -451,16 +464,16 @@ export default function VersionHistoryTab({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
                     Sandbox Test Version
                   </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
+                  <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
                     STAGING
                   </span>
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{data?.activeTestVersion || 'develop'}</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
                     <span>TESTING</span>
                   </span>
                 </h4>
@@ -469,11 +482,14 @@ export default function VersionHistoryTab({
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
-            {activeTestRecord?.changelog || 'Candidate branch/tag compiled for SuperApp sandbox integration validation.'}
+            {activeTestRecord?.changelog ||
+              (['WEBVIEW', 'DEEP_LINK'].includes(String(integrationMethod || '').toUpperCase())
+                ? 'Active dynamic endpoint staged for SuperApp sandbox validation (no native build required).'
+                : 'Candidate branch/tag compiled for SuperApp sandbox integration validation.')}
           </p>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Source: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.sourceType || 'Git Repository'}</strong>
             </span>
             <div className="flex items-center gap-1.5">
@@ -501,13 +517,13 @@ export default function VersionHistoryTab({
                 </svg>
               </div>
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   Pending Draft Revision
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{activeDraftVer || 'No Active Draft'}</span>
                   {pendingRevision && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
                       <span>{pendingRevision.revisionStatus || 'IN REVIEW'}</span>
                     </span>
                   )}
@@ -523,7 +539,7 @@ export default function VersionHistoryTab({
           </p>
 
           <div className="pt-3 border-t border-amber-100 dark:border-amber-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               State: <strong className="text-slate-700 dark:text-slate-300">{pendingRevision ? 'Pending Review' : 'Synced'}</strong>
             </span>
             {pendingRevision ? (
@@ -556,8 +572,9 @@ export default function VersionHistoryTab({
       </div>
 
       {/* 2. Version History Timeline & Table */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        {/* Row 1: Section Title & Subtitle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -566,79 +583,79 @@ export default function VersionHistoryTab({
               <span>MiniApp Version History &amp; Release Timeline</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Historical record of package versions, Git release tags, commit SHAs, and sandbox revisions for {miniAppName}.
+              Historical record of package releases, staging builds, and draft revisions for {miniAppName}.
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Version Diff Comparator Selector */}
-            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-1.5 shrink-0">
-                <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                <span>Compare:</span>
-              </span>
-
-              <div className="w-36">
-                <Select
-                  value={effectiveBase}
-                  onChange={(e) => setCompareBase(e.target.value)}
-                  className="!py-1.5 !px-2.5 text-xs font-semibold"
-                >
-                  {baseOptions.map((opt) => (
-                    <option key={`base-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <span className="text-slate-400 dark:text-slate-500 text-xs font-bold shrink-0">➔</span>
-
-              <div className="w-36">
-                <Select
-                  value={effectiveTarget}
-                  onChange={(e) => setCompareTarget(e.target.value)}
-                  className="!py-1.5 !px-2.5 text-xs font-semibold"
-                >
-                  {targetOptions.map((opt) => (
-                    <option key={`target-${opt.value}`} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <Link
-                href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(effectiveBase)}&target=${encodeURIComponent(effectiveTarget)}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
-                title="Open dedicated PR-style diff review workspace"
-              >
+        {/* Row 2: Action & Filter Toolbar (Separate row so Compare Diff and Stage Filter never stack awkwardly) */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+          {/* Left: Filter Dropdown */}
+          <div className="flex items-center">
+            <CleanDropdown
+              label="Type:"
+              value={filterType}
+              options={versionFilterOptions}
+              onChange={(val) => setFilterType(val as 'ALL' | 'PRODUCTION' | 'TEST' | 'DRAFT')}
+              align="left"
+              dropdownWidth="w-56"
+              icon={
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
-                <span>Review Diff</span>
-              </Link>
+              }
+            />
+          </div>
+
+          {/* Right: Version Diff Comparator Selector */}
+          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs self-start md:self-auto">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 px-1.5 shrink-0">
+              <svg className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span>Compare:</span>
+            </span>
+
+            <div className="w-32 sm:w-36">
+              <Select
+                value={effectiveBase}
+                onChange={(e) => setCompareBase(e.target.value)}
+                className="!py-1.5 !px-2.5 text-xs font-semibold"
+              >
+                {baseOptions.map((opt) => (
+                  <option key={`base-${opt.value}`} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
-              {(['ALL', 'PRODUCTION', 'TEST'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setFilterType(mode)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    filterType === mode
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {mode === 'ALL' ? 'All Versions' : mode === 'PRODUCTION' ? 'Releases' : 'Test / Staging'}
-                </button>
-              ))}
+            <span className="text-slate-400 dark:text-slate-500 text-xs font-bold shrink-0">➔</span>
+
+            <div className="w-32 sm:w-36">
+              <Select
+                value={effectiveTarget}
+                onChange={(e) => setCompareTarget(e.target.value)}
+                className="!py-1.5 !px-2.5 text-xs font-semibold"
+              >
+                {targetOptions.map((opt) => (
+                  <option key={`target-${opt.value}`} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
             </div>
+
+            <Link
+              href={`/miniapps/${miniAppId}/review?base=${encodeURIComponent(effectiveBase)}&target=${encodeURIComponent(effectiveTarget)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
+              title="Open dedicated PR-style diff review workspace"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              <span>Review Diff</span>
+            </Link>
           </div>
         </div>
 
@@ -648,25 +665,22 @@ export default function VersionHistoryTab({
             <thead className="bg-slate-50/90 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-4 w-36">Version</th>
-                <th className="py-3 px-4 min-w-[200px]">Package &amp; Ref</th>
-                <th className="py-3 px-4 w-40">Status</th>
-                <th className="py-3 px-4 min-w-[140px]">Capabilities</th>
-                <th className="py-3 px-4 w-44">Date</th>
-                <th className="py-3 px-4 min-w-[170px]">Developer</th>
-                <th className="py-3 px-4 min-w-[180px]">Checksum</th>
-                <th className="py-3 px-4 text-right w-44">Actions</th>
+                <th className="py-3 px-4 min-w-[240px]">Release Summary</th>
+                <th className="py-3 px-4 w-56">Target Source</th>
+                <th className="py-3 px-4 w-36">Status</th>
+                <th className="py-3 px-4 w-48">Date &amp; Author</th>
+                <th className="py-3 px-4 text-right w-36">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
               {filteredVersions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
                     No version records found matching this filter.
                   </td>
                 </tr>
               ) : (
                 filteredVersions.map((rec, idx) => {
-                  const isFullCommit = typeof rec.gitRef === 'string' && /^[0-9a-f]{40}$/i.test(rec.gitRef);
                   const resolvedDev =
                     rec.releasedBy ||
                     ownerName ||
@@ -674,69 +688,200 @@ export default function VersionHistoryTab({
                     (ownerEmail ? ownerEmail.split('@')[0] : null) ||
                     'Developer';
 
-                  const rawChecksum =
-                    rec.checksum ||
-                    (rec.gitRef ? `sha256:${rec.gitRef.substring(0, 16)}...` : null);
+                  const isCurrentActive =
+                    rec.version === data?.currentReleaseVersion &&
+                    (rec.status === 'ACTIVE' || rec.type === 'PRODUCTION');
 
                   return (
                     <tr
                       key={`${rec.version}-${idx}`}
                       className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* Version */}
+                      {/* 1. Version */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
-                            {rec.version}
-                          </span>
-                          {rec.sourceType && (
-                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
-                              {SOURCE_LABELS[rec.sourceType] || rec.sourceType}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                              v{rec.version}
+                            </span>
+                            {isCurrentActive && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Current Active Release" />
+                            )}
+                          </div>
+                          <div>
+                            {rec.type === 'PRODUCTION' ? (
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                Release
+                              </span>
+                            ) : rec.type === 'TEST' ? (
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                Staging
+                              </span>
+                            ) : (
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                Draft
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 2. Release Summary (Fills flexible table width) */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col gap-1 max-w-md">
+                          <p
+                            className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed cursor-pointer hover:text-slate-900 dark:hover:text-white"
+                            onClick={() => setSelectedChangelog(rec)}
+                            title={rec.changelog || 'Click to view full notes'}
+                          >
+                            {rec.changelog || (rec.type === 'PRODUCTION' ? `Release package build v${rec.version}` : `Sandbox testing revision v${rec.version}`)}
+                          </p>
+                          {rec.buildNumber && (
+                            <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
+                              Build #{rec.buildNumber}
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Package & Ref */}
+                      {/* 3. Polymorphic Target Source */}
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                            {rec.packageName || data?.packageName || appId || 'sc_public_miniapp'}
-                          </span>
-                          {isFullCommit ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleCopyGitRef(rec.gitRef!)}
-                                className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-                                title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
-                              >
-                                <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="12" r="3" strokeWidth="2" />
-                                  <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
-                                </svg>
-                                <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
-                                {copiedGitRef === rec.gitRef ? (
-                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
-                                ) : (
-                                  <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        {(() => {
+                          const resolvedSource = (rec.sourceType || integrationMethod || 'GIT').toUpperCase();
+
+                          if (resolvedSource === 'WEBVIEW') {
+                            const targetUrl =
+                              rec.endpointUrl ||
+                              rec.integrationConfig?.productionUrl ||
+                              rec.integrationConfig?.stagingUrl ||
+                              rec.integrationConfig?.webUrl ||
+                              integrationConfig?.productionUrl ||
+                              integrationConfig?.stagingUrl ||
+                              '';
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                  <svg className="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                                   </svg>
+                                  <span className="font-semibold text-xs text-slate-500 dark:text-slate-400">Web Endpoint</span>
+                                </div>
+                                {targetUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUrl(targetUrl, 'Web Endpoint URL')}
+                                    className="group inline-flex items-center gap-1.5 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    title={`Target URL: ${targetUrl}\nClick to copy`}
+                                  >
+                                    <span className="truncate">{targetUrl.replace(/^https?:\/\//, '')}</span>
+                                    {copiedUrl === targetUrl ? (
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                    ) : (
+                                      <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-slate-400 italic">No URL configured</span>
                                 )}
-                              </button>
+                              </div>
+                            );
+                          }
+
+                          if (resolvedSource === 'DEEP_LINK') {
+                            const targetScheme =
+                              rec.urlScheme ||
+                              rec.integrationConfig?.urlScheme ||
+                              rec.integrationConfig?.deepLinkUri ||
+                              integrationConfig?.urlScheme ||
+                              '';
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                  <svg className="w-3.5 h-3.5 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                  </svg>
+                                  <span className="font-semibold text-xs text-slate-500 dark:text-slate-400">App Scheme</span>
+                                </div>
+                                {targetScheme ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyUrl(targetScheme, 'Deep Link Scheme')}
+                                    className="group inline-flex items-center gap-1.5 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    title={`URI Scheme: ${targetScheme}\nClick to copy`}
+                                  >
+                                    <span className="truncate">{targetScheme}</span>
+                                    {copiedUrl === targetScheme ? (
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                    ) : (
+                                      <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-slate-400 italic">No Scheme configured</span>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          // Default: Flutter Package, Native SDK, Git
+                          const isFullCommit = typeof rec.gitRef === 'string' && /^[0-9a-f]{40}$/i.test(rec.gitRef);
+                          const rawChecksum =
+                            rec.checksum ||
+                            (rec.gitRef ? `sha256:${rec.gitRef.substring(0, 16)}...` : null);
+
+                          return (
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isFullCommit ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyGitRef(rec.gitRef!)}
+                                  className="group inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                                  title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
+                                >
+                                  <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3" strokeWidth="2" />
+                                    <path strokeLinecap="round" strokeWidth="2" d="M12 3v6m0 6v6" />
+                                  </svg>
+                                  <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
+                                  {copiedGitRef === rec.gitRef ? (
+                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                                  ) : (
+                                    <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-xs font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
+                                  <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                  </svg>
+                                  <span>{rec.gitRef || (rec.type === 'TEST' ? 'develop' : `tag: v${rec.version}`)}</span>
+                                </span>
+                              )}
+
+                              {rawChecksum && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
+                                  className="group p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer shrink-0"
+                                  title={`SHA-256 Checksum: ${rec.checksum || rawChecksum}\nClick to copy digest`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
-                          ) : (
-                            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                              <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                              </svg>
-                              <span>{rec.gitRef || (rec.type === 'TEST' ? 'branch: develop' : `tag: v${rec.version}`)}</span>
-                            </span>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </td>
 
-                      {/* Status */}
+                      {/* 4. Status */}
                       <td className="py-3.5 px-4">
                         {rec.status === 'ACTIVE' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
@@ -775,95 +920,32 @@ export default function VersionHistoryTab({
                         )}
                       </td>
 
-                      {/* Capabilities */}
-                      <td className="py-3.5 px-4">
-                        {capsByVersion[rec.version] && capsByVersion[rec.version].length > 0 ? (
-                          <VersionCapabilities caps={capsByVersion[rec.version]} />
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                            <svg className="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>None</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Date */}
+                      {/* 5. Date & Author */}
                       <td className="py-3.5 px-4 text-xs">
-                        {rec.releasedAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.releasedAt)}
-                            </span>
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Production Release</span>
-                          </div>
-                        ) : rec.submittedAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.submittedAt)}
-                            </span>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Submitted for Review</span>
-                          </div>
-                        ) : rec.createdAt ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatDate(rec.createdAt)}
-                            </span>
-                            <span className="text-[10px] text-slate-400">Created</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      {/* Developer */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold shadow-2xs shrink-0 ring-1 ring-white dark:ring-slate-800">
-                            {getDeveloperInitials(resolvedDev)}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span
-                              className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate"
-                              title={resolvedDev}
-                            >
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {rec.releasedAt
+                              ? formatDate(rec.releasedAt)
+                              : rec.submittedAt
+                              ? formatDate(rec.submittedAt)
+                              : formatDate(rec.createdAt) || '—'}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
+                              {getDeveloperInitials(resolvedDev)}
+                            </div>
+                            <span className="truncate max-w-[110px]" title={resolvedDev}>
                               {resolvedDev}
                             </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                              {rec.type === 'PRODUCTION' ? 'Release Manager' : 'Developer'}
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span className="text-xs text-slate-400">
+                              {rec.releasedAt ? 'Released' : rec.submittedAt ? 'Submitted' : 'Created'}
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      {/* Checksum */}
-                      <td className="py-3.5 px-4">
-                        {rawChecksum ? (
-                          <button
-                            type="button"
-                            onClick={() => handleCopyChecksum(rec.checksum || rawChecksum)}
-                            className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/90 dark:border-slate-700/80 transition-all shadow-2xs cursor-pointer"
-                            title={`Full SHA-256 Digest: ${rec.checksum || rawChecksum}\nClick to copy`}
-                          >
-                            <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            <span className="font-semibold">{formatShortHash(rec.checksum || rawChecksum)}</span>
-                            {copiedChecksum === (rec.checksum || rawChecksum) ? (
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Copied!</span>
-                            ) : (
-                              <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            )}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
+                      {/* 6. Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Review Diff in Dedicated Workspace */}
@@ -944,10 +1026,10 @@ export default function VersionHistoryTab({
         </div>
       </div>
 
-      {/* Changelog Modal */}
-      {selectedChangelog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      {/* Changelog Modal (Portaled to document.body for full-screen edge-to-edge backdrop blur) */}
+      {mounted && selectedChangelog && createPortal(
+        <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-mono font-bold text-lg text-slate-900 dark:text-slate-100">
@@ -979,7 +1061,7 @@ export default function VersionHistoryTab({
 
               {selectedChangelog.checksum && (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[11px] font-bold uppercase text-slate-500 block mb-1">
+                  <span className="text-xs font-bold uppercase text-slate-500 block mb-1">
                     SHA-256 Package Checksum
                   </span>
                   <p className="font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all">
@@ -1002,7 +1084,8 @@ export default function VersionHistoryTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Version Diff Comparison Modal */}
@@ -1032,10 +1115,10 @@ export default function VersionHistoryTab({
         buildType={inviteModalState.buildType}
         teamTelegramChatId={teamTelegramChatId}
       />
-      {/* Rollback Confirmation Modal */}
-      {rollbackModalState.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 space-y-4">
+      {/* Rollback Confirmation Modal (Portaled to document.body for full-screen edge-to-edge backdrop blur) */}
+      {mounted && rollbackModalState.isOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] w-screen h-screen min-h-screen flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md my-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1088,7 +1171,8 @@ export default function VersionHistoryTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

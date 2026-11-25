@@ -40,8 +40,8 @@ export class NotificationsController {
 
   @Get(':id')
   @RequirePermissions('miniapp:read')
-  async getNotification(@Param('id') id: string) {
-    const notif = await this.notificationsService.findById(id);
+  async getNotification(@Param('id') id: string, @Req() req: any) {
+    const notif = await this.notificationsService.findById(id, req?.user?.sub);
     if (!notif) {
       throw new NotFoundException(`Notification #${id} not found`);
     }
@@ -50,37 +50,40 @@ export class NotificationsController {
 
   @Post('mark-all-read')
   @RequirePermissions('miniapp:read')
-  markAllNotificationsRead() {
-    return this.notificationsService.markAllAsRead();
+  markAllNotificationsRead(@Req() req: any) {
+    return this.notificationsService.markAllAsRead(req?.user?.sub);
   }
 
   @Post('read-all')
   @RequirePermissions('miniapp:read')
-  readAllNotifications() {
-    return this.notificationsService.markAllAsRead();
+  readAllNotifications(@Req() req: any) {
+    return this.notificationsService.markAllAsRead(req?.user?.sub);
   }
 
   @Delete('bulk')
   @RequirePermissions('miniapp:read')
-  deleteBulkNotifications(@Body() body: { ids: string[] }) {
-    return this.notificationsService.deleteBulk(body?.ids || []);
+  deleteBulkNotifications(@Body() body: { ids: string[] }, @Req() req: any) {
+    return this.notificationsService.deleteBulk(
+      body?.ids || [],
+      req?.user?.sub,
+    );
   }
 
   @Delete(':id')
   @RequirePermissions('miniapp:read')
-  deleteNotification(@Param('id') id: string) {
-    return this.notificationsService.delete(id);
+  deleteNotification(@Param('id') id: string, @Req() req: any) {
+    return this.notificationsService.delete(id, req?.user?.sub);
   }
 
   @Patch(':id/read')
   @RequirePermissions('miniapp:read')
-  markNotificationRead(@Param('id') id: string) {
-    return this.notificationsService.markAsRead(id);
+  markNotificationRead(@Param('id') id: string, @Req() req: any) {
+    return this.notificationsService.markAsRead(id, req?.user?.sub);
   }
 
   @Post(':id/mark-read')
   @RequirePermissions('miniapp:read')
-  markNotificationReadPost(@Param('id') id: string) {
-    return this.notificationsService.markAsRead(id);
+  markNotificationReadPost(@Param('id') id: string, @Req() req: any) {
+    return this.notificationsService.markAsRead(id, req?.user?.sub);
   }
 }

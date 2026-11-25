@@ -163,6 +163,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
         const currentPath = window.location.pathname;
         const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = `/login${redirectParam}`;
       }
       throw new ApiError('Session expired. Please log in again.', 401);
@@ -182,6 +183,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
           if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
             const currentPath = window.location.pathname;
             const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
             window.location.href = `/login${redirectParam}`;
           }
         }
@@ -191,6 +193,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
           const currentPath = window.location.pathname;
           const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
           window.location.href = `/login${redirectParam}`;
         }
       }
@@ -227,6 +230,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
     typeof window !== 'undefined' &&
     window.location.pathname !== '/change-password'
   ) {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = '/change-password';
     throw new ApiError('Choose your own password before continuing.', 403);
   }
@@ -265,6 +269,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
     if (response.status === 401 && !isAuthPage && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
       const currentPath = window.location.pathname;
       const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = `/login${redirectParam}`;
     }
 

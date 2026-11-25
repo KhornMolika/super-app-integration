@@ -1,9 +1,10 @@
 "use client";
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export const Label = ({ className = '', children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label className={`block text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-1.5 transition-colors ${className}`} {...props}>
+  <label className={`block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1.5 transition-colors ${className}`} {...props}>
     {children}
   </label>
 );
@@ -13,7 +14,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
+      className={`text-sm text-slate-800 dark:text-slate-100 w-full px-4 py-2.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -25,7 +26,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
+      className={`text-sm text-slate-800 dark:text-slate-100 w-full px-4 py-2.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -43,9 +44,44 @@ export interface SelectOption {
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className = '', children, value, defaultValue, onChange, disabled, name, id, required, ...props }, ref) => {
     const [isOpen, setIsOpen] = React.useState(false);
+    const [mounted, setMounted] = React.useState(false);
+    const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({});
     const [searchQuery, setSearchQuery] = React.useState('');
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const menuRef = React.useRef<HTMLDivElement>(null);
     const hiddenSelectRef = React.useRef<HTMLSelectElement | null>(null);
+
+    React.useEffect(() => {
+      setMounted(true);
+    }, []);
+
+    const updateMenuPosition = React.useCallback(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpward = spaceBelow < 260 && rect.top > spaceBelow;
+
+      setMenuStyle({
+        position: 'fixed',
+        zIndex: 99999,
+        left: Math.max(8, rect.left),
+        width: rect.width,
+        ...(openUpward
+          ? { bottom: window.innerHeight - rect.top + 6 }
+          : { top: rect.bottom + 6 }),
+      });
+    }, []);
+
+    React.useEffect(() => {
+      if (!isOpen) return;
+      updateMenuPosition();
+      window.addEventListener('scroll', updateMenuPosition, true);
+      window.addEventListener('resize', updateMenuPosition);
+      return () => {
+        window.removeEventListener('scroll', updateMenuPosition, true);
+        window.removeEventListener('resize', updateMenuPosition);
+      };
+    }, [isOpen, updateMenuPosition]);
 
     // Sync external forwarded ref
     React.useImperativeHandle(ref, () => hiddenSelectRef.current as HTMLSelectElement);
@@ -92,7 +128,12 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
     // Handle outside click to close dropdown
     React.useEffect(() => {
       const handlePointerDown = (e: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        const target = e.target as Node;
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(target) &&
+          (!menuRef.current || !menuRef.current.contains(target))
+        ) {
           setIsOpen(false);
           setSearchQuery('');
         }
@@ -233,12 +274,16 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
           </div>
         </button>
 
-        {/* Modern Floating Popover Menu */}
-        {isOpen && (
-          <div
-            className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 p-1.5 max-h-64 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-150"
-            role="listbox"
-          >
+        {/* Modern Floating Popover Menu via Portal to avoid overflow-hidden clipping */}
+        {isOpen &&
+          mounted &&
+          createPortal(
+            <div
+              ref={menuRef}
+              style={menuStyle}
+              className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 p-1.5 max-h-64 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-150"
+              role="listbox"
+            >
             {/* Quick Search if more than 6 options */}
             {options.length > 6 && (
               <div className="p-1 mb-1 border-b border-slate-100 dark:border-slate-800/80 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
@@ -271,7 +316,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
                       if (groupItems.length === 0) return null;
                       return (
                         <div key={grp} className="mb-2 last:mb-0">
-                          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          <div className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                             {grp}
                           </div>
                           {groupItems.map((opt) => {
@@ -337,8 +382,9 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
                     })}
               </div>
             )}
-          </div>
-        )}
+            </div>,
+            document.body,
+          )}
       </div>
     );
   }
@@ -356,9 +402,9 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<any, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', as: Component = 'button', children, ...props }, ref) => {
     const sizeStyles: Record<string, string> = {
-      sm: "px-3.5 py-1.5 text-xs rounded-lg",
-      md: "px-6 py-3 text-sm rounded-xl",
-      lg: "px-8 py-4 text-base rounded-2xl",
+      sm: "px-3.5 py-2 text-sm rounded-xl",
+      md: "px-5 py-2.5 text-sm rounded-xl",
+      lg: "px-7 py-3.5 text-base rounded-2xl",
     };
     const baseStyles = "transition-all font-semibold flex items-center justify-center disabled:opacity-50 cursor-pointer";
     const variants: Record<string, string> = {
@@ -381,4 +427,7 @@ export const Button = React.forwardRef<any, ButtonProps>(
   }
 );
 Button.displayName = 'Button';
+
+export { RequiredOptionalToggle } from './RequiredOptionalToggle';
+export type { RequiredOptionalToggleProps } from './RequiredOptionalToggle';
 

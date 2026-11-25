@@ -47,7 +47,7 @@ describe('capability gate (ADR-004 Section 5: disable, don\'t fail)', () => {
     expect(r.unavailableReason).toBe('Unavailable until Super App v1.4.0');
     expect(r.availableFrom).toBe('1.4.0');
     const [f] = capabilityFindings(r);
-    expect(f.severity).toBe('MEDIUM'); // reported, never CRITICAL/HIGH: the scan does not fail
+    expect(f.severity).toBe('HIGH'); // required unsupported capabilities fail the compliance gate
   });
 
   it('required capability not in the catalog at all: generic future-release label', () => {

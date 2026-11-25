@@ -10,3 +10,4 @@ export * from './tabs/UserAuditTab';
 export * from './TelegramConfigModal';
 export * from './AvatarUpload';
 export * from './UserAvatar';
+export * from './AssignRoleModal';

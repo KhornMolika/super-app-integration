@@ -74,7 +74,7 @@ export function OrganizationOverviewCard({ organization: rawOrg }: OrganizationO
         {/* Tile 2: Organization Code */}
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50">
           <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-400">
-            <span className="font-mono text-[11px] font-bold">#</span>
+            <span className="font-mono text-xs font-bold">#</span>
             <span>Organization Code</span>
           </div>
           <div className="mt-1">
@@ -113,7 +113,7 @@ export function OrganizationOverviewCard({ organization: rawOrg }: OrganizationO
           </div>
           <div className="mt-1 flex items-center gap-2">
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${
                 isActive
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'

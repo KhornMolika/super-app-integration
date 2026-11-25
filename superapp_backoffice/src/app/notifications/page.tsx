@@ -49,7 +49,7 @@ function readNotificationState(params: URLSearchParams): {
   const timeframe = (['ALL', 'TODAY', 'WEEK', 'MONTH'].includes(rawTime) ? rawTime : 'ALL') as NotificationTimeframe;
 
   const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
-  const pageSize = Math.max(5, parseInt(params.get('limit') || '10', 10) || 10);
+  const pageSize = Math.max(5, parseInt(params.get('limit') || '5', 10) || 5);
 
   return {
     searchQuery: q,
@@ -80,7 +80,7 @@ function writeNotificationState(
   if (filters.severity !== 'ALL') p.set('severity', filters.severity);
   if (filters.timeframe !== 'ALL') p.set('timeframe', filters.timeframe);
   if (page > 1) p.set('page', String(page));
-  if (limit !== 10) p.set('limit', String(limit));
+  if (limit !== 5) p.set('limit', String(limit));
   return p.toString();
 }
 
@@ -247,9 +247,9 @@ function NotificationsPageContent() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               Notifications
-            </h2>
+            </h1>
             {unreadCount > 0 && (
               <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 {unreadCount} unread
@@ -310,7 +310,7 @@ function NotificationsPageContent() {
                   <span>{tab.label}</span>
                   {tab.count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      className={`text-xs px-1.5 py-0.2 rounded-full font-bold ${
                         isActive
                           ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400'
                           : 'bg-slate-300/60 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
@@ -340,7 +340,7 @@ function NotificationsPageContent() {
               </svg>
               <span>Deep Filter</span>
               {activeFilterCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center font-bold">
+                <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center font-bold">
                   {activeFilterCount}
                 </span>
               )}
@@ -379,7 +379,7 @@ function NotificationsPageContent() {
         {/* Active Filter Chips / Indicators Row */}
         {hasAnyActiveFilters && (
           <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-            <span className="text-slate-400 dark:text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+            <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold uppercase tracking-wider">
               Active:
             </span>
 
@@ -546,12 +546,12 @@ function NotificationsPageContent() {
                         {item.title}
                       </h4>
 
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">
                         • {formatNotificationRelativeTime(item.createdAt)}
                       </span>
 
                       {item.miniApp?.name && (
-                        <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                        <span className="hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
                           {item.miniApp.name}
                         </span>
                       )}
@@ -575,7 +575,7 @@ function NotificationsPageContent() {
                       Mark read
                     </button>
                   ) : (
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5">Read</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 px-1.5 py-0.5">Read</span>
                   )}
 
                   <button
@@ -600,14 +600,14 @@ function NotificationsPageContent() {
         </div>
 
         {/* Pagination Bar */}
-        {filteredNotifications.length > 0 && (
+        {totalItems >= 5 && (
           <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 px-4 py-3 shadow-xs">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               totalItems={totalItems}
               pageSize={pageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[5, 10, 20, 50]}
               showPageSizeSelector
               showTotal
               onPageChange={(page) => setCurrentPage(page)}

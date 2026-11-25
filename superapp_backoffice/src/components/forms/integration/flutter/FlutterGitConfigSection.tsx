@@ -89,7 +89,7 @@ export default function FlutterGitConfigSection({
     }
   };
 
-  const handleGenerateDedicatedKey = async () => {
+  const handleGenerateDedicatedKey = React.useCallback(async () => {
     try {
       setIsGeneratingKey(true);
       setKeyError("");
@@ -114,7 +114,7 @@ export default function FlutterGitConfigSection({
     } finally {
       setIsGeneratingKey(false);
     }
-  };
+  }, [flutterConfig?.packageName, flutterConfig?.appName, onUpdateFlutterConfig]);
 
   const [copyFailed, setCopyFailed] = useState(false);
   const publicKeyRef = React.useRef<HTMLPreElement>(null);
@@ -154,7 +154,16 @@ export default function FlutterGitConfigSection({
     ) {
       handleGenerateDedicatedKey();
     }
-  }, [isPrivateRepo, authMethod, flutterConfig?.deployPublicKey, flutterConfig?.hasDeployKey]);
+  }, [
+    isPrivateRepo,
+    authMethod,
+    flutterConfig?.deployPublicKey,
+    flutterConfig?.hasDeployKey,
+    handleGenerateDedicatedKey,
+    isEditable,
+    isGeneratingKey,
+    keyError,
+  ]);
 
   const urlError = allErrors["integrationConfigFlutter.gitUrl"];
   const tokenError = allErrors["integrationConfigFlutter.gitAccessToken"];
@@ -400,7 +409,7 @@ export default function FlutterGitConfigSection({
         <div className="flex items-center justify-between gap-2 min-h-9 mb-1.5">
           <Label htmlFor="git-commit" className="!mb-0 flex items-center gap-2">
             <span>Commit</span>
-            <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+            <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
               Auto-detected
             </span>
           </Label>
@@ -498,7 +507,7 @@ export default function FlutterGitConfigSection({
                   onCommitChange(branchHeadSha);
                   setIsManualCommit(false);
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded border border-slate-300 dark:border-slate-600 transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded border border-slate-300 dark:border-slate-600 transition-colors"
                 title="Paste detected latest commit SHA"
               >
                 Use Latest

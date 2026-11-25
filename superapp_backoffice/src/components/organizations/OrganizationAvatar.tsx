@@ -48,12 +48,12 @@ const SIZE_STYLES: Record<
 > = {
   xs: {
     container: 'w-6 h-6',
-    text: 'text-[9px]',
+    text: 'text-xs',
     logoPadding: 'p-0.5',
   },
   sm: {
     container: 'w-7 h-7',
-    text: 'text-[10px]',
+    text: 'text-xs',
     logoPadding: 'p-0.5',
   },
   md: {

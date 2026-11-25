@@ -1,6 +1,9 @@
 import {
   WebSocketGateway,
   WebSocketServer,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
@@ -22,15 +25,34 @@ export class NotificationGateway
 
   handleConnection(client: Socket) {
     this.logger.log('Client connected: ' + client.id);
+    const userId = client.handshake?.auth?.userId;
+    if (typeof userId === 'string' && userId.trim()) {
+      void client.join(`user:${userId.trim()}`);
+    }
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log('Client disconnected: ' + client.id);
   }
 
+  @SubscribeMessage('join')
+  handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { userId?: string },
+  ) {
+    const userId = payload?.userId?.trim();
+    if (userId) {
+      void client.join(`user:${userId}`);
+    }
+  }
+
   emitNotification(notification: any) {
-    if (this.server) {
-      this.server.emit('notification.created', notification);
+    if (!this.server) return;
+    const targetUserId = notification?.data?.userId || notification?.userId;
+    if (targetUserId) {
+      this.server
+        .to(`user:${targetUserId}`)
+        .emit('notification.created', notification);
     }
   }
 

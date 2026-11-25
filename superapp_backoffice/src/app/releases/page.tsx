@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/inputs';
+import { Search } from 'lucide-react';
 import { superAppApi, miniappsApi, MiniApp } from '@/api';
 import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppReleaseCompareModal';
 import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
 import { useAuth } from '@/lib/auth';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
+import { Pagination } from '@/components/ui/Pagination';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
 import {
   AppStatusBadge,
@@ -26,6 +28,41 @@ export default function ReleasesPage() {
   const [gate2Result, setGate2Result] = useState<any>(null);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [ecosystemStatus, setEcosystemStatus] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [methodFilter, setMethodFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const filteredApps = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return apps.filter((app) => {
+      if (q) {
+        const name = (app.name || '').toLowerCase();
+        const appId = (app.appId || '').toLowerCase();
+        const pkg = (app.integrationConfig?.packageName || '').toLowerCase();
+        if (!name.includes(q) && !appId.includes(q) && !pkg.includes(q)) {
+          return false;
+        }
+      }
+      if (methodFilter !== 'ALL' && app.integrationMethod !== methodFilter) {
+        return false;
+      }
+      if (statusFilter !== 'ALL') {
+        const appStatus = appStatusOf(app);
+        const stage = versionStageOf(app);
+        if (appStatus !== statusFilter && stage !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [apps, searchQuery, methodFilter, statusFilter]);
+
+  const paginatedApps = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredApps.slice(start, start + pageSize);
+  }, [filteredApps, currentPage, pageSize]);
 
   const fetchNextVersion = () => {
     superAppApi.getNextVersion()
@@ -99,62 +136,74 @@ export default function ReleasesPage() {
   return (
     <div className="w-full min-w-0 space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">SuperApp Release Pipeline</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              SuperApp Release Pipeline
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
               Release Verification
             </span>
           </div>
-          <p className="text-slate-500 mt-1 text-sm">
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
             Verify mini-app packages, validate security checksums, and assemble official SuperApp releases.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Compare Button */}
-          <button
-            type="button"
-            onClick={() => setCompareModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-xs"
+        {/* Unified Action Toolbar - Uniform h-10 height, rounded-xl, and aligned */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+          {/* 1. Compare Button */}
+          <Link
+            href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
+            className="h-10 px-3.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-2 shadow-2xs shrink-0 whitespace-nowrap"
+            title="Compare official live and candidate release manifests"
           >
-            <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span>Compare SA Releases (SA vs SA)</span>
-          </button>
+          </Link>
 
-          <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-xs text-slate-500 font-medium">Candidate Version:</span>
+          {/* 2. Candidate Version Input Pill */}
+          <div className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700 flex items-center gap-2 shrink-0 shadow-2xs">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+              Candidate Version:
+            </span>
             <input
               type="text"
               value={releaseVersion}
               onChange={e => setReleaseVersion(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-900 dark:text-white w-20 outline-none font-mono"
+              className="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white w-18 outline-none text-center"
+              title="Candidate staging release version tag"
             />
           </div>
 
-          <Button
+          {/* 3. Run Gate 2 & Assemble Test Build Primary Button */}
+          <button
+            type="button"
             onClick={handleRunGate2}
             disabled={isAssembling}
-            className="bg-accent-500 hover:bg-accent-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center space-x-2"
+            className="h-10 px-4 rounded-xl text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 shadow-sm hover:shadow transition-all flex items-center gap-2 shrink-0 whitespace-nowrap disabled:opacity-50 cursor-pointer"
             title="Runs Gate 2 verification and triggers Jenkins superapp-test-build to assemble candidate staging APK"
           >
             {isAssembling ? (
               <>
-                <svg className="animate-spin w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg className="animate-spin w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
                 <span>Running Gate 2 & Assembling...</span>
               </>
             ) : (
               <>
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <span>Run Gate 2 & Assemble Test Build</span>
               </>
             )}
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -169,7 +218,7 @@ export default function ReleasesPage() {
               <DotBadge color="bg-emerald-500 animate-pulse" />
               <span>OFFICIAL PRODUCTION RELEASE</span>
             </span>
-            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">superapp-release-build</span>
+            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">superapp-release-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
@@ -181,14 +230,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-xs">
             <span className="text-slate-500">Status: <strong className="text-emerald-700 dark:text-emerald-400">Live in Production</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
+            <Link
+              href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
               className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View Bundle</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -199,7 +247,7 @@ export default function ReleasesPage() {
               <DotBadge color="bg-accent-500" />
               <span>CANDIDATE STAGING ASSEMBLY</span>
             </span>
-            <span className="text-[11px] font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
+            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
@@ -211,14 +259,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
             <span className="text-slate-500">Staging: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Staged</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
+            <Link
+              href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
               className="text-xs font-bold text-accent-700 dark:text-accent-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Compare Diff</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -241,14 +288,13 @@ export default function ReleasesPage() {
           </div>
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
             <span className="text-slate-500">Repository: <strong className="text-slate-700 dark:text-slate-300">Nexus S3</strong></span>
-            <button
-              type="button"
-              onClick={() => setCompareModalOpen(true)}
-              className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:underline flex items-center gap-1"
+            <Link
+              href={`/releases/compare?base=v0.0.1&target=${encodeURIComponent(releaseVersion)}`}
+              className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View History</span>
               <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -266,7 +312,7 @@ export default function ReleasesPage() {
                   <h3 className="font-bold text-slate-900 dark:text-slate-100">
                     Candidate Staging Assembly & Gate 2 Verification
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
                     superapp-test-build
                   </span>
                 </div>
@@ -294,7 +340,7 @@ export default function ReleasesPage() {
                 {gate2Result.verifiedApps?.map((app: any) => (
                   <div key={app.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/50 last:border-0">
                     <span className="font-medium text-slate-800 dark:text-slate-200">{app.packageName}</span>
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                       <CheckIcon className="w-3 h-3" />
                       <span>Digest Matched</span>
                     </span>
@@ -308,7 +354,7 @@ export default function ReleasesPage() {
               <div className="font-mono text-xs text-accent-600 dark:text-accent-400 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
                 SHA256: {gate2Result.manifest?.integrityDigest}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2">
+              <div className="text-xs text-slate-500 mt-2">
                 Consolidated Permissions: {gate2Result.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}
               </div>
             </div>
@@ -324,7 +370,7 @@ export default function ReleasesPage() {
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                     SuperApp Candidate Test APK Ready
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
                       {releaseVersion} (Staging Candidate) • superapp-test-build
                     </span>
                   </h4>
@@ -348,21 +394,77 @@ export default function ReleasesPage() {
 
       {/* Approved MiniApps List Table with Clear Version Badging */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <span>Bundled MiniApp Candidates for Assembly</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Approved MiniApps eligible to be bundled into SuperApp candidate release {releaseVersion}.
-            </p>
+        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-4">
+          <div className="flex justify-between items-center gap-3 flex-wrap">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Bundled MiniApp Candidates for Assembly</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Approved MiniApps eligible to be bundled into SuperApp candidate release {releaseVersion}.
+              </p>
+            </div>
+            <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+              {filteredApps.length} MiniApps Queued
+            </span>
           </div>
-          <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-            {apps.length} MiniApps Queued
-          </span>
+
+          <SearchFilterBar
+            searchValue={searchQuery}
+            onSearchChange={(val) => {
+              setSearchQuery(val);
+              setCurrentPage(1);
+            }}
+            searchPlaceholder="Search by MiniApp name, appId, or package..."
+            filters={[
+              {
+                id: 'method',
+                label: 'Method',
+                value: methodFilter,
+                onChange: (val) => {
+                  setMethodFilter(val);
+                  setCurrentPage(1);
+                },
+                options: [
+                  { value: 'ALL', label: 'All Methods' },
+                  { value: 'WEBVIEW', label: 'WebView' },
+                  { value: 'FLUTTER_PACKAGE', label: 'Flutter Package' },
+                  { value: 'NATIVE_SDK', label: 'Native SDK' },
+                  { value: 'DEEP_LINK', label: 'Deep Link' },
+                ],
+                dropdownWidth: 'w-52',
+                align: 'right',
+              },
+              {
+                id: 'status',
+                label: 'Status',
+                value: statusFilter,
+                onChange: (val) => {
+                  setStatusFilter(val);
+                  setCurrentPage(1);
+                },
+                options: [
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'LIVE', label: 'Live' },
+                  { value: 'APPROVED', label: 'Approved' },
+                  { value: 'TESTING', label: 'Testing' },
+                  { value: 'TEST_PASSED', label: 'Test Passed' },
+                ],
+                dropdownWidth: 'w-48',
+                align: 'right',
+              },
+            ]}
+            isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL' || statusFilter !== 'ALL'}
+            onResetFilters={() => {
+              setSearchQuery('');
+              setMethodFilter('ALL');
+              setStatusFilter('ALL');
+              setCurrentPage(1);
+            }}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
@@ -377,12 +479,16 @@ export default function ReleasesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {apps.length === 0 ? (
+              {filteredApps.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">No approved mini apps queued for release.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                    {apps.length === 0
+                      ? 'No approved mini apps queued for release.'
+                      : 'No MiniApps match your search or filter criteria.'}
+                  </td>
                 </tr>
               ) : (
-                apps.map(app => {
+                paginatedApps.map(app => {
                   const hasLiveVersion = Boolean(app.currentReleaseVersion || app.status === 'ACTIVE');
                   const liveVerStr = app.currentReleaseVersion || (hasLiveVersion ? '1.0.0' : '-');
                   const candidateVerStr = app.version || '0.0.2';
@@ -426,8 +532,8 @@ export default function ReleasesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <AppStatusBadge app={app} />
-                          {versionStageOf(app) && <VersionStageBadge app={app} />}
+                          <AppStatusBadge app={app} showPrefix={true} />
+                          {versionStageOf(app) && <VersionStageBadge app={app} showPrefix={true} />}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -446,6 +552,23 @@ export default function ReleasesPage() {
             </tbody>
           </table>
         </div>
+        {filteredApps.length >= 5 && (
+          <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredApps.length}
+              pageSize={pageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              showPageSizeSelector
+              showTotal
+            />
+          </div>
+        )}
       </div>
 
       {/* SuperApp Release Comparator Modal */}

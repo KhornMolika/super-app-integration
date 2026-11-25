@@ -19,7 +19,10 @@ export function isStepRequiredInfoComplete(
       const hasSlug = Boolean(slugVal && /^[a-z0-9_.-]+$/.test(slugVal));
 
       // 3. Organization: required
-      const hasOrg = Boolean(formData.organization && formData.organization.trim());
+      const orgName = typeof formData.organization === 'string'
+        ? formData.organization.trim()
+        : (formData.organization as any)?.name?.trim() || '';
+      const hasOrg = Boolean(orgName || formData.organizationId || formData.organizationCode);
 
       // 4. Logo: required
       const hasLogo = Boolean(
@@ -180,7 +183,11 @@ export function getMissingRequirements(
       if (!(formData.name && formData.name.trim().length >= 2)) missing.push('a name');
       const logo = formData.logo?.trim() || '';
       if (!(logo.startsWith('http') || logo.startsWith('data:image/') || logo.startsWith('/'))) missing.push('an icon');
-      if (!formData.organization?.trim()) missing.push('an organization');
+      const orgName = typeof formData.organization === 'string'
+        ? formData.organization.trim()
+        : (formData.organization as any)?.name?.trim() || '';
+      const hasOrg = Boolean(orgName || formData.organizationId || formData.organizationCode);
+      if (!hasOrg) missing.push('an organization');
       const slug = (formData.slug || formData.appId || '').trim();
       if (!(slug && /^[a-z0-9_.-]+$/.test(slug))) missing.push('a valid app ID');
       break;

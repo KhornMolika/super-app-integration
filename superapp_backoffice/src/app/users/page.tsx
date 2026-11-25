@@ -25,6 +25,7 @@ import { ActionMenu } from '@/components/ui/ActionMenu';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   getRoleTheme,
   getUserRoles,
@@ -46,7 +47,7 @@ function UsersContent() {
   const canManageUsers = can('user:manage');
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '5', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialRole = searchParams.get('role') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
@@ -221,7 +222,7 @@ function UsersContent() {
     } finally {
       setLoadingUsers(false);
     }
-  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter]);
+  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter, toast]);
 
   // Fetch Roles and Organizations from Database via Next.js BFF proxy
   const fetchRoles = useCallback(async () => {
@@ -412,7 +413,7 @@ function UsersContent() {
                   {user.name}
                 </Link>
                 {user.staffId && (
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                     {user.staffId}
                   </span>
                 )}
@@ -785,7 +786,7 @@ function UsersContent() {
         );
       },
     },
-  ], [roleFilter, statusFilter, canManageUsers, handleOpenEditUser, handleToggleUserStatus, handleDeleteUser]);
+  ], [roleFilter, statusFilter, canManageUsers, currentUser, fetchUsers, fetchGlobalCounts, toast, handleToggleUserStatus, handleDeleteUser]);
   // Server-Driven Pagination Props for DataTable
   const paginationProps: PaginationProps = {
     currentPage: paginationMeta.page || currentPage,
@@ -806,38 +807,28 @@ function UsersContent() {
     <ProtectedRoute requiredPermission="user:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         {/* Page Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Users
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {isPlatformAdmin
-                  ? 'Manage operator accounts, status approvals, and platform user directory.'
-                  : 'Members of your organization. You can add, edit and deactivate them.'}
-              </p>
-            </div>
-          </div>
-          {/* Header Action Button */}
-          {canManageUsers && (
-            <Button
-              type="button"
-              onClick={handleOpenCreateUser}
-              className="w-full sm:w-auto gap-2 shadow-sm font-semibold justify-center"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              <span>Create New User</span>
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Users"
+          description={
+            isPlatformAdmin
+              ? 'Manage operator accounts, status approvals, and platform user directory.'
+              : 'Members of your organization. You can add, edit and deactivate them.'
+          }
+          actions={
+            canManageUsers ? (
+              <Button
+                type="button"
+                onClick={handleOpenCreateUser}
+                className="w-full sm:w-auto gap-2 shadow-sm font-semibold justify-center"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>Create New User</span>
+              </Button>
+            ) : undefined
+          }
+        />
         {/* KPI Quick Status Filters Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <button
@@ -848,7 +839,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
               Total Accounts
             </span>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
@@ -863,7 +854,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span>Active</span>
             </div>
@@ -879,7 +870,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               <span>Pending Review</span>
             </div>
@@ -895,7 +886,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
               <span>Unverified Email</span>
             </div>
@@ -911,7 +902,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               <span>Inactive</span>
             </div>

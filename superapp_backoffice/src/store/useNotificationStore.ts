@@ -8,7 +8,9 @@ interface NotificationStoreState {
   readCount: number;
   isLoading: boolean;
   isInitialized: boolean;
+  ownerUserId: string | null;
 
+  syncUserScope: (userId: string | null) => void;
   fetchNotifications: () => Promise<void>;
   addNotification: (raw: any) => void;
   markAsRead: (id: string) => Promise<void>;
@@ -35,6 +37,19 @@ export const useNotificationStore = create<NotificationStoreState>()(
       readCount: 0,
       isLoading: false,
       isInitialized: false,
+      ownerUserId: null,
+
+      syncUserScope: (userId: string | null) => {
+        if (get().ownerUserId !== userId) {
+          set({
+            notifications: [],
+            unreadCount: 0,
+            readCount: 0,
+            isInitialized: false,
+            ownerUserId: userId,
+          });
+        }
+      },
 
       fetchNotifications: async () => {
         set({ isLoading: true });
@@ -139,7 +154,10 @@ export const useNotificationStore = create<NotificationStoreState>()(
     }),
     {
       name: 'superapp-notifications-cache',
-      partialize: (state) => ({ notifications: state.notifications }),
+      partialize: (state) => ({
+        notifications: state.notifications,
+        ownerUserId: state.ownerUserId,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.notifications)) {
           const counts = computeCounts(state.notifications);

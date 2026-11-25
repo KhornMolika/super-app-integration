@@ -29,12 +29,12 @@ export default function DashboardMetricsGrid({
               </svg>
             </div>
             {metrics.pendingReviews > 0 && (
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                 {metrics.pendingReviews} pending
               </span>
             )}
           </div>
-          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
             Total MiniApps
           </h3>
           <div className="mt-1 flex items-baseline space-x-2">
@@ -55,16 +55,16 @@ export default function DashboardMetricsGrid({
                 </svg>
               </div>
               {metrics.pendingUsersCount > 0 ? (
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                   {metrics.pendingUsersCount} unapproved
                 </span>
               ) : (
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300">
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300">
                   Active
                 </span>
               )}
             </div>
-            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
               Platform Users
             </h3>
             <div className="mt-1 flex items-baseline space-x-2">
@@ -79,7 +79,7 @@ export default function DashboardMetricsGrid({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
-            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
               Developer Community
             </h3>
             <div className="mt-1 flex items-baseline space-x-2">
@@ -99,11 +99,11 @@ export default function DashboardMetricsGrid({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
               Regulators
             </span>
           </div>
-          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
             Authorities &amp; Orgs
           </h3>
           <div className="mt-1 flex items-baseline space-x-2">
@@ -122,11 +122,11 @@ export default function DashboardMetricsGrid({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
               RBAC
             </span>
           </div>
-          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
             Capabilities
           </h3>
           <div className="mt-1 flex items-baseline space-x-2">
@@ -145,11 +145,11 @@ export default function DashboardMetricsGrid({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
               </svg>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
               Testing
             </span>
           </div>
-          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
             Test Build APK
           </h3>
           <div className="mt-1 flex items-baseline space-x-2">
@@ -168,11 +168,11 @@ export default function DashboardMetricsGrid({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-300 dark:border-accent-800">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-300 dark:border-accent-800">
               Production
             </span>
           </div>
-          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
+          <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
             Official Release
           </h3>
           <div className="mt-1 flex items-baseline space-x-2">
@@ -214,7 +214,7 @@ export default function DashboardMetricsGrid({
             In Review
           </h3>
           {myPendingAppsCount > 0 && (
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
               Awaiting Approval
             </span>
           )}
@@ -253,7 +253,7 @@ export default function DashboardMetricsGrid({
             Telegram Alerts
           </h3>
           <span
-            className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+            className={`px-2 py-0.5 text-xs font-bold rounded-full ${
               isTelegramConnected
                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'

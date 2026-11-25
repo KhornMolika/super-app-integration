@@ -465,6 +465,32 @@ export class MiniappLifecycleHelper {
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
+    const useLocalScanner =
+      process.env.USE_LOCAL_SECURITY_SCANNER === 'true' ||
+      process.env.LOCAL_SECURITY_SCANNER === 'true';
+
+    if (useLocalScanner) {
+      this.logger.log(
+        `Local Security Engine active (USE_LOCAL_SECURITY_SCANNER=true). Executing in-process scan for ${method} MiniApp ${id}...`,
+      );
+      this.localSecurityScannerService.scanMiniApp(id, method, {
+        fallbackReason: 'Local Security Engine',
+        securityChecks: app.securityChecks,
+      });
+
+      await logActivityFn(
+        id,
+        actorId,
+        'STATUS_CHANGE',
+        'Submitted for Review',
+        'App submitted for review',
+        'SUBMIT_MINI_APP',
+        null,
+        app,
+      );
+      return app;
+    }
+
     this.logger.log(
       `Triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
@@ -512,6 +538,8 @@ export class MiniappLifecycleHelper {
             fallbackReason: reason,
             securityChecks: app.securityChecks,
           });
+        } else {
+          this.monitorJenkinsValidation(id, method);
         }
       })
       .catch(async (err) => {
@@ -645,6 +673,47 @@ export class MiniappLifecycleHelper {
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
+    const useLocalScanner =
+      process.env.USE_LOCAL_SECURITY_SCANNER === 'true' ||
+      process.env.LOCAL_SECURITY_SCANNER === 'true';
+
+    if (useLocalScanner) {
+      this.logger.log(
+        `Local Security Engine active (USE_LOCAL_SECURITY_SCANNER=true). Executing in-process scan for ${method} MiniApp ${id}...`,
+      );
+      this.localSecurityScannerService.scanMiniApp(id, method, {
+        fallbackReason: 'Local Security Engine',
+        securityChecks: activeChecks,
+      });
+
+      await this.notificationsService.createNotification(
+        app.ownerId || '',
+        'Local Security Scan Running',
+        `Automated security audit running via Local Security Engine.`,
+        'SCAN_STARTED',
+        app.id,
+      );
+
+      await logActivityFn(
+        id,
+        actorId,
+        'VALIDATION',
+        'Local Security Engine',
+        `Automated security scan initiated using Local Security Engine.`,
+        'RESCAN_MINI_APP',
+        null,
+        app,
+      );
+
+      return {
+        success: true,
+        engine: 'LOCAL',
+        message: `Automated scan is running via Local Security Engine.`,
+        validationStatus: 'RUNNING',
+        validationStages: initialStages,
+      };
+    }
+
     this.logger.log(
       `Re-triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
@@ -745,6 +814,9 @@ export class MiniappLifecycleHelper {
       app,
     );
 
+    // Watchdog poller for Jenkins validation pipeline
+    this.monitorJenkinsValidation(id, method);
+
     return {
       success: true,
       engine: 'JENKINS',
@@ -752,33 +824,274 @@ export class MiniappLifecycleHelper {
       validationStatus: 'RUNNING',
       validationStages: initialStages,
     };
+  }
 
-    await this.notificationsService.createNotification(
-      app.ownerId || '',
-      'Scan Re-run',
-      `${app.name || 'MiniApp'} automated security scan re-initiated on Jenkins.`,
-      'SCAN_STARTED',
-      app.id,
-    );
-
-    await logActivityFn(
-      id,
-      actorId,
-      'VALIDATION',
-      'Scan Re-run',
-      'Automated security scan re-triggered on Jenkins',
-      'RESCAN_MINI_APP',
-      null,
-      app,
-    );
-
-    return {
-      success: true,
-      engine: 'JENKINS',
-      message: 'Automated security scan triggered successfully on Jenkins.',
-      validationStatus: 'RUNNING',
-      validationStages: initialStages,
+  /**
+   * Watchdog poller for Jenkins validation pipelines (WebView, Flutter Package, Native SDK, Deep Link).
+   * Detects early Jenkins crashes, updates live stages, and finalizes on pipeline completion.
+   */
+  private monitorJenkinsValidation(miniAppId: string, integrationMethod: string) {
+    const methodJobMap: Record<string, string> = {
+      WEBVIEW: 'miniapp-validation-webview',
+      FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+      NATIVE_SDK: 'miniapp-validation-native-sdk',
+      DEEP_LINK: 'miniapp-validation-deep-link',
     };
+    const targetJob = methodJobMap[integrationMethod] || 'miniapp-validation';
+
+    let polls = 0;
+    const maxPolls = 300; // 300 * 2.5s = ~12.5 minutes
+
+    const interval = setInterval(async () => {
+      polls++;
+      try {
+        if (!this.miniappRepository?.findOne) {
+          clearInterval(interval);
+          return;
+        }
+        const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+        if (app) await this.runs?.loadScanInProgress(app);
+        if (!app || app.validationStatus !== 'RUNNING' || polls >= maxPolls) {
+          clearInterval(interval);
+          if (app && app.validationStatus === 'RUNNING' && polls >= maxPolls) {
+            await this.markValidationFailed(
+              miniAppId,
+              'Validation pipeline timed out waiting for Jenkins CI.',
+            );
+          }
+          return;
+        }
+
+        const jStatus = await this.jenkinsService.getJobBuildStatus(targetJob);
+        if (!jStatus.available) return;
+
+        // If the build belongs to another miniApp, ignore until our build is active
+        if (jStatus.miniAppId && jStatus.miniAppId !== miniAppId) return;
+
+        // Advance live stages from Jenkins console log markers
+        if (jStatus.consoleText && app.validationStages) {
+          const consoleText = jStatus.consoleText;
+          const stages: Record<string, any> = { ...app.validationStages };
+          let changed = false;
+
+          const stageKeys = Object.keys(stages);
+          for (let i = 0; i < stageKeys.length; i++) {
+            const k = stageKeys[i];
+            const stageNum = i + 1;
+            const stageMarker = `[STAGE ${stageNum}]`;
+            const nextMarker = `[STAGE ${stageNum + 1}]`;
+
+            const hasStarted = consoleText.includes(stageMarker);
+            const hasNext = consoleText.includes(nextMarker) || consoleText.includes('Finished:');
+
+            if (hasNext && stages[k].status !== 'COMPLETED') {
+              stages[k] = {
+                ...stages[k],
+                status: 'COMPLETED',
+                details: `${stages[k].name || 'Security check'} passed and cleared on Jenkins CI.`,
+                updatedAt: new Date().toISOString(),
+              };
+              changed = true;
+            } else if (hasStarted && !hasNext && stages[k].status !== 'RUNNING') {
+              stages[k] = {
+                ...stages[k],
+                status: 'RUNNING',
+                details: `Executing security verification on Jenkins runner...`,
+                updatedAt: new Date().toISOString(),
+              };
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            app.validationStages = stages;
+            await this.miniappRepository.save(app);
+            await persistAppVersions(this.miniappRepository, app);
+            await this.runs?.syncScan(app);
+            this.notificationsService?.emitStageUpdate?.({
+              miniAppId: app.id,
+              stages: app.validationStages,
+              validationStatus: 'RUNNING',
+            });
+          }
+        }
+
+        // When Jenkins completes
+        if (!jStatus.building && jStatus.result !== null) {
+          clearInterval(interval);
+          if (jStatus.result === 'SUCCESS') {
+            this.logger.log(
+              `Jenkins validation for ${integrationMethod} app ${miniAppId} completed with SUCCESS (Build #${jStatus.buildNumber || 'latest'}). Finalizing pass.`,
+            );
+            await this.markValidationPassed(miniAppId, integrationMethod, {
+              ...jStatus,
+              jobName: targetJob,
+            });
+          } else {
+            const errorLine =
+              jStatus.consoleText
+                ?.split('\n')
+                .map((l) => l.trim())
+                .filter(
+                  (l) =>
+                    l.includes('FAILURE') ||
+                    l.includes('ERROR') ||
+                    l.includes('Exception') ||
+                    l.includes('failed') ||
+                    l.includes('unexpected char'),
+                )
+                .slice(-3)
+                .join(' | ') ||
+              `Jenkins validation pipeline finished with ${jStatus.result || 'FAILURE'}.`;
+
+            this.logger.warn(
+              `Jenkins validation failure for ${integrationMethod} app ${miniAppId}: ${errorLine}`,
+            );
+            await this.markValidationFailed(miniAppId, errorLine);
+          }
+        }
+      } catch (err: any) {
+        this.logger.debug(`Jenkins validation watchdog poll error: ${err.message}`);
+      }
+    }, 2500);
+  }
+
+  private async markValidationPassed(
+    miniAppId: string,
+    integrationMethod: string,
+    jStatus?: any,
+  ) {
+    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    if (app) await this.runs?.loadScanInProgress(app);
+    if (!app || app.validationStatus !== 'RUNNING') return;
+
+    const stages: Record<string, any> = { ...(app.validationStages || {}) };
+    for (const k of Object.keys(stages)) {
+      stages[k] = {
+        ...stages[k],
+        status: 'COMPLETED',
+        details: `${stages[k].name || 'Security check'} verified and cleared on Jenkins CI.`,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    app.validationStatus = 'PASSED';
+    if (
+      !app.pendingRevision &&
+      ['DRAFT', 'SUBMITTED'].includes((app.lifecycleStatus || '').toUpperCase())
+    ) {
+      app.lifecycleStatus = 'IN_REVIEW';
+    } else if (app.pendingRevision) {
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        validationStatus: 'PASSED',
+        revisionStatus: 'IN_REVIEW',
+      };
+    }
+    app.validationStages = stages;
+    app.validationReport = {
+      score: 100,
+      status: 'PASSED',
+      method: integrationMethod,
+      buildNumber: jStatus?.buildNumber,
+      buildUrl: jStatus?.buildUrl,
+      jobName: jStatus?.jobName,
+      completedAt: new Date().toISOString(),
+      findings: [],
+      checks: Object.fromEntries(
+        Object.keys(stages).map((k) => [
+          k,
+          { passed: true, details: stages[k].details },
+        ]),
+      ),
+    };
+
+    await this.miniappRepository.save(app);
+    await persistAppVersions(this.miniappRepository, app);
+    await this.runs?.syncScan(app);
+
+    this.notificationsService?.emitStageUpdate?.({
+      miniAppId: app.id,
+      stages: app.validationStages,
+      validationStatus: 'PASSED',
+    });
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Security Validation Passed',
+        `Automated security scan for "${app.name || 'MiniApp'}" passed all security engines on Jenkins CI.`,
+        'SCAN_COMPLETED',
+        app.id,
+      );
+    }
+  }
+
+  private async markValidationFailed(miniAppId: string, errorMessage: string) {
+    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    if (app) await this.runs?.loadScanInProgress(app);
+    if (!app || app.validationStatus !== 'RUNNING') return;
+
+    const stages: Record<string, any> = { ...(app.validationStages || {}) };
+    let hadRunning = false;
+    for (const k of Object.keys(stages)) {
+      if (stages[k]?.status === 'RUNNING') {
+        stages[k] = {
+          ...stages[k],
+          status: 'FAILED',
+          details: errorMessage,
+          updatedAt: new Date().toISOString(),
+        };
+        hadRunning = true;
+      }
+    }
+    if (!hadRunning && Object.keys(stages).length > 0) {
+      const firstKey = Object.keys(stages)[0];
+      stages[firstKey] = {
+        ...stages[firstKey],
+        status: 'FAILED',
+        details: errorMessage,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    app.validationStatus = 'FAILED';
+    app.validationStages = stages;
+    app.validationReport = {
+      score: 45,
+      status: 'FAILED',
+      failureType: 'PIPELINE_ERROR',
+      completedAt: new Date().toISOString(),
+      findings: [
+        {
+          id: 'JENKINS_PIPELINE_FAILURE',
+          title: 'Jenkins Pipeline Execution Failed',
+          description: errorMessage,
+          recommendation:
+            'Check the Jenkins build console logs and re-run the security scan.',
+        },
+      ],
+    };
+
+    await this.miniappRepository.save(app);
+    await persistAppVersions(this.miniappRepository, app);
+    await this.runs?.syncScan(app);
+
+    this.notificationsService?.emitStageUpdate?.({
+      miniAppId: app.id,
+      stages: app.validationStages,
+      validationStatus: 'FAILED',
+    });
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Security Validation Failed',
+        `Automated security scan for "${app.name || 'MiniApp'}" failed: ${errorMessage}`,
+        'SCAN_FAILED',
+        app.id,
+      );
+    }
   }
 
   async cancelValidation(
@@ -836,7 +1149,7 @@ export class MiniappLifecycleHelper {
     await persistAppVersions(this.miniappRepository, app);
     await this.runs?.syncScan(app, actorId);
 
-    this.notificationsService.emitStageUpdate({
+    this.notificationsService?.emitStageUpdate?.({
       miniAppId: id,
       stages: app.validationStages,
       validationStatus: 'FAILED',

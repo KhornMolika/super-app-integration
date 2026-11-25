@@ -45,7 +45,7 @@ export default function NotFound() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 active:scale-95 transition-all shadow-xs cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all shadow-xs cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-slate-400" />
             <span>Go Back</span>
@@ -82,7 +82,7 @@ export default function NotFound() {
                 <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>MiniApp Directory</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Packages & sandbox
               </p>
             </Link>
@@ -95,7 +95,7 @@ export default function NotFound() {
                 <Layers className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>Banners</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Promotional heroes
               </p>
             </Link>
@@ -108,7 +108,7 @@ export default function NotFound() {
                 <BookOpen className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>Guidelines</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Regulatory standards
               </p>
             </Link>

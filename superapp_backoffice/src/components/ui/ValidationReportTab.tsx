@@ -7,9 +7,11 @@ import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
-import { MoreHorizontal, PlayCircle, Printer, ArrowLeft, Layers } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, ArrowLeft, Layers, Table, Check, CheckCircle2, ShieldAlert, Activity } from 'lucide-react';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { miniappsApi } from '@/api';
 import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
@@ -263,6 +265,177 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   },
 };
 
+function getMethodBadge(method?: string) {
+  switch (method) {
+    case 'FLUTTER_PACKAGE':
+      return {
+        label: 'Flutter Package',
+        classes: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      };
+    case 'WEBVIEW':
+      return {
+        label: 'WebView Integration',
+        classes: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+      };
+    case 'MINI_PROGRAM':
+      return {
+        label: 'MiniProgram DSL',
+        classes: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+      };
+    case 'MOBILE_APP':
+      return {
+        label: 'Native Mobile App',
+        classes: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      };
+    default:
+      return {
+        label: method || 'MiniApp',
+        classes: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      };
+  }
+}
+
+interface VersionSelectorPopoverProps {
+  selectedVersion: string;
+  versionList: any[];
+  onSelectVersion: (ver: string) => void;
+  miniApp: any;
+}
+
+function VersionSelectorPopover({
+  selectedVersion,
+  versionList,
+  onSelectVersion,
+  miniApp,
+}: VersionSelectorPopoverProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const activeVerObj = versionList.find(
+    (v) => (v.version || v) === selectedVersion
+  );
+  const isLive = activeVerObj?.status === 'ACTIVE' || selectedVersion === miniApp.currentReleaseVersion;
+  const isTesting = activeVerObj?.status === 'TESTING' || selectedVersion === miniApp.activeTestVersion;
+  const isReview = activeVerObj?.status === 'IN_REVIEW';
+
+  return (
+    <div className="relative inline-block" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-all cursor-pointer group"
+        title="Switch Release Version"
+      >
+        <span className="text-xs font-sans font-extrabold uppercase tracking-wider text-slate-400">
+          Version:
+        </span>
+        <span className="font-bold text-slate-900 dark:text-white">
+          {selectedVersion || 'v1.0.0'}
+        </span>
+        {isLive && (
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+            Live
+          </span>
+        )}
+        {isTesting && (
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+            Testing
+          </span>
+        )}
+        {isReview && (
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+            Review
+          </span>
+        )}
+        <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-transform duration-200" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center justify-between">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Select Release Version
+            </span>
+            <span className="text-xs font-mono text-slate-400">
+              {versionList.length} total
+            </span>
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {versionList.length > 0 ? (
+              versionList.map((ver) => {
+                const verName = ver.version || ver;
+                const isSelected = verName === selectedVersion;
+                const vLive = ver.status === 'ACTIVE' || verName === miniApp.currentReleaseVersion;
+                const vTesting = ver.status === 'TESTING' || verName === miniApp.activeTestVersion;
+                const vReview = ver.status === 'IN_REVIEW';
+
+                return (
+                  <button
+                    key={ver.id || verName}
+                    type="button"
+                    onClick={() => {
+                      onSelectVersion(verName);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 font-bold border border-brand-200 dark:border-brand-800'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold">{verName}</span>
+                      {vLive && (
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          Live
+                        </span>
+                      )}
+                      {vTesting && (
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                          Testing
+                        </span>
+                      )}
+                      {vReview && (
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          Review
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-2 text-xs text-slate-500 font-mono">
+                {selectedVersion || 'v1.0.0'}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ValidationReportTab({
   miniApp,
   onRefresh,
@@ -272,6 +445,17 @@ export default function ValidationReportTab({
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlVersion = searchParams?.get('version');
+
+  const methodBadge = useMemo(() => getMethodBadge(miniApp?.integrationMethod), [miniApp?.integrationMethod]);
+  const miniAppLogo = useMemo(
+    () =>
+      miniApp?.logo ||
+      miniApp?.logoUrl ||
+      miniApp?.iconUrl ||
+      miniApp?.pendingRevision?.logo ||
+      miniApp?.pendingRevision?.logoUrl,
+    [miniApp]
+  );
 
   const [mounted, setMounted] = useState(false);
   const [isReScanning, setIsReScanning] = useState(false);
@@ -330,16 +514,24 @@ export default function ValidationReportTab({
         console.warn('Could not load versions list for report, using default:', err);
         setSelectedVersion(miniApp.currentReleaseVersion || miniApp.activeTestVersion || 'v1.0.0');
       });
-  }, [miniApp?.id, miniApp?.status, miniApp?.activeTestVersion, miniApp?.currentReleaseVersion, urlVersion]);
+  }, [
+    miniApp?.id,
+    miniApp?.status,
+    miniApp?.activeTestVersion,
+    miniApp?.currentReleaseVersion,
+    miniApp?.pendingRevision?.version,
+    urlVersion,
+  ]);
 
-  // When selectedVersion changes, fetch authoritative version report
+  // When selectedVersion changes or miniApp updates, fetch authoritative version report
   useEffect(() => {
     if (!miniApp?.id || !selectedVersion) return;
     setIsLoadingVersionReport(true);
     miniappsApi
       .getVersionReport(miniApp.id, selectedVersion)
       .then((data: any) => {
-        setVersionReportData(data);
+        const payload = (data && typeof data === 'object' && 'data' in data && data.data) ? data.data : data;
+        setVersionReportData(payload);
       })
       .catch((err) => {
         console.warn('Could not fetch dedicated version report, using parent miniApp state:', err);
@@ -348,11 +540,11 @@ export default function ValidationReportTab({
       .finally(() => {
         setIsLoadingVersionReport(false);
       });
-  }, [miniApp?.id, selectedVersion]);
+  }, [miniApp?.id, miniApp?.updatedAt, miniApp?.validationStatus, selectedVersion]);
   
-  // Active sub-tab inside the unified security command center: 'findings' | 'engines' | 'sbom' | 'runs'
+  // Active sub-tab inside the unified security command center: 'engines' | 'findings' | 'sbom' | 'runs'
   const [activeViewTab, setActiveViewTab] = useState<'findings' | 'engines' | 'sbom' | 'runs'>(
-    defaultSubTab || 'findings'
+    defaultSubTab || 'engines'
   );
 
   useEffect(() => {
@@ -375,20 +567,58 @@ export default function ValidationReportTab({
   const [showRawSbomJson, setShowRawSbomJson] = useState(false);
   const [sbomCopied, setSbomCopied] = useState(false);
 
+  // Security Report Inspector Modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showRawReportJson, setShowRawReportJson] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
+  const [reportSearchQuery, setReportSearchQuery] = useState('');
+  const [reportSeverityFilter, setReportSeverityFilter] = useState('ALL');
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const effectiveData = versionReportData || miniApp;
-  const report = effectiveData.validationReport || null;
-  const stages = effectiveData.validationStages || {};
-  const issues = miniApp.issues || [];
-  const findings = report?.findings || [];
-  const sbom = report?.sbom || effectiveData.validationReport?.sbom || null;
-  const valStatus = (effectiveData.validationStatus || 'PENDING').toUpperCase();
+  const effectiveData = useMemo(() => {
+    const vReport = (versionReportData && typeof versionReportData === 'object' && 'data' in versionReportData && versionReportData.data)
+      ? versionReportData.data
+      : versionReportData;
+    if (!vReport) return miniApp;
+    const isReportEmpty =
+      !vReport.validationReport &&
+      (!vReport.validationStages || Object.keys(vReport.validationStages).length === 0);
+    if (isReportEmpty && (miniApp.validationStatus === 'FAILED' || miniApp.validationStatus === 'PASSED')) {
+      return {
+        ...vReport,
+        validationStatus: miniApp.validationStatus,
+        validationScore: miniApp.validationScore,
+        validationReport: miniApp.validationReport,
+        validationStages: miniApp.validationStages,
+        validationErrors: miniApp.validationErrors,
+      };
+    }
+    return vReport;
+  }, [versionReportData, miniApp]);
+
+  const report = effectiveData.validationReport || miniApp.validationReport || null;
+  const stages = useMemo(
+    () =>
+      effectiveData.validationStages && Object.keys(effectiveData.validationStages).length > 0
+        ? effectiveData.validationStages
+        : miniApp.validationStages || {},
+    [effectiveData.validationStages, miniApp.validationStages],
+  );
+  const issues = useMemo(() => miniApp.issues || [], [miniApp.issues]);
+  const findings = useMemo(() => report?.findings || [], [report?.findings]);
+  const sbom = report?.sbom || effectiveData.validationReport?.sbom || miniApp.validationReport?.sbom || null;
+  const valStatus = (
+    effectiveData.validationStatus && effectiveData.validationStatus !== 'PENDING'
+      ? effectiveData.validationStatus
+      : miniApp.validationStatus || 'PENDING'
+  ).toUpperCase();
   const score =
     effectiveData.validationScore ??
     report?.score ??
+    miniApp.validationScore ??
     (valStatus === 'PASSED' ? 100 : valStatus === 'FAILED' ? 45 : null);
   const isFlutterPackage = (effectiveData.integrationMethod || miniApp.integrationMethod) === 'FLUTTER_PACKAGE';
 
@@ -444,8 +674,27 @@ export default function ValidationReportTab({
     }));
 
     (issues || []).forEach((iss: any) => {
-      const findingId = iss.metadata?.findingId || iss.type || 'ISSUE';
-      if (!list.some((f) => f.id === findingId || (f.description && f.description === iss.description))) {
+      const findingId = iss.metadata?.findingId || iss.id || `${iss.type || 'ISSUE'}-${iss.metadata?.field || Math.random().toString(36).slice(2, 7)}`;
+      const issCapMatch = (iss.description || '').match(/capability\s+"([^"]+)"/i);
+      const capKey = issCapMatch ? issCapMatch[1].toLowerCase() : null;
+
+      const existingCapFinding = capKey
+        ? list.find((f) => {
+            const fCapMatch = (f.title || '').match(/capability\s+"([^"]+)"/i) || (f.description || '').match(/capability\s+"([^"]+)"/i);
+            const fKey = fCapMatch ? fCapMatch[1].toLowerCase() : null;
+            return (fKey && fKey === capKey) || (f.id || '').toLowerCase().includes(`_${capKey}`);
+          })
+        : null;
+
+      if (existingCapFinding) {
+        existingCapFinding.severity = 'HIGH';
+        if (iss.description && !existingCapFinding.description.includes('not recognized')) {
+          existingCapFinding.description = iss.description;
+        }
+        return;
+      }
+
+      if (!list.some((f) => (iss.id && f.id === iss.id) || (f.description && f.description === iss.description))) {
         list.push({
           id: findingId,
           severity: (iss.severity || 'HIGH').toUpperCase(),
@@ -454,7 +703,7 @@ export default function ValidationReportTab({
           engineId: iss.metadata?.engineId || iss.metadata?.stage || (
             iss.type?.toLowerCase().includes('secret') ? 'secret_scan' :
             iss.type?.toLowerCase().includes('cve') || iss.type?.toLowerCase().includes('dep') ? 'dependency_scan' :
-            iss.type?.toLowerCase().includes('perm') || iss.type?.toLowerCase().includes('cap') ? 'capability_gate' :
+            iss.type?.toLowerCase().includes('perm') || iss.type?.toLowerCase().includes('cap') || iss.metadata?.field?.toLowerCase().includes('perm') || iss.description?.toLowerCase().includes('capability') ? 'capability_gate' :
             iss.type?.toLowerCase().includes('sast') || iss.type?.toLowerCase().includes('dart') ? 'sast' :
             undefined
           ),
@@ -466,8 +715,46 @@ export default function ValidationReportTab({
       }
     });
 
+    // Fallback: If validationErrors exists on the app/version and wasn't already in issues
+    const scanValStatus = String(
+      effectiveData.validationStatus || miniApp.validationStatus || '',
+    ).toUpperCase();
+    const capGateCompletedClean =
+      stages?.capability_gate?.status === 'COMPLETED' &&
+      !stages?.capability_gate?.findings;
+    if (
+      scanValStatus !== 'PASSED' &&
+      effectiveData.validationErrors &&
+      typeof effectiveData.validationErrors === 'object'
+    ) {
+      Object.entries(effectiveData.validationErrors).forEach(([field, msg]) => {
+        if (capGateCompletedClean && field.toLowerCase().includes('perm')) {
+          return;
+        }
+        const desc = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        if (!list.some((f) => f.description === desc)) {
+          list.push({
+            id: `VALIDATION_ERROR-${field}`,
+            severity: 'HIGH',
+            title: 'VALIDATION_ERROR',
+            description: desc,
+            engineId: field.toLowerCase().includes('perm') || desc.toLowerCase().includes('capability') ? 'capability_gate' : undefined,
+            recommendation: 'Remediate this finding in accordance with SuperApp security policies.',
+          });
+        }
+      });
+    }
+
     return list;
-  }, [findings, issues]);
+  }, [
+    findings,
+    issues,
+    effectiveData.validationErrors,
+    effectiveData.validationStatus,
+    miniApp.validationStatus,
+    stages?.capability_gate?.findings,
+    stages?.capability_gate?.status,
+  ]);
 
   // Stage aliases mapping
   const checkAliases: Record<string, string[]> = useMemo(() => ({
@@ -613,7 +900,7 @@ export default function ValidationReportTab({
   }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage, checkAliases, stageFindingsMap]);
 
   const { role } = useAuth();
-  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const [selectedStageLog, setSelectedStageLog] = useState<{
     name: string;
@@ -664,8 +951,11 @@ export default function ValidationReportTab({
   // Supply Chain Pipeline Stepper calculations (for Flutter & Native SDK)
   const rev = miniApp?.pendingRevision;
   const inRevision = Boolean(rev?.integrationConfig);
-  const conf: Record<string, any> =
-    (inRevision ? rev.integrationConfig : miniApp?.integrationConfigFlutter || miniApp?.integrationConfig) || {};
+  const conf: Record<string, any> = useMemo(
+    () =>
+      (inRevision ? rev.integrationConfig : miniApp?.integrationConfigFlutter || miniApp?.integrationConfig) || {},
+    [inRevision, rev?.integrationConfig, miniApp?.integrationConfigFlutter, miniApp?.integrationConfig],
+  );
   const storagePath: string | undefined = conf.packageStoragePath || conf.minioKey;
   const published = Boolean(conf.nexusPublishedVersion) && !conf.nexusPublishError;
   const publishError: string | undefined = conf.nexusPublishError || undefined;
@@ -675,11 +965,28 @@ export default function ValidationReportTab({
     valStatus === 'PASSED' ? 'done' : valStatus === 'FAILED' ? 'failed' : isScanningActive ? 'running' : 'waiting';
   const nexusStepState = published
     ? 'done'
-    : publishError
-    ? 'failed'
     : valStatus !== 'PASSED'
     ? 'waiting'
+    : publishError
+    ? 'failed'
     : 'waiting';
+
+  const dartSdkWarning = useMemo(() => {
+    if (report?.ingest?.sdkWarning) return report.ingest.sdkWarning;
+    if (conf?.sdkWarning) return conf.sdkWarning;
+    const sdkFinding = allFindings.find(
+      (f) =>
+        (f.description && f.description.includes('Dart SDK')) ||
+        (f.description && f.description.includes('SDK version ^')) ||
+        (f.title && f.title.includes('SDK version')),
+    );
+    if (sdkFinding) {
+      const match = sdkFinding.description.match(/requires SDK version (\^[0-9.]+)/i);
+      const reqVer = match ? match[1] : '^3.12.2';
+      return `Your package requires Dart SDK ${reqVer}, but the SuperApp platform currently runs on Dart 3.12.0. Please update your environment constraint to '>=3.0.0 <4.0.0' to ensure compatibility.`;
+    }
+    return null;
+  }, [report, conf, allFindings]);
 
   const handleDownloadScanReportMarkdown = () => {
     const lines = [
@@ -739,12 +1046,6 @@ export default function ValidationReportTab({
     URL.revokeObjectURL(url);
   };
 
-  const handlePrintReport = () => {
-    if (typeof window !== 'undefined') {
-      window.print();
-    }
-  };
-
   const handleDownloadAuditJson = () => {
     const dataToExport = {
       exportedAt: new Date().toISOString(),
@@ -771,6 +1072,58 @@ export default function ValidationReportTab({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const fullAuditReportData = useMemo(() => {
+    return {
+      exportedAt: report?.completedAt || new Date().toISOString(),
+      miniApp: {
+        id: miniApp.id,
+        appId: miniApp.appId,
+        name: miniApp.name,
+        integrationMethod: miniApp.integrationMethod,
+        version: selectedVersion || miniApp.currentReleaseVersion || '1.0.0',
+        validationStatus: valStatus,
+        validationScore: score,
+      },
+      summary: {
+        score: score ?? 100,
+        status: valStatus,
+        totalFindings: allFindings.length,
+        critical: allFindings.filter((f) => f.severity === 'CRITICAL').length,
+        high: allFindings.filter((f) => f.severity === 'HIGH').length,
+        medium: allFindings.filter((f) => f.severity === 'MEDIUM').length,
+        low: allFindings.filter((f) => f.severity === 'LOW').length,
+      },
+      gates: report?.checks || {},
+      stages: stages || {},
+      findings: allFindings,
+      report,
+    };
+  }, [miniApp, selectedVersion, valStatus, score, allFindings, report, stages]);
+
+  const handleCopyReportJson = () => {
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(JSON.stringify(fullAuditReportData, null, 2));
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2000);
+    }
+  };
+
+  const filteredModalFindings = useMemo(() => {
+    return allFindings.filter((f) => {
+      const matchesSeverity = reportSeverityFilter === 'ALL' || f.severity === reportSeverityFilter;
+      const q = reportSearchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        (f.title && f.title.toLowerCase().includes(q)) ||
+        (f.description && f.description.toLowerCase().includes(q)) ||
+        (f.cveId && f.cveId.toLowerCase().includes(q)) ||
+        (f.filePath && f.filePath.toLowerCase().includes(q)) ||
+        (f.id && f.id.toLowerCase().includes(q)) ||
+        (f.engineId && f.engineId.toLowerCase().includes(q));
+      return matchesSeverity && matchesSearch;
+    });
+  }, [allFindings, reportSeverityFilter, reportSearchQuery]);
 
   const handleDownloadSbom = () => {
     if (!sbom) return;
@@ -880,7 +1233,13 @@ export default function ValidationReportTab({
         : miniApp.integrationConfig?.repoUrl
         ? `Git Repo: ${miniApp.integrationConfig.repoUrl}${miniApp.integrationConfig.commitSha ? ` @ ${miniApp.integrationConfig.commitSha.substring(0, 7)}` : ''}`
         : 'Flutter Package Ingestion')
-    : (miniApp.integrationConfig?.productionUrl || miniApp.integrationConfigWebView?.productionUrl || 'N/A');
+    : (miniApp.integrationConfig?.productionUrl ||
+       miniApp.integrationConfigWebView?.productionUrl ||
+       miniApp.integrationConfigWebView?.targetUrl ||
+       miniApp.integrationConfigDeepLink?.universalLink ||
+       miniApp.integrationConfigDeepLink?.customScheme ||
+       (miniApp.appId ? `MiniApp Target (${miniApp.appId})` : '') ||
+       'Production Target Endpoint');
 
   // Selected Security Checks list for profile badges
   const activeProfileChecks = useMemo(() => {
@@ -991,7 +1350,7 @@ export default function ValidationReportTab({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <>
       {/* Floating Toast Notification for Re-Scan / Status Actions */}
       {mounted && reScanMessage && createPortal(
         <div className="fixed bottom-6 right-6 z-[120] animate-in slide-in-from-bottom-5 fade-in duration-300">
@@ -1014,360 +1373,728 @@ export default function ValidationReportTab({
         document.body
       )}
 
-      {/* Standalone Page Header (Print / Executive Banner) */}
+      {/* 1. Fixed 2-Tier Security Command Deck (Matching Review Workspace) */}
       {isStandalonePage && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 print:border-none print:shadow-none print:p-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800 print:hidden">
-            <Link
-              href={`/miniapps/${miniApp.id}`}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to MiniApp Console</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => typeof window !== 'undefined' && window.print()}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print / Save PDF</span>
-              </button>
+        <div className="fixed top-16 left-0 right-0 z-20 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-xs print:hidden">
+          {/* Deck 1: Identity & Security Verdict Actions */}
+          <div className="border-b border-slate-100 dark:border-slate-800/80 py-2.5">
+            <div className="max-w-[1700px] mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
+              {/* Left: Back & MiniApp Identity */}
+              <div className="flex items-center gap-3 min-w-0">
+                <Link
+                  href={`/miniapps/${miniApp.id}`}
+                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors shadow-2xs shrink-0 flex items-center gap-1.5 text-xs font-semibold"
+                  title="Return to MiniApp Console"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Back</span>
+                </Link>
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0 hidden sm:block" />
+
+                {/* MiniApp Avatar + Name + Method */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <AppLogoAvatar
+                    logo={miniAppLogo}
+                    name={miniApp.name || miniApp.appId}
+                    size="md"
+                    className="shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100 truncate leading-tight">
+                        {miniApp.name || miniApp.appId}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${methodBadge.classes}`}>
+                        {methodBadge.label}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                        {selectedVersion || miniApp.currentReleaseVersion || '1.0.0'}
+                      </span>
+                    </div>
+                    {miniApp.appId && (
+                      <span className="text-xs font-mono text-slate-400 block truncate max-w-[240px]">
+                        {miniApp.appId}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Security Status & Actions */}
+              <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+                {/* Status Verdict Pill */}
+                {valStatus === 'RUNNING' || isScanningActive ? (
+                  <div className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs animate-pulse">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                    <span>Scanning...</span>
+                  </div>
+                ) : valStatus === 'PASSED' ? (
+                  <div className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>Audit Passed (100%)</span>
+                  </div>
+                ) : (
+                  <div className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>Validation Failed</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowConfigModal(true)}
+                    disabled={isReScanning || isCancelling}
+                    className="flex items-center gap-1.5 text-xs font-semibold h-8.5 px-3 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <ShieldIcon className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="hidden sm:inline">Configure Profile</span>
+                    <span className="text-xs font-mono font-bold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      {activeProfileChecks.length}
+                    </span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => handleReScan()}
+                    disabled={isReScanning || isCancelling}
+                    className={`flex items-center gap-1.5 text-xs font-semibold h-8.5 px-3.5 transition-all cursor-pointer ${
+                      isScanningActive ? 'opacity-90 shadow-md ring-2 ring-brand-500/20' : ''
+                    }`}
+                  >
+                    <RefreshIcon className={`w-3.5 h-3.5 ${isScanningActive ? 'animate-spin' : ''}`} />
+                    <span>{isScanningActive ? 'Running...' : 'Re-Run Security Scan'}</span>
+                  </Button>
+
+                  <ActionMenu
+                    align="right"
+                    ariaLabel="More report actions"
+                    trigger={
+                      <div
+                        className="flex items-center justify-center h-8.5 w-8.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
+                        title="More actions"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </div>
+                    }
+                    items={[
+                      {
+                        label: `Inspect Security Report (${allFindings.length})`,
+                        icon: <ShieldCheckIcon className="w-4 h-4 text-brand-600" />,
+                        onClick: () => setShowReportModal(true),
+                      },
+                      ...(sbom
+                        ? [
+                            {
+                              label: `Inspect SBOM (${sbomComponents.length})`,
+                              icon: <ClipboardCheckIcon className="w-4 h-4 text-brand-500" />,
+                              onClick: () => setShowSbomModal(true),
+                            },
+                          ]
+                        : []),
+                      {
+                        label: 'Download Security Report (.md)',
+                        icon: <FileText className="w-4 h-4 text-brand-600" />,
+                        onClick: handleDownloadScanReportMarkdown,
+                      },
+                      {
+                        label: 'Download Security Report (.json)',
+                        icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
+                        onClick: handleDownloadAuditJson,
+                      },
+                      ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
+                        ? [
+                            {
+                              label: `Re-Scan Failed Only (${failedStageIds.length})`,
+                              icon: <RefreshIcon className="w-4 h-4 text-amber-500" />,
+                              onClick: () => handleReScan(failedStageIds, true),
+                              disabled: isReScanning || isCancelling,
+                            },
+                          ]
+                        : []),
+                      ...(valStatus === 'RUNNING'
+                        ? [
+                            {
+                              label: isCancelling ? 'Stopping...' : 'Stop / Reset Scan',
+                              icon: <XCircleIcon className="w-4 h-4 text-rose-500" />,
+                              onClick: handleCancelScan,
+                              disabled: isCancelling,
+                              variant: 'danger' as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <span className="text-[10px] font-bold tracking-widest text-brand-600 dark:text-brand-400 uppercase">
-                Official Regulatory Attestation & Security Verification Report
-              </span>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                {miniApp.name || miniApp.appId}
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                App ID: <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{miniApp.appId}</span> &bull; Integration: <span className="font-semibold text-slate-700 dark:text-slate-300">{miniApp.integrationMethod || 'WEBVIEW'}</span> &bull; Target Version: <span className="font-bold text-brand-600 dark:text-brand-400 font-mono">{selectedVersion || 'Latest'}</span>
-              </p>
+
+          {/* Deck 2: Underline Subnav Navigation & Version Capsule */}
+          <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-0.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Subnav Tabs */}
+            <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mb-px">
+              <button
+                type="button"
+                onClick={() => setActiveViewTab('engines')}
+                className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeViewTab === 'engines'
+                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
+                }`}
+              >
+                <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
+                <span>Security Engines & Telemetry</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded text-xs font-mono ${
+                    activeViewTab === 'engines'
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {activeStages.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveViewTab('findings')}
+                className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeViewTab === 'findings'
+                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
+                }`}
+              >
+                <AlertTriangleIcon className={`w-3.5 h-3.5 ${allFindings.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+                <span>Findings & Remediation</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded text-xs font-mono ${
+                    activeViewTab === 'findings'
+                      ? allFindings.length > 0
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold'
+                        : 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
+                      : allFindings.length > 0
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 font-semibold'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {allFindings.length}
+                </span>
+              </button>
+
+              {sbom && (
+                <button
+                  type="button"
+                  onClick={() => setActiveViewTab('sbom')}
+                  className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                    activeViewTab === 'sbom'
+                      ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
+                  }`}
+                >
+                  <ClipboardCheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>SBOM & Dependencies</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-xs font-mono ${
+                      activeViewTab === 'sbom'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {sbomComponents.length}
+                  </span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setActiveViewTab('runs')}
+                className={`pb-2.5 pt-2 px-3 border-b-2 text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeViewTab === 'runs'
+                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 font-semibold'
+                }`}
+              >
+                <PlayCircle className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Scans & Builds History</span>
+              </button>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
-                <span className="text-slate-400 text-[10px] uppercase block tracking-wider font-bold">Lifecycle</span>
-                <span className="text-slate-800 dark:text-slate-200 capitalize font-medium">{effectiveData.status || miniApp.status}</span>
-              </div>
-              <div className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${
-                valStatus === 'PASSED' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 text-emerald-700 dark:text-emerald-300' :
-                valStatus === 'FAILED' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 text-rose-700 dark:text-rose-300' :
-                'bg-amber-50 dark:bg-amber-950/30 border-amber-200 text-amber-700 dark:text-amber-300'
-              }`}>
-                <span className="opacity-75 text-[10px] uppercase block tracking-wider font-bold">Audit Status</span>
-                <span>{valStatus}</span>
-              </div>
+
+            {/* Right: Version Selector Capsule */}
+            <div className="self-start lg:self-center shrink-0 pb-2 lg:pb-1.5">
+              <VersionSelectorPopover
+                selectedVersion={selectedVersion}
+                versionList={versionList}
+                onSelectVersion={(verName) => {
+                  setSelectedVersion(verName);
+                  if (typeof window !== 'undefined') {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('version', verName);
+                    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+                  }
+                }}
+                miniApp={miniApp}
+              />
             </div>
           </div>
         </div>
       )}
 
-      {/* Version Context Switcher Bar */}
-      <div className="bg-slate-50 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-6 print:hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Left: Context Indicator & Version selector */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-750">
-              <Layers className="w-4 h-4 text-brand-500" />
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                Release Version
-              </span>
-            </div>
-
-            {/* Version Pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {versionList.length > 0 ? (
-                versionList.map((ver) => {
-                  const isSelected = (ver.version || ver) === selectedVersion;
-                  const verName = ver.version || ver;
-                  const isLive = ver.status === 'ACTIVE' || verName === miniApp.currentReleaseVersion;
-                  const isTesting = ver.status === 'TESTING' || verName === miniApp.activeTestVersion;
-                  const isReview = ver.status === 'IN_REVIEW';
-
-                  return (
-                    <button
-                      key={ver.id || verName}
-                      type="button"
-                      onClick={() => {
-                        setSelectedVersion(verName);
-                        // Update URL parameter without reload
-                        if (typeof window !== 'undefined') {
-                          const params = new URLSearchParams(window.location.search);
-                          params.set('version', verName);
-                          router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
-                        }
-                      }}
-                      className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm ring-1 ring-brand-500/30'
-                          : 'bg-transparent hover:bg-white/60 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <span className="font-mono font-semibold">{verName}</span>
-                      {isLive && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                          Live
-                        </span>
-                      )}
-                      {isTesting && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                          Testing
-                        </span>
-                      )}
-                      {isReview && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          Review
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="px-3 py-1 bg-white dark:bg-slate-850 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-750">
-                  {selectedVersion || 'v1.0.0'} (Default)
-                </div>
-              )}
-            </div>
+      {/* Main Content Workspace Container */}
+      <div className={isStandalonePage ? "max-w-[1700px] mx-auto px-4 sm:px-6 pt-[196px] space-y-6 animate-in fade-in duration-300" : "space-y-6 animate-in fade-in duration-300"}>
+        {/* Minimal Print Header */}
+        {isStandalonePage && (
+          <div className="hidden print:block mb-6">
+            <h1 className="text-2xl font-bold text-slate-900">{miniApp.name || miniApp.appId}</h1>
+            <p className="text-xs text-slate-500">
+              Official Regulatory Attestation & Security Verification Report &bull; Version: {selectedVersion || 'Latest'} &bull; Status: {valStatus}
+            </p>
           </div>
+        )}
 
-          {/* Right: Quick actions & Loading feedback */}
-          <div className="flex items-center gap-2 self-end md:self-center">
-            {isLoadingVersionReport && (
-              <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                <RefreshIcon className="w-3.5 h-3.5 animate-spin text-brand-500" />
-                <span>Loading report...</span>
-              </span>
-            )}
-            {!isStandalonePage && (
-              <Link
-                href={`/miniapps/${miniApp.id}/security?version=${encodeURIComponent(selectedVersion || '')}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors cursor-pointer"
-                title="Open dedicated security report page"
-              >
-                <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
-                <span>Full Report Page</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Executive Security Summary Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
-        <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
-          isScanningActive ? 'pb-6 border-b border-slate-100 dark:border-slate-800' : ''
-        }`}>
-          <div className="flex items-start gap-4">
-            <div className={`w-20 h-20 rounded-2xl border flex flex-col items-center justify-center p-2 flex-shrink-0 transition-all ${
-              isScanningActive
-                ? 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-500/15 dark:border-amber-500/40 ring-2 ring-amber-500/20 animate-pulse'
-                : scoreBg
-            }`}>
-              {isScanningActive ? (
-                <div className="flex flex-col items-center justify-center text-center">
-                  <RefreshIcon className="w-6 h-6 text-amber-500 animate-spin" />
-                  <span className="text-[9px] font-black tracking-wider text-amber-600 dark:text-amber-400 mt-1 uppercase">AUDITING</span>
-                </div>
-              ) : (
-                <>
-                  <span className={`text-2xl font-black ${scoreColor}`}>
-                    {score !== null ? score : '--'}
+        {/* Version Context Switcher Bar (Only rendered when embedded inside MiniApp tabs) */}
+        {!isStandalonePage && (
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm mb-6 print:hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-slate-700">
+                  <Layers className="w-4 h-4 text-brand-500" />
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                    Release Version
                   </span>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {versionList.length > 0 ? (
+                    versionList.map((ver) => {
+                      const isSelected = (ver.version || ver) === selectedVersion;
+                      const verName = ver.version || ver;
+                      const isLive = ver.status === 'ACTIVE' || verName === miniApp.currentReleaseVersion;
+                      const isTesting = ver.status === 'TESTING' || verName === miniApp.activeTestVersion;
+                      const isReview = ver.status === 'IN_REVIEW';
+
+                      return (
+                        <button
+                          key={ver.id || verName}
+                          type="button"
+                          onClick={() => {
+                            setSelectedVersion(verName);
+                            if (typeof window !== 'undefined') {
+                              const params = new URLSearchParams(window.location.search);
+                              params.set('version', verName);
+                              router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+                            }
+                          }}
+                          className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm ring-1 ring-brand-500/30'
+                              : 'bg-transparent hover:bg-white/60 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          <span className="font-mono font-semibold">{verName}</span>
+                          {isLive && (
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                              Live
+                            </span>
+                          )}
+                          {isTesting && (
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                              Testing
+                            </span>
+                          )}
+                          {isReview && (
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                              Review
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3 py-1 bg-white dark:bg-slate-800 rounded-lg text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      {selectedVersion || 'v1.0.0'} (Default)
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end md:self-center">
+                {isLoadingVersionReport && (
+                  <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                    <RefreshIcon className="w-3.5 h-3.5 animate-spin text-brand-500" />
+                    <span>Loading report...</span>
+                  </span>
+                )}
+                <Link
+                  href={`/miniapps/${miniApp.id}/security?version=${encodeURIComponent(selectedVersion || '')}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                  title="Open dedicated security report page"
+                >
+                  <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
+                  <span>Full Report Page</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Executive Security Intelligence Hero Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
+          <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
+            isScanningActive ? 'pb-6 border-b border-slate-100 dark:border-slate-800' : ''
+          }`}>
+            <div className="flex items-start gap-4">
+              <div className={`relative w-18 h-18 rounded-2xl border flex flex-col items-center justify-center p-1.5 flex-shrink-0 transition-all ${
+                isScanningActive
+                  ? 'bg-emerald-500/5 border-emerald-500/25 dark:bg-emerald-950/20 dark:border-emerald-800/50 shadow-xs'
+                  : scoreBg
+              }`}>
+                {isScanningActive ? (
+                  <div className="relative flex items-center justify-center w-full h-full">
+                    {/* Circular SVG Gauge */}
+                    <svg className="w-14 h-14 -rotate-90 transform" viewBox="0 0 48 48">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="19"
+                        className="stroke-slate-200/80 dark:stroke-slate-700/60"
+                        strokeWidth="3.5"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="19"
+                        className="stroke-emerald-500 dark:stroke-emerald-400 transition-all duration-500 ease-out"
+                        strokeWidth="3.5"
+                        strokeDasharray={2 * Math.PI * 19}
+                        strokeDashoffset={2 * Math.PI * 19 * (1 - Math.max(scanProgressPercent, 5) / 100)}
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-sm font-black font-mono text-slate-900 dark:text-white leading-none">
+                        {scanProgressPercent}%
+                      </span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5">
+                        AUDIT
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span className={`text-2xl font-black ${scoreColor}`}>
+                      {score !== null ? score : '--'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score</span>
+                  </>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {isFlutterPackage ? 'Package Security & Compliance Report' : 'Automated Security & Compliance Report'}
+                  </h3>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider transition-all ${
+                    valStatus === 'PASSED'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                      : valStatus === 'RUNNING'
+                      ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs'
+                      : valStatus === 'FAILED'
+                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                  }`}>
+                    {valStatus === 'RUNNING' ? (
+                      <>
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="tracking-wide">SCANNING IN PROGRESS</span>
+                      </>
+                    ) : valStatus === 'PASSED' ? (
+                      <>
+                        <CheckIcon className="w-3.5 h-3.5" />
+                        <span>PASSED (100% COMPLIANT)</span>
+                      </>
+                    ) : valStatus === 'FAILED' ? (
+                      <>
+                        <XIcon className="w-3.5 h-3.5" />
+                        <span>SECURITY AUDIT FAILED</span>
+                      </>
+                    ) : (
+                      valStatus
+                    )}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-slate-400 font-medium">Target:</span>
+                  <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[550px]">
+                    {scannedTargetLabel}
+                  </code>
+                  {isScanningActive && (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Activity className="w-3 h-3 animate-pulse" />
+                      <span>Live Telemetry Active</span>
+                    </span>
+                  )}
+                </p>
+                {report?.completedAt && (
+                  <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-1 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" />
+                      Report generated: {new Date(report.completedAt).toLocaleString()}
+                    </span>
+                    {report?.reportPath?.startsWith('local-scan://') && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50">
+                        <ShieldCheckIcon className="w-3 h-3" />
+                        Local Security Engine
+                      </span>
+                    )}
+                    {sbomComponents.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                        <ClipboardCheckIcon className="w-3 h-3" />
+                        CycloneDX 1.5 SBOM ({sbomComponents.length} pkgs)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Metrics / Inline Actions */}
+            <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0">
+              {!isStandalonePage ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowConfigModal(true)}
+                    disabled={isReScanning || isCancelling}
+                    className="flex items-center gap-2 text-xs sm:text-sm font-semibold h-9 px-3 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <ShieldIcon className="w-4 h-4 text-slate-500" />
+                    <span>Configure Profile</span>
+                    <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      {activeProfileChecks.length}
+                    </span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => handleReScan()}
+                    disabled={isReScanning || isCancelling}
+                    className={`flex items-center gap-2 text-xs sm:text-sm font-semibold h-9 px-4 transition-all ${
+                      isScanningActive ? 'opacity-90 shadow-md ring-2 ring-brand-500/20' : ''
+                    }`}
+                  >
+                    <RefreshIcon className={`w-4 h-4 ${isScanningActive ? 'animate-spin' : ''}`} />
+                    <span>{isScanningActive ? 'Running...' : 'Re-Run Security Scan'}</span>
+                  </Button>
+
+                  <ActionMenu
+                    align="right"
+                    ariaLabel="More report actions"
+                    trigger={
+                      <div
+                        className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-xs cursor-pointer"
+                        title="More actions"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </div>
+                    }
+                    items={[
+                      {
+                        label: `Inspect Security Report (${allFindings.length})`,
+                        icon: <ShieldCheckIcon className="w-4 h-4 text-brand-600" />,
+                        onClick: () => setShowReportModal(true),
+                      },
+                      ...(sbom
+                        ? [
+                            {
+                              label: `Inspect SBOM (${sbomComponents.length})`,
+                              icon: <ClipboardCheckIcon className="w-4 h-4 text-brand-500" />,
+                              onClick: () => setShowSbomModal(true),
+                            },
+                          ]
+                        : []),
+                      {
+                        label: 'Download Security Report (.md)',
+                        icon: <FileText className="w-4 h-4 text-brand-600" />,
+                        onClick: handleDownloadScanReportMarkdown,
+                      },
+                      {
+                        label: 'Download Security Report (.json)',
+                        icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
+                        onClick: handleDownloadAuditJson,
+                      },
+                      ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
+                        ? [
+                            {
+                              label: `Re-Scan Failed Only (${failedStageIds.length})`,
+                              icon: <RefreshIcon className="w-4 h-4 text-amber-500" />,
+                              onClick: () => handleReScan(failedStageIds, true),
+                              disabled: isReScanning || isCancelling,
+                            },
+                          ]
+                        : []),
+                      ...(valStatus === 'RUNNING'
+                        ? [
+                            {
+                              label: isCancelling ? 'Stopping...' : 'Stop / Reset Scan',
+                              icon: <XCircleIcon className="w-4 h-4 text-rose-500" />,
+                              onClick: handleCancelScan,
+                              disabled: isCancelling,
+                              variant: 'danger' as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </>
+              ) : isScanningActive ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                    <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
+                    <span>Live Audit Active</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/90 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {completedStagesCount}/{totalStagesCount}
+                    </span>
+                    <span>Checks Finished</span>
+                  </span>
+                  {isCancelling ? (
+                    <span className="text-xs text-rose-500 font-semibold animate-pulse">Stopping...</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleCancelScan}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-xs font-medium text-rose-700 dark:text-rose-300 transition-colors cursor-pointer"
+                      title="Cancel live scan"
+                    >
+                      <XCircleIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Stop</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/90 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span className={`w-2 h-2 rounded-full ${allFindings.length > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                    <span>{allFindings.length > 0 ? `${allFindings.length} Violations Detected` : 'All Security Checks Passed'}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-100/80 dark:bg-slate-800/90 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {activeStages.length - failedStageIds.length}/{activeStages.length}
+                    </span>
+                    <span>Engines Cleared</span>
+                  </span>
+                </div>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {isFlutterPackage ? 'Package Security & Compliance Report' : 'Automated Security & Compliance Report'}
-                </h3>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider transition-all ${
-                  valStatus === 'PASSED'
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                    : valStatus === 'RUNNING'
-                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-sm animate-pulse'
-                    : valStatus === 'FAILED'
-                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                }`}>
-                  {valStatus === 'RUNNING' ? (
-                    <>
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </div>
+
+        {/* Modern Live Pipeline Execution Deck (when scan is active) */}
+        {isScanningActive && (
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col gap-3.5 animate-in fade-in duration-300">
+            {/* Top row: Stage Title + Monospace Progress Stats */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative flex items-center justify-center w-7 h-7 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <RefreshIcon className="w-3.5 h-3.5 animate-spin" />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                      Live Security Pipeline Executing
+                    </span>
+                    {runningStage && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Stage {runningStage.index} of {totalStagesCount}: {runningStage.title}
                       </span>
-                      <span>SCANNING IN PROGRESS</span>
-                    </>
-                  ) : valStatus === 'PASSED' ? (
-                    <>
-                      <CheckIcon className="w-3.5 h-3.5" />
-                      <span>PASSED (100% COMPLIANT)</span>
-                    </>
-                  ) : valStatus === 'FAILED' ? (
-                    <>
-                      <XIcon className="w-3.5 h-3.5" />
-                      <span>SECURITY AUDIT FAILED</span>
-                    </>
-                  ) : (
-                    valStatus
-                  )}
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    {runningStage?.description || 'Automated SAST, SCA, Secret Scanning & Network Policy Validation in progress...'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Count Badge */}
+              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{completedStagesCount}</span>
+                  <span className="text-slate-400">/</span>
+                  <span>{totalStagesCount} Checks Completed</span>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{scanProgressPercent}%</span>
                 </span>
               </div>
-              <p className="text-base text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
-                <span>Target:</span>
-                <code className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                  {scannedTargetLabel}
-                </code>
-              </p>
-              {report?.completedAt && (
-                <div className="flex items-center gap-2.5 text-sm text-slate-400 mt-1 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <FileText className="w-3.5 h-3.5" />
-                    Report generated: {new Date(report.completedAt).toLocaleString()}
-                  </span>
-                  {report?.reportPath?.startsWith('local-scan://') && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50">
-                      <ShieldCheckIcon className="w-3 h-3" />
-                      Local Security Engine
-                    </span>
-                  )}
-                  {sbomComponents.length > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-                      <ClipboardCheckIcon className="w-3 h-3" />
-                      CycloneDX 1.5 SBOM ({sbomComponents.length} pkgs)
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 flex-wrap self-start lg:self-center shrink-0">
-            {/* Configure Profile Button */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowConfigModal(true)}
-              disabled={isReScanning || isCancelling}
-              className="flex items-center gap-2 text-xs sm:text-sm font-semibold h-10 px-3.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              <ShieldIcon className="w-4 h-4 text-slate-500" />
-              <span>Configure Profile</span>
-              <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                {activeProfileChecks.length}
-              </span>
-            </Button>
-
-            {/* Primary Action Button: Re-Run Scan */}
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => handleReScan()}
-              disabled={isReScanning || isCancelling}
-              className={`flex items-center gap-2 text-xs sm:text-sm font-semibold h-10 px-4 transition-all ${
-                isScanningActive ? 'opacity-90 shadow-md ring-2 ring-brand-500/20' : ''
-              }`}
-            >
-              <RefreshIcon className={`w-4 h-4 ${isScanningActive ? 'animate-spin' : ''}`} />
-              <span>{isScanningActive ? 'Running...' : 'Re-Run Security Scan'}</span>
-            </Button>
-
-            {/* Ellipsis (...) Dropdown for Utility Actions */}
-            <ActionMenu
-              align="right"
-              ariaLabel="More report actions"
-              trigger={
-                <div
-                  className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-xs cursor-pointer"
-                  title="More actions"
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                </div>
-              }
-              items={[
-                ...(sbom
-                  ? [
-                      {
-                        label: `Inspect SBOM (${sbomComponents.length})`,
-                        icon: <ClipboardCheckIcon className="w-4 h-4 text-brand-500" />,
-                        onClick: () => setShowSbomModal(true),
-                      },
-                    ]
-                  : []),
-                {
-                  label: 'Download Scan Report (.md)',
-                  icon: <FileText className="w-4 h-4 text-brand-600" />,
-                  onClick: handleDownloadScanReportMarkdown,
-                },
-                {
-                  label: 'Download Audit JSON',
-                  icon: <DownloadIcon className="w-4 h-4 text-slate-500" />,
-                  onClick: handleDownloadAuditJson,
-                },
-                {
-                  label: 'Print Security Report',
-                  icon: <ExternalLinkIcon className="w-4 h-4 text-slate-500" />,
-                  onClick: handlePrintReport,
-                },
-                ...(valStatus === 'FAILED' && failedStageIds.length > 0 && !isScanningActive
-                  ? [
-                      {
-                        label: `Re-Scan Failed Only (${failedStageIds.length})`,
-                        icon: <RefreshIcon className="w-4 h-4 text-amber-500" />,
-                        onClick: () => handleReScan(failedStageIds, true),
-                        disabled: isReScanning || isCancelling,
-                      },
-                    ]
-                  : []),
-                ...(valStatus === 'RUNNING'
-                  ? [
-                      {
-                        label: isCancelling ? 'Stopping...' : 'Stop / Reset Scan',
-                        icon: <XCircleIcon className="w-4 h-4 text-rose-500" />,
-                        onClick: handleCancelScan,
-                        disabled: isCancelling,
-                        variant: 'danger' as const,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Live Scan Progress Bar Banner (when scan is active) */}
-        {isScanningActive && (
-          <div className="mt-4 p-4 rounded-xl bg-slate-900/5 dark:bg-slate-800/40 border border-brand-200/80 dark:border-brand-800/60 flex flex-col gap-2.5 animate-in fade-in duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xs font-bold animate-spin flex-shrink-0">
-                  <RefreshIcon className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    Live Security Pipeline Executing
-                  </span>
-                  {runningStage && (
-                    <span className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-100 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-800">
-                      Stage {runningStage.index} of {totalStagesCount}: {runningStage.title}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
-                {completedStagesCount}/{totalStagesCount} Checks Completed ({scanProgressPercent}%)
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+            {/* Glowing Shimmer Progress Bar */}
+            <div className="relative w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-200/60 dark:border-slate-700/50">
               <div
-                className="bg-gradient-to-r from-brand-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${Math.max(scanProgressPercent, 8)}%` }}
-              />
+                className="relative bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out overflow-hidden shadow-xs"
+                style={{ width: `${Math.max(scanProgressPercent, 6)}%` }}
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] animate-[shimmer_2s_infinite]" />
+              </div>
+            </div>
+
+            {/* 5-Stage Visual Stepper Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+              {activeStages.map((stage) => {
+                const isCompleted = stage.recorded?.status === 'COMPLETED';
+                const isRunning = stage.recorded?.status === 'RUNNING' || (runningStage?.id === stage.id);
+                const isFailed = stage.recorded?.status === 'FAILED';
+                const isPending = !isCompleted && !isRunning && !isFailed;
+
+                return (
+                  <div
+                    key={stage.id}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-xs transition-all ${
+                      isRunning
+                        ? 'border-sky-300 dark:border-sky-700/80 bg-sky-50/80 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 shadow-xs ring-1 ring-sky-500/20'
+                        : isCompleted
+                        ? 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/35 text-emerald-900 dark:text-emerald-200'
+                        : isFailed
+                        ? 'border-rose-300 dark:border-rose-800 bg-rose-50/60 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : isRunning ? (
+                        <RefreshIcon className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 animate-spin" />
+                      ) : isFailed ? (
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[10px] font-mono text-slate-400">
+                          {stage.index}
+                        </div>
+                      )}
+                    </div>
+                    <span className="truncate font-medium text-xs leading-tight">
+                      {stage.title}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1403,7 +2130,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '1. MinIO Quarantine' : '1. Package Ingestion'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate font-mono">
                       {published
                         ? (isSuperAdmin ? 'Promoted & Graduated to Nexus' : 'Ingested & Released')
                         : minioStepState === 'done'
@@ -1412,7 +2139,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   minioStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
@@ -1458,7 +2185,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '2. Security Audit & Gates' : '2. Security Clearance'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {securityScanStepState === 'done'
                         ? (isSuperAdmin ? 'Clearance Approved (All Gates Passed)' : 'All Security Checks Cleared')
                         : securityScanStepState === 'running'
@@ -1469,7 +2196,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   securityScanStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : securityScanStepState === 'running'
@@ -1510,7 +2237,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '3. Nexus Pub-Hosted' : '3. SuperApp Release'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {nexusStepState === 'done'
                         ? (isSuperAdmin
                             ? (conf.nexusPublishedVersion ? `Published to Nexus (v${conf.nexusPublishedVersion})` : 'Published to Nexus')
@@ -1523,7 +2250,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   nexusStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : nexusStepState === 'failed'
@@ -1533,6 +2260,26 @@ export default function ValidationReportTab({
                   {nexusStepState === 'done' ? 'Published' : nexusStepState === 'failed' ? 'Failed' : 'Waiting'}
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pre-flight / Ingestion Dart SDK Compatibility Warning Banner */}
+        {dartSdkWarning && (
+          <div className="mt-4 p-4 rounded-xl border border-amber-300 dark:border-amber-800/80 bg-amber-50/90 dark:bg-amber-950/40 flex items-start gap-3 shadow-xs animate-in fade-in">
+            <span className="text-xl shrink-0 select-none">⚠️</span>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                  Dart SDK Version Compatibility Warning
+                </h4>
+                <span className="text-xs px-2 py-0.5 rounded font-mono font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                  Platform Runtime: Dart 3.12.0
+                </span>
+              </div>
+              <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+                {dartSdkWarning}
+              </p>
             </div>
           </div>
         )}
@@ -1551,7 +2298,7 @@ export default function ValidationReportTab({
                       ? 'Jenkins CI Unreachable — Completed via Local Security Engine'
                       : 'Completed via Fallback Security Engine'}
                   </h4>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
                     Auto-Recovered
                   </span>
                 </div>
@@ -1579,7 +2326,7 @@ export default function ValidationReportTab({
                     <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
                       Platform Infrastructure Error (Super App Team Action Required)
                     </h4>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-200/80 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-200/80 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
                       Not a MiniApp Defect
                     </span>
                   </div>
@@ -1661,75 +2408,77 @@ export default function ValidationReportTab({
         )}
       </div>
 
-      {/* AppSec Command Center Sub-Navigation Tabs */}
-      <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveViewTab('findings')}
-          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
-            activeViewTab === 'findings'
-              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <AlertTriangleIcon className={`w-4 h-4 ${allFindings.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
-          <span>Findings & Remediation</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-            allFindings.length > 0
-              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-          }`}>
-            {allFindings.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveViewTab('engines')}
-          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
-            activeViewTab === 'engines'
-              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
-          <span>Security Engines & Telemetry</span>
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-            {activeStages.length}
-          </span>
-        </button>
-
-        {sbom && (
+      {/* AppSec Command Center Sub-Navigation Tabs (Only rendered when embedded inside MiniApp tabs) */}
+      {!isStandalonePage && (
+        <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto">
           <button
             type="button"
-            onClick={() => setActiveViewTab('sbom')}
+            onClick={() => setActiveViewTab('engines')}
             className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
-              activeViewTab === 'sbom'
+              activeViewTab === 'engines'
                 ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <ClipboardCheckIcon className="w-4 h-4 text-emerald-500" />
-            <span>SBOM & Dependencies</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              {sbomComponents.length}
+            <ShieldCheckIcon className="w-4 h-4 text-brand-500" />
+            <span>Security Engines & Telemetry</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {activeStages.length}
             </span>
           </button>
-        )}
 
-        <button
-          type="button"
-          onClick={() => setActiveViewTab('runs')}
-          className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
-            activeViewTab === 'runs'
-              ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <PlayCircle className="w-4 h-4 text-indigo-500" />
-          <span>Scans & Builds History</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setActiveViewTab('findings')}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+              activeViewTab === 'findings'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <AlertTriangleIcon className={`w-4 h-4 ${allFindings.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+            <span>Findings & Remediation</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              allFindings.length > 0
+                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+            }`}>
+              {allFindings.length}
+            </span>
+          </button>
+
+          {sbom && (
+            <button
+              type="button"
+              onClick={() => setActiveViewTab('sbom')}
+              className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+                activeViewTab === 'sbom'
+                  ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <ClipboardCheckIcon className="w-4 h-4 text-emerald-500" />
+              <span>SBOM & Dependencies</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {sbomComponents.length}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setActiveViewTab('runs')}
+            className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm border-b-2 transition-all whitespace-nowrap ${
+              activeViewTab === 'runs'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/20 rounded-t-lg'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <PlayCircle className="w-4 h-4 text-indigo-500" />
+            <span>Scans & Builds History</span>
+          </button>
+        </div>
+      )}
 
       {/* Tab 2: Pipeline Stage Execution Timeline with Multi-Issue Accordions */}
       {activeViewTab === 'engines' && (
@@ -1940,7 +2689,7 @@ export default function ValidationReportTab({
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                               finding.severity === 'CRITICAL'
                                 ? 'bg-rose-200 text-rose-900 dark:bg-rose-900 dark:text-rose-200'
                                 : finding.severity === 'HIGH'
@@ -1953,7 +2702,7 @@ export default function ValidationReportTab({
                               {finding.title}
                             </span>
                           </div>
-                          <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             {finding.id}
                           </span>
                         </div>
@@ -1963,14 +2712,14 @@ export default function ValidationReportTab({
                         </p>
 
                         {finding.filePath && (
-                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-400 pt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600 dark:text-slate-400 pt-0.5">
                             <FileText className="w-3 h-3 text-slate-400" />
                             <span>Location: {finding.filePath}{finding.lineNumber ? `:${finding.lineNumber}` : ''}</span>
                           </div>
                         )}
 
                         {finding.recommendation && (
-                          <div className="p-2 rounded bg-white/80 dark:bg-slate-800/80 border border-rose-200/50 dark:border-rose-900/40 text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                          <div className="p-2 rounded bg-white/80 dark:bg-slate-800/80 border border-rose-200/50 dark:border-rose-900/40 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
                             <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 flex-shrink-0 mt-0.5" />
                             <div>
                               <strong className="text-slate-900 dark:text-white font-semibold">Remediation: </strong>
@@ -2074,7 +2823,7 @@ export default function ValidationReportTab({
                         <div className="flex items-center gap-2">
                           <PackageIcon className="w-4 h-4 text-brand-500 flex-shrink-0" />
                           <span className="font-semibold text-slate-900 dark:text-white">{comp.name}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                          <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
                             {comp.type || 'library'}
                           </span>
                         </div>
@@ -2143,7 +2892,7 @@ export default function ValidationReportTab({
                     }`}
                   >
                     <span>{sev}</span>
-                    <span className="text-[10px] opacity-80">({count})</span>
+                    <span className="text-xs opacity-80">({count})</span>
                   </button>
                 );
               })}
@@ -2169,19 +2918,20 @@ export default function ValidationReportTab({
               />
             </div>
             {activeStages.length > 0 && (
-              <select
+              <CleanDropdown
+                label="Engine"
                 value={selectedEngineFilter}
-                onChange={(e) => setSelectedEngineFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                aria-label="Filter findings by engine"
-              >
-                <option value="ALL">All Engines ({allFindings.length} findings)</option>
-                {activeStages.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.title} ({st.findings.length})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedEngineFilter(val)}
+                options={[
+                  { value: 'ALL', label: `All Engines (${allFindings.length} findings)` },
+                  ...activeStages.map((st) => ({
+                    value: st.id,
+                    label: `${st.title} (${st.findings.length})`,
+                  })),
+                ]}
+                dropdownWidth="w-64"
+                align="right"
+              />
             )}
           </div>
         )}
@@ -2238,7 +2988,7 @@ export default function ValidationReportTab({
                           {f.id}
                         </span>
                         {f.engineId && (
-                          <span className="text-[10px] uppercase font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">
+                          <span className="text-xs uppercase font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">
                             {f.engineId}
                           </span>
                         )}
@@ -2273,6 +3023,389 @@ export default function ValidationReportTab({
         <RunHistoryTab miniAppId={miniApp.id} versionFilter={selectedVersion} />
       )}
 
+      {/* Security Report Inspector Modal (Table & Raw JSON Views) */}
+      {mounted && showReportModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-center items-start pt-6 sm:pt-10 md:pt-12 pb-8 p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowReportModal(false)}
+          />
+
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-5xl w-full max-h-[88vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg border shrink-0 ${
+                  valStatus === 'PASSED'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
+                    : valStatus === 'FAILED'
+                    ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-800/50'
+                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800/50'
+                }`}>
+                  {valStatus === 'PASSED' ? (
+                    <ShieldCheckIcon className="w-5 h-5" />
+                  ) : valStatus === 'FAILED' ? (
+                    <AlertTriangleIcon className="w-5 h-5" />
+                  ) : (
+                    <ShieldIcon className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                      Security & Compliance Report
+                    </h3>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                        valStatus === 'PASSED'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                          : valStatus === 'FAILED'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          valStatus === 'PASSED' ? 'bg-emerald-500' : valStatus === 'FAILED' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`} />
+                        {valStatus || 'PENDING'}
+                      </span>
+                      <span className="inline-flex items-center text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
+                        Score: <span className="ml-1 text-slate-900 dark:text-white">{score ?? '--'}/100</span>
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                    Target: {miniApp.appId || miniApp.id} v{selectedVersion || miniApp.currentReleaseVersion || '1.0.0'} • Generated: {report?.completedAt ? new Date(report.completedAt).toLocaleString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Controls: Segmented View Switcher + Export Menu + Close */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Segmented View Switch: Table vs Raw JSON */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowRawReportJson(false)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      !showRawReportJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawReportJson(true)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      showRawReportJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <CodeIcon className="w-3.5 h-3.5" />
+                    <span>Raw JSON</span>
+                  </button>
+                </div>
+
+                {/* Unified Export Menu */}
+                <ActionMenu
+                  align="right"
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-colors"
+                    >
+                      <DownloadIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <span>Export</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    </button>
+                  }
+                  items={[
+                    {
+                      label: 'Download Report (.json)',
+                      icon: <DownloadIcon className="w-4 h-4 text-brand-600" />,
+                      onClick: handleDownloadAuditJson,
+                    },
+                    {
+                      label: 'Download Report (.md)',
+                      icon: <FileText className="w-4 h-4 text-brand-600" />,
+                      onClick: handleDownloadScanReportMarkdown,
+                    },
+                  ]}
+                />
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {showRawReportJson ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-semibold text-slate-500">Security Audit Full Attestation JSON Manifest</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyReportJson}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 font-semibold transition-colors"
+                    >
+                      <CopyIcon className="w-3.5 h-3.5" />
+                      <span>{reportCopied ? 'Copied!' : 'Copy JSON'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-4 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto max-h-[60vh] border border-slate-800 leading-relaxed">
+                    {JSON.stringify(fullAuditReportData, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Compliance Score</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-1">
+                        <span>{score ?? '--'}</span>
+                        <span className="text-xs text-slate-400 font-normal">/ 100</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Audit Verdict</div>
+                      <div className={`mt-1 text-base font-bold uppercase truncate ${
+                        valStatus === 'PASSED' ? 'text-emerald-600 dark:text-emerald-400' : valStatus === 'FAILED' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {valStatus || 'PENDING'}
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active Findings</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                        {allFindings.length}
+                        <span className="ml-1.5 text-xs text-slate-400 font-normal font-mono">
+                          ({allFindings.filter((f) => f.severity === 'CRITICAL' || f.severity === 'HIGH').length} High/Crit)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Automated Gates</div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                        {activeStages.filter((s: any) => s.recorded?.status === 'COMPLETED' || s.recorded?.status === 'PASSED' || (valStatus === 'PASSED' && s.findings.length === 0)).length}
+                        <span className="text-xs text-slate-400 font-normal font-mono"> / {activeStages.length} Passed</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Findings Section */}
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Identified Security Findings</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                          {filteredModalFindings.length} of {allFindings.length}
+                        </span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="relative flex-1 min-w-[200px]">
+                          <SearchIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={reportSearchQuery}
+                            onChange={(e) => setReportSearchQuery(e.target.value)}
+                            placeholder="Filter findings..."
+                            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          />
+                        </div>
+                        <CleanDropdown
+                          label="Severity"
+                          value={reportSeverityFilter}
+                          onChange={(val) => setReportSeverityFilter(val)}
+                          options={[
+                            { value: 'ALL', label: `All Severities (${allFindings.length})` },
+                            { value: 'CRITICAL', label: `Critical (${allFindings.filter((f) => f.severity === 'CRITICAL').length})` },
+                            { value: 'HIGH', label: `High (${allFindings.filter((f) => f.severity === 'HIGH').length})` },
+                            { value: 'MEDIUM', label: `Medium (${allFindings.filter((f) => f.severity === 'MEDIUM').length})` },
+                            { value: 'LOW', label: `Low (${allFindings.filter((f) => f.severity === 'LOW').length})` },
+                          ]}
+                          buttonClassName="h-8 px-2.5 py-1 rounded-xl"
+                          dropdownWidth="w-56"
+                          align="right"
+                        />
+                      </div>
+                    </div>
+
+                    {filteredModalFindings.length === 0 ? (
+                      <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 text-sm">
+                        {allFindings.length === 0
+                          ? 'Zero vulnerabilities identified! All configured security checks passed cleanly.'
+                          : 'No findings match your current search query or severity filter.'}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-bold uppercase text-slate-700 dark:text-slate-300">
+                            <tr>
+                              <th className="px-3.5 py-2.5 w-[12%]">Severity</th>
+                              <th className="px-3.5 py-2.5 w-[22%]">Vulnerability / ID</th>
+                              <th className="px-3.5 py-2.5 w-[14%]">Tool / Engine</th>
+                              <th className="px-3.5 py-2.5 w-[28%]">Description & Location</th>
+                              <th className="px-3.5 py-2.5 w-[24%]">Remediation</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                            {filteredModalFindings.map((f, i) => (
+                              <tr key={f.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-3.5 py-3 align-top">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                                    f.severity === 'CRITICAL'
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                      : f.severity === 'HIGH'
+                                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300'
+                                      : f.severity === 'MEDIUM'
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  }`}>
+                                    {f.severity}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3 align-top font-semibold text-slate-900 dark:text-white">
+                                  <div>{f.title || f.id}</div>
+                                  {f.cveId && (
+                                    <div className="text-xs font-mono text-slate-400 mt-0.5">{f.cveId}</div>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-600 dark:text-slate-400">
+                                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                                    {f.engineId || 'gatekeeper'}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-700 dark:text-slate-300">
+                                  <div>{f.description}</div>
+                                  {f.filePath && (
+                                    <div className="mt-1 flex items-center gap-1 text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
+                                      <CodeIcon className="w-3 h-3 text-slate-400 shrink-0" />
+                                      <span className="truncate">{f.filePath}{f.lineNumber ? `:${f.lineNumber}` : ''}</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-3 align-top text-slate-600 dark:text-slate-400">
+                                  <div className="flex items-start gap-1">
+                                    <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500 shrink-0 mt-0.5" />
+                                    <span>{f.recommendation || 'Follow SuperApp integration security checklist.'}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Automated Security Gates Table */}
+                  <div className="space-y-3 pt-2">
+                    <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldIcon className="w-4 h-4 text-brand-500" />
+                        <span>Security Engines & Gate Verification Pipeline ({activeStages.length})</span>
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Configured validation checks for {miniApp.integrationMethod}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-bold uppercase text-slate-700 dark:text-slate-300">
+                          <tr>
+                            <th className="px-3.5 py-2.5 w-[35%]">Engine / Audit Gate</th>
+                            <th className="px-3.5 py-2.5 w-[20%]">Tooling</th>
+                            <th className="px-3.5 py-2.5 w-[20%]">Status</th>
+                            <th className="px-3.5 py-2.5 w-[25%]">Issues Detected</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                          {activeStages.map((stage: any, idx: number) => {
+                            const isPass = stage.recorded?.status === 'COMPLETED' || stage.recorded?.status === 'PASSED' || (valStatus === 'PASSED' && stage.findings.length === 0);
+                            const isFail = stage.recorded?.status === 'FAILED' || stage.findings.length > 0;
+                            const stStatus = isFail ? 'FAILED' : isPass ? 'PASSED' : (stage.recorded?.status || 'PENDING');
+                            return (
+                              <tr key={stage.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-3.5 py-3 font-semibold text-slate-900 dark:text-white">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">
+                                      {idx + 1}
+                                    </span>
+                                    <span>{stage.title || stage.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3.5 py-3 text-slate-600 dark:text-slate-400 font-mono text-xs">
+                                  {stage.tool}
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                                    stStatus === 'PASSED'
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                      : stStatus === 'FAILED'
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  }`}>
+                                    {stStatus}
+                                  </span>
+                                </td>
+                                <td className="px-3.5 py-3">
+                                  {stage.findings && stage.findings.length > 0 ? (
+                                    <span className="text-rose-600 dark:text-rose-400 font-bold">
+                                      {stage.findings.length} {stage.findings.length === 1 ? 'issue' : 'issues'} detected
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                      Clean (0 issues)
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono truncate max-w-md">
+                <span>Target: {scannedTargetLabel || 'Package Archive'}</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowReportModal(false)}
+                className="text-sm px-4"
+              >
+                Close Inspector
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* CycloneDX 1.5 SBOM Inspector Modal */}
       {mounted && showSbomModal && sbom && createPortal(
         <div className="fixed inset-0 z-[9999] flex justify-center items-start pt-6 sm:pt-10 md:pt-12 pb-8 p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
@@ -2286,46 +3419,72 @@ export default function ValidationReportTab({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50 shrink-0">
                   <ClipboardCheckIcon className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>CycloneDX 1.5 Software Bill of Materials (SBOM)</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                      CycloneDX 1.5 SBOM
+                    </h3>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold shrink-0">
                       {sbomComponents.length} Pkgs
                     </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
                     Serial: {sbom.serialNumber || 'urn:uuid:cyclonedx-manifest'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowRawSbomJson(!showRawSbomJson)}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
-                >
-                  <CodeIcon className="w-3.5 h-3.5" />
-                  <span>{showRawSbomJson ? 'View Table' : 'Raw JSON'}</span>
-                </Button>
+
+              {/* Action Controls: Segmented View Switcher + Export + Close */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Segmented View Switch: Table vs Raw JSON */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowRawSbomJson(false)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      !showRawSbomJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Table className="w-3.5 h-3.5" />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawSbomJson(true)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      showRawSbomJson
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <CodeIcon className="w-3.5 h-3.5" />
+                    <span>Raw JSON</span>
+                  </button>
+                </div>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleExportSbomJson}
-                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
+                  className="text-xs px-2.5 py-1.5 h-8 flex items-center gap-1.5 shadow-xs"
                 >
-                  <DownloadIcon className="w-3.5 h-3.5" />
-                  <span>Download JSON</span>
+                  <DownloadIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span>Export JSON</span>
                 </Button>
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
                 <button
                   type="button"
                   onClick={() => setShowSbomModal(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   aria-label="Close modal"
                 >
                   <XIcon className="w-5 h-5" />
@@ -2367,17 +3526,20 @@ export default function ValidationReportTab({
                       />
                     </div>
                     {sbomUniqueLicenses.length > 0 && (
-                      <select
+                      <CleanDropdown
+                        label="License"
                         value={sbomLicenseFilter}
-                        onChange={(e) => setSbomLicenseFilter(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                        aria-label="Filter SBOM by license"
-                      >
-                        <option value="ALL">All Licenses ({sbomComponents.length})</option>
-                        {sbomUniqueLicenses.map((lic) => (
-                          <option key={lic} value={lic}>{lic}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSbomLicenseFilter(val)}
+                        options={[
+                          { value: 'ALL', label: `All Licenses (${sbomComponents.length})` },
+                          ...sbomUniqueLicenses.map((lic) => ({
+                            value: lic,
+                            label: lic,
+                          })),
+                        ]}
+                        dropdownWidth="w-56"
+                        align="right"
+                      />
                     )}
                   </div>
 
@@ -2410,7 +3572,7 @@ export default function ValidationReportTab({
                                 {comp.version}
                               </td>
                               <td className="px-4 py-3">
-                                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                   {comp.type || 'library'}
                                 </span>
                               </td>
@@ -2593,7 +3755,7 @@ export default function ValidationReportTab({
                   <div className="space-y-1.5">
                     {selectedStageLog.findings.map((f: any, i: number) => (
                       <div key={i} className="text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
-                        <span className="font-bold uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
+                        <span className="font-bold uppercase font-mono text-xs px-1.5 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
                           {f.severity}
                         </span>
                         <span className="font-semibold text-slate-900 dark:text-white">{f.title}:</span>
@@ -2628,6 +3790,7 @@ export default function ValidationReportTab({
         </div>,
         document.body
       )}
-    </div>
+      </div>
+    </>
   );
 }

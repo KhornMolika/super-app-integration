@@ -83,7 +83,7 @@ export function DeleteCollaboratorModal({
               <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{displayEmail}</div>
             </div>
           </div>
-          <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 shrink-0">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 shrink-0">
             {collaboratorRoleLabel(collaborator.role)}
           </span>
         </div>

@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Search,
   X,
+  Plus,
   Table as TableIcon,
   LayoutGrid,
   Shield,
@@ -22,6 +23,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
 import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import {
@@ -35,6 +37,7 @@ interface CapabilitiesTabProps {
   loading?: boolean;
   onSyncGitLab?: () => void;
   isSyncingGitLab?: boolean;
+  onCapabilityCreated?: () => void;
   getPermissionIcon?: (key?: string) => React.ReactNode;
 }
 
@@ -43,6 +46,7 @@ export function CapabilitiesTab({
   loading = false,
   onSyncGitLab,
   isSyncingGitLab = false,
+  onCapabilityCreated,
 }: CapabilitiesTabProps) {
   const view = useCapabilityView();
   const canManageAllowlist = view.canEditCatalog;
@@ -55,10 +59,30 @@ export function CapabilitiesTab({
   const initialMethod = (searchParams?.get('method') as IntegrationMethodOption) || 'ALL';
   const initialAllowlist = (searchParams?.get('allowlist') as 'ALL' | 'ALLOWED' | 'DISALLOWED') || 'ALL';
   const initialPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
-  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '10', 10));
+  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '5', 10));
   const initialView = searchParams?.get('view') === 'grid' ? 'grid' : 'table';
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingCap, setCreatingCap] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    key: '',
+    name: '',
+    description: '',
+    category: 'PLATFORM',
+    minSuperAppVersion: '1.0.0',
+    isActive: true,
+    isAllowed: true,
+    aliasesText: '',
+    pubspecText: '',
+    androidPermsText: '',
+    iosPlistText: '',
+    jsKeywordsText: '',
+    defaultPurpose: '',
+    iosKey: '',
+    androidPermission: '',
+    defaultAction: '',
+  });
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
@@ -101,7 +125,7 @@ export function CapabilitiesTab({
     if (currentPage > 1) params.set('page', String(currentPage));
     else params.delete('page');
 
-    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (pageSize !== 5) params.set('limit', String(pageSize));
     else params.delete('limit');
 
     if (viewMode !== 'table') params.set('view', viewMode);
@@ -138,7 +162,10 @@ export function CapabilitiesTab({
     setLocalCaps(capabilities);
   }, [capabilities]);
 
-  const safeCapabilities = Array.isArray(localCaps) ? localCaps : [];
+  const safeCapabilities = useMemo(
+    () => (Array.isArray(localCaps) ? localCaps : []),
+    [localCaps],
+  );
 
   const handleToggleAllowed = async (capId: string, currentAllowed: boolean) => {
     const next = !currentAllowed;
@@ -330,11 +357,11 @@ export function CapabilitiesTab({
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 SuperApp Host Capability Whitelist
               </h4>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
                 {allowedCount} of {safeCapabilities.length} Allowed
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Decide which device and bridge capabilities MiniApps are authorized to declare during security validation.
             </p>
           </div>
@@ -387,70 +414,62 @@ export function CapabilitiesTab({
             <span>Disallowed ({disallowedCount})</span>
           </button>
         </div>
+
+        {canManageAllowlist && (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-colors cursor-pointer shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Capability</span>
+          </button>
+        )}
       </div>
 
       {/* Search, Filter & View Toggle Toolbar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by name, key, or method (e.g. .postMessage, .takePhoto)..."
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput('');
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Filters & View Mode Switcher */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 shrink-0">
-          {/* Category Dropdown */}
-          <CleanDropdown
-            label="Category"
-            value={selectedCategory}
-            onChange={(val) => {
+      <SearchFilterBar
+        searchValue={searchInput}
+        onSearchChange={(val) => setSearchInput(val)}
+        searchPlaceholder="Search by name, key, or method (e.g. .postMessage, .takePhoto)..."
+        filters={[
+          {
+            id: 'category',
+            label: 'Category',
+            value: selectedCategory,
+            onChange: (val) => {
               setSelectedCategory(val);
               setCurrentPage(1);
-            }}
-            options={categoryOptions}
-            buttonClassName="py-1.5 text-xs rounded-xl"
-            dropdownWidth="w-52"
-          />
-
-          {/* Integration Method Dropdown */}
-          <CleanDropdown
-            label="Method"
-            value={selectedIntegrationMethod}
-            onChange={(val) => {
+            },
+            options: categoryOptions,
+            dropdownWidth: 'w-52',
+          },
+          {
+            id: 'method',
+            label: 'Method',
+            value: selectedIntegrationMethod,
+            onChange: (val) => {
               setSelectedIntegrationMethod(val as IntegrationMethodOption);
               setCurrentPage(1);
-            }}
-            options={integrationMethodOptions}
-            buttonClassName="py-1.5 text-xs rounded-xl"
-            dropdownWidth="w-56"
-          />
-
-          {/* View Toggle: Table / Grid */}
+            },
+            options: integrationMethodOptions,
+            dropdownWidth: 'w-56',
+          },
+        ]}
+        isFiltered={
+          searchInput.trim() !== '' ||
+          selectedCategory !== 'ALL' ||
+          selectedIntegrationMethod !== 'ALL' ||
+          allowlistFilter !== 'ALL'
+        }
+        onResetFilters={handleResetFilters}
+        rightSlot={
           <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
             <button
               type="button"
               onClick={() => {
                 setViewMode('table');
-                setPageSize(10);
+                setPageSize(5);
                 setCurrentPage(1);
               }}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -481,8 +500,8 @@ export function CapabilitiesTab({
               <span className="hidden sm:inline">Grid</span>
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Capabilities Content */}
       {paginatedItems.length === 0 ? (
@@ -503,14 +522,13 @@ export function CapabilitiesTab({
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <thead className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 sm:px-5">Capability</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Integration Method Call</th>
-                  <th className="py-3 px-4">Provider Package</th>
-                  <th className="py-3 px-4">Catalog Status</th>
-                  <th className="py-3 px-4">Host Allowlist</th>
+                  <th className="py-3 px-4">Capability</th>
+                  <th className="py-3 px-3">Category</th>
+                  <th className="py-3 px-3">Integration Method Call</th>
+                  <th className="py-3 px-3">Catalog Status</th>
+                  <th className="py-3 px-3">Host Allowlist</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -534,8 +552,8 @@ export function CapabilitiesTab({
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group"
                     >
                       {/* Capability Name & Key (no description underneath) */}
-                      <td className="py-3.5 px-4 sm:px-5">
-                        <div className="flex items-center gap-3">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className={`w-9 h-9 rounded-xl ${visual.bgColor} ${visual.borderColor} border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}
                           >
@@ -551,7 +569,7 @@ export function CapabilitiesTab({
                             <button
                               type="button"
                               onClick={(e) => handleCopy(e, cap.key || '', `key-${cap.id}`)}
-                              className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                              className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                               title="Click to copy key"
                             >
                               <span>#{cap.key}</span>
@@ -566,24 +584,24 @@ export function CapabilitiesTab({
                       </td>
 
                       {/* Category */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
                         >
                           {visual.category}
                         </span>
                       </td>
 
                       {/* Method Call */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3">
                         <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/40 transition-colors">
                           <span
-                            className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
+                            className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
                           >
                             {methodSyntax.badgeLabel}
                           </span>
                           <code
-                            className="font-mono text-xs font-bold text-accent-600 dark:text-accent-400 truncate max-w-[140px] sm:max-w-[200px]"
+                            className="font-mono text-xs font-bold text-accent-600 dark:text-accent-400 truncate max-w-[140px]"
                             title={methodSyntax.full}
                           >
                             {methodSyntax.concise}
@@ -603,23 +621,11 @@ export function CapabilitiesTab({
                         </div>
                       </td>
 
-                      {/* Provider Package */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {cap.providerPackage ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[11px] border border-slate-200/60 dark:border-slate-700/60">
-                            <Package className="w-3 h-3 text-slate-400" />
-                            <span className="truncate max-w-[150px]">{cap.providerPackage}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-mono text-xs">—</span>
-                        )}
-                      </td>
-
                       {/* Status & Platform */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="space-y-0.5">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${
                               isActive
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
                                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -630,7 +636,7 @@ export function CapabilitiesTab({
                             />
                             <span>{isActive ? 'Active' : 'Deprecated'}</span>
                           </span>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                          <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
                             <Smartphone className="w-2.5 h-2.5" />
                             <span>{cap.platform || 'Cross-Platform'}</span>
                           </div>
@@ -664,7 +670,7 @@ export function CapabilitiesTab({
                           )}
 
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                               cap.isAllowed !== false
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                 : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -739,11 +745,11 @@ export function CapabilitiesTab({
                           {cap.name}
                         </Link>
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                             {cap.key}
                           </span>
-                          <span className="text-[10px] text-slate-400">•</span>
-                          <span className={`text-[10px] font-semibold ${visual.badgeTextColor}`}>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className={`text-xs font-semibold ${visual.badgeTextColor}`}>
                             {visual.category}
                           </span>
                         </div>
@@ -751,7 +757,7 @@ export function CapabilitiesTab({
                     </div>
 
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
                         cap.status === 'Active'
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60'
                           : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60'
@@ -771,7 +777,7 @@ export function CapabilitiesTab({
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/30 transition-colors">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
+                          className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
                         >
                           {methodSyntax.badgeLabel}
                         </span>
@@ -783,7 +789,7 @@ export function CapabilitiesTab({
                             {methodSyntax.concise}
                           </code>
                           <span
-                            className="text-[10px] font-mono text-slate-400 truncate hidden xl:inline"
+                            className="text-xs font-mono text-slate-400 truncate hidden xl:inline"
                             title={methodSyntax.full}
                           >
                             {methodSyntax.full}
@@ -806,9 +812,9 @@ export function CapabilitiesTab({
                     </div>
 
                     {/* Badges Row: Provider Package & Permissions */}
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
                       {cap.providerPackage && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px]">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs">
                           <Package className="w-3 h-3 text-slate-400" />
                           {cap.providerPackage}
                         </span>
@@ -817,7 +823,7 @@ export function CapabilitiesTab({
                       {cap.requiredPermissions?.map((perm) => (
                         <span
                           key={perm}
-                          className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
+                          className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
                         >
                           {perm}
                         </span>
@@ -827,7 +833,7 @@ export function CapabilitiesTab({
                 </div>
 
                 {/* Footer with Allowlist Toggle & View Details Link */}
-                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     {canManageAllowlist && (
                       <button
@@ -852,7 +858,7 @@ export function CapabilitiesTab({
                       </button>
                     )}
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${
                         cap.isAllowed !== false
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                           : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -893,6 +899,305 @@ export function CapabilitiesTab({
             pageSizeOptions={viewMode === 'table' ? [5, 10, 20, 50] : [3, 6, 9, 12]}
             showTotal={true}
           />
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Create Dynamic Capability
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Stored in PostgreSQL and immediately used by detection, alias resolution, and gates.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              className="space-y-4 text-xs"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!createForm.key.trim() || !createForm.name.trim()) {
+                  toast.error('Key and Display Name are required.');
+                  return;
+                }
+                const splitCsv = (v: string) =>
+                  v
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                try {
+                  setCreatingCap(true);
+                  await permissionsApi.create({
+                    key: createForm.key.trim().toLowerCase().replace(/\s+/g, '_'),
+                    name: createForm.name.trim(),
+                    description: createForm.description.trim() || undefined,
+                    category: createForm.category.trim() || 'PLATFORM',
+                    minSuperAppVersion: createForm.minSuperAppVersion.trim() || '1.0.0',
+                    isActive: createForm.isActive,
+                    isAllowed: createForm.isAllowed,
+                    aliases: splitCsv(createForm.aliasesText),
+                    detectionRules: {
+                      pubspecPackages: splitCsv(createForm.pubspecText),
+                      androidPermissions: splitCsv(createForm.androidPermsText),
+                      iosPlistKeys: splitCsv(createForm.iosPlistText),
+                      jsBridgeKeywords: splitCsv(createForm.jsKeywordsText),
+                      defaultPurpose: createForm.defaultPurpose.trim() || undefined,
+                    },
+                    storeMapping: {
+                      iosKey: createForm.iosKey.trim() || undefined,
+                      androidPermission: createForm.androidPermission.trim() || undefined,
+                      defaultAction: createForm.defaultAction.trim() || undefined,
+                    },
+                  });
+                  toast.success(`Capability "${createForm.name.trim()}" created.`);
+                  setShowCreateModal(false);
+                  setCreateForm({
+                    key: '',
+                    name: '',
+                    description: '',
+                    category: 'PLATFORM',
+                    minSuperAppVersion: '1.0.0',
+                    isActive: true,
+                    isAllowed: true,
+                    aliasesText: '',
+                    pubspecText: '',
+                    androidPermsText: '',
+                    iosPlistText: '',
+                    jsKeywordsText: '',
+                    defaultPurpose: '',
+                    iosKey: '',
+                    androidPermission: '',
+                    defaultAction: '',
+                  });
+                  onCapabilityCreated?.();
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to create capability.');
+                } finally {
+                  setCreatingCap(false);
+                }
+              }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Capability Key *
+                  </label>
+                  <input
+                    required
+                    value={createForm.key}
+                    onChange={(e) => setCreateForm({ ...createForm, key: e.target.value })}
+                    placeholder="e.g. nfc_reader"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Display Name *
+                  </label>
+                  <input
+                    required
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                    placeholder="e.g. NFC Smart Card Reader"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Category
+                  </label>
+                  <input
+                    value={createForm.category}
+                    onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
+                    placeholder="e.g. HARDWARE"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Min SuperApp Version
+                  </label>
+                  <input
+                    value={createForm.minSuperAppVersion}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, minSuperAppVersion: e.target.value })
+                    }
+                    placeholder="1.0.0"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Description
+                  </label>
+                  <input
+                    value={createForm.description}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, description: e.target.value })
+                    }
+                    placeholder="Short description of what this capability enables"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Aliases (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.aliasesText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, aliasesText: e.target.value })
+                    }
+                    placeholder="e.g. nfc, contactless, smart_card"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Pubspec Packages (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.pubspecText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, pubspecText: e.target.value })
+                    }
+                    placeholder="e.g. nfc_manager"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    JS Bridge Keywords (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.jsKeywordsText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, jsKeywordsText: e.target.value })
+                    }
+                    placeholder="e.g. nfcScan, readNfc"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Android Permissions (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.androidPermsText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, androidPermsText: e.target.value })
+                    }
+                    placeholder="e.g. android.permission.NFC"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    iOS Info.plist Keys (comma-separated)
+                  </label>
+                  <input
+                    value={createForm.iosPlistText}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, iosPlistText: e.target.value })
+                    }
+                    placeholder="e.g. NFCReaderUsageDescription"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Store Mapping: iOS Key
+                  </label>
+                  <input
+                    value={createForm.iosKey}
+                    onChange={(e) => setCreateForm({ ...createForm, iosKey: e.target.value })}
+                    placeholder="NFCReaderUsageDescription"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Store Mapping: Android Permission
+                  </label>
+                  <input
+                    value={createForm.androidPermission}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, androidPermission: e.target.value })
+                    }
+                    placeholder="android.permission.NFC"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                    Default Purpose / Action
+                  </label>
+                  <input
+                    value={createForm.defaultPurpose}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        defaultPurpose: e.target.value,
+                        defaultAction: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. scan contactless NFC tags and identity cards"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-6 pt-1">
+                  <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.isActive}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, isActive: e.target.checked })
+                      }
+                    />
+                    <span>Active in Host Shell</span>
+                  </label>
+                  <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.isAllowed}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, isAllowed: e.target.checked })
+                      }
+                    />
+                    <span>Allowed by Host Policy</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingCap}
+                  className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold disabled:opacity-50"
+                >
+                  {creatingCap ? 'Creating...' : 'Create Capability'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

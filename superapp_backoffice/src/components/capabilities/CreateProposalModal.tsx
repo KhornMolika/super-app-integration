@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '@/components/ui/inputs';
+import { Button, Select } from '@/components/ui/inputs';
 import {
   Sparkles,
   X,
@@ -255,7 +255,7 @@ export function CreateProposalModal({
                 <span>Associated Scope / Target</span>
                 <span className="text-rose-500 font-bold">*</span>
               </label>
-              <span className="text-[11px] text-slate-400">Where will this be used?</span>
+              <span className="text-xs text-slate-400">Where will this be used?</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -277,7 +277,7 @@ export function CreateProposalModal({
                 </div>
                 <div>
                   <div className="text-xs font-bold">Platform Shell</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                     Universal for all MiniApps
                   </div>
                 </div>
@@ -301,7 +301,7 @@ export function CreateProposalModal({
                 </div>
                 <div>
                   <div className="text-xs font-bold">Registered App</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                     Specific existing MiniApp
                   </div>
                 </div>
@@ -325,7 +325,7 @@ export function CreateProposalModal({
                 </div>
                 <div>
                   <div className="text-xs font-bold">New / External App</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
                     Not yet in registry
                   </div>
                 </div>
@@ -335,7 +335,7 @@ export function CreateProposalModal({
             {/* Sub-inputs based on Scope Selection */}
             {scopeType === 'registered' && (
               <div className="pt-1.5 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Select Registered MiniApp
                 </label>
                 {isLoadingApps ? (
@@ -345,20 +345,17 @@ export function CreateProposalModal({
                     No registered MiniApps found. Switch to <strong>New / External App</strong> to specify an upcoming MiniApp.
                   </div>
                 ) : (
-                  <div className="relative">
-                    <select
-                      value={selectedMiniAppId}
-                      onChange={(e) => setSelectedMiniAppId(e.target.value)}
-                      className="w-full h-10 text-xs pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 cursor-pointer appearance-none"
-                    >
-                      {miniapps.map((app) => (
-                        <option key={app.id} value={app.id}>
-                          {app.name} ({app.appId || app.organization || 'MiniApp'})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
+                  <Select
+                    value={selectedMiniAppId}
+                    onChange={(e) => setSelectedMiniAppId(e.target.value)}
+                    className="h-10 text-xs py-2"
+                  >
+                    {miniapps.map((app) => (
+                      <option key={app.id} value={app.id}>
+                        {app.name} ({app.appId || app.organization || 'MiniApp'})
+                      </option>
+                    ))}
+                  </Select>
                 )}
               </div>
             )}
@@ -366,10 +363,10 @@ export function CreateProposalModal({
             {scopeType === 'custom' && (
               <div className="pt-1.5 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     MiniApp Name or Identifier <span className="text-rose-500 font-bold">*</span>
                   </label>
-                  <span className="text-[10px] text-slate-400">e.g. In-development or partner app</span>
+                  <span className="text-xs text-slate-400">e.g. In-development or partner app</span>
                 </div>
                 <input
                   type="text"
@@ -418,7 +415,7 @@ export function CreateProposalModal({
                   className="w-full h-10 pl-7 pr-3 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-400"
                 />
               </div>
-              <p id="capability-id-help" className="text-[10px] text-slate-500 dark:text-slate-400">
+              <p id="capability-id-help" className="text-xs text-slate-500 dark:text-slate-400">
                 A short name in lowercase with underscores, e.g. <span className="font-mono">nfc_reader</span>.
               </p>
             </div>
@@ -430,7 +427,7 @@ export function CreateProposalModal({
                   Display Name
                 </label>
                 {autoName && !permissionName && (
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                     Auto: {autoName}
                   </span>
                 )}
@@ -473,9 +470,9 @@ export function CreateProposalModal({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-sky-300/60 dark:border-sky-800 hover:border-sky-500 text-slate-800 dark:text-slate-100 cursor-pointer transition-colors"
                     >
                       <span className="font-semibold">{sg.name}</span>
-                      <span className="font-mono text-[10px] text-slate-500">{sg.key}</span>
+                      <span className="font-mono text-xs text-slate-500">{sg.key}</span>
                       {sg.reason === 'exists' && (
-                        <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">available</span>
+                        <span className="text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">available</span>
                       )}
                     </button>
                   ))}
@@ -514,17 +511,17 @@ export function CreateProposalModal({
                     {permissionName.trim() || autoName || (permissionKey.trim() ? permissionKey.trim() : 'Platform Feature')}
                   </span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${matchedVisual.pillBgColor} ${matchedVisual.badgeTextColor}`}
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${matchedVisual.pillBgColor} ${matchedVisual.badgeTextColor}`}
                   >
                     {matchedVisual.category}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Visual icon &amp; styling categorized automatically
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
               <Sparkles className="w-3 h-3" />
               Auto-Styled
             </span>

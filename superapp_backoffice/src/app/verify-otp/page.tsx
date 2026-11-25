@@ -158,7 +158,7 @@ function VerifyOtpContent() {
                 </svg>
                 <span>Super Administrator Review Required</span>
               </div>
-              <p className="text-[11px] text-slate-300/90 leading-relaxed">
+              <p className="text-xs text-slate-300/90 leading-relaxed">
                 As a regulated sovereign financial infrastructure platform, all new developer accounts require Super Administrator authorization before back-office access is granted.
               </p>
             </div>
@@ -166,7 +166,7 @@ function VerifyOtpContent() {
             <div className="pt-2">
               <Link
                 href="/login"
-                className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-brand-500/40 transition-all duration-200 flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-brand-500/40 transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <span>Return to Login</span>
                 <span className="text-brand-400">→</span>
@@ -189,7 +189,7 @@ function VerifyOtpContent() {
             </svg>
           </div>
           <div className="truncate">
-            <div className="text-[11px] text-slate-400">Sent code to</div>
+            <div className="text-xs text-slate-400">Sent code to</div>
             <div className="text-xs font-semibold text-white truncate">
               {rawEmail ? maskEmail(rawEmail) : 'your email address'}
             </div>

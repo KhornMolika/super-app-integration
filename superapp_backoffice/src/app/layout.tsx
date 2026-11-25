@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Google_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
 import { AuthProvider } from '@/lib/auth';
@@ -8,7 +8,18 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { AppShell } from '@/components/ui/AppShell';
 
-const plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'] });
+const googleSans = Google_Sans({
+  subsets: ['latin', 'khmer'],
+  variable: '--font-google-sans',
+  display: 'swap',
+  adjustFontFallback: false,
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'SuperApp Back Office',
@@ -21,10 +32,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${googleSans.variable} ${jetbrainsMono.variable}`}
+    >
       <body
         suppressHydrationWarning
-        className={`${plusJakarta.className} antialiased h-screen overflow-hidden selection:bg-brand-500/30 selection:text-brand-900 dark:selection:text-brand-100`}
+        className={`${googleSans.className} font-sans antialiased h-screen overflow-hidden selection:bg-brand-500/30 selection:text-brand-900 dark:selection:text-brand-100`}
       >
         <AuthProvider>
           <ConfirmationProvider>

@@ -170,7 +170,7 @@ export function OrganizationDetailHeader({
           <AlertTriangleIcon className="w-5 h-5 text-amber-600 shrink-0" />
           <div>
             <p className="font-bold">Organization Inactive</p>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
               This organization is currently inactive. Active platform operations and new mini-app submissions under this regulatory authority are temporarily suspended.
             </p>
           </div>

@@ -10,7 +10,7 @@ import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/Pa
 import { authApi } from '@/api/auth.api';
 import { maskEmail } from '@/lib/mask-email';
 
-type RecoveryStep = 'email' | 'otp' | 'new-password' | 'success';
+type RecoveryStep = 'email' | 'otp' | 'new-password';
 
 const CODE_LIFESPAN_SECONDS = 300; // 5 minutes validity
 const RESEND_COOLDOWN_SECONDS = 60; // 60s before resend is allowed
@@ -37,8 +37,6 @@ export default function ForgotPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [resetToken, setResetToken] = useState('');
-  // After the reset: can sign in now, or (newly verified developer) awaits approval
-  const [nextStatus, setNextStatus] = useState<'ACTIVE' | 'PENDING_APPROVAL'>('ACTIVE');
 
   const [loading, setLoading] = useState(false);
 
@@ -121,6 +119,14 @@ export default function ForgotPasswordPage() {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       const res = await authApi.verifyRecoveryOtp(trimmedEmail, code);
+      if (!res?.resetToken) {
+        setOtpError(true);
+        toast.error(
+          res?.message || 'Could not obtain reset session token. Please try again.',
+          'Verification Failed',
+        );
+        return;
+      }
       setResetToken(res.resetToken);
       toast.success('Recovery code verified! Set your new password.', 'Code Verified');
       setStep('new-password');
@@ -184,10 +190,9 @@ export default function ForgotPasswordPage() {
     setPasswordError('');
 
     try {
-      const res = await authApi.resetPassword(resetToken, newPassword);
-      setNextStatus(res?.nextStatus === 'PENDING_APPROVAL' ? 'PENDING_APPROVAL' : 'ACTIVE');
-      setStep('success');
+      await authApi.resetPassword(resetToken, newPassword);
       toast.success('Your password has been changed securely.', 'Password Updated');
+      router.push(`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch (err: any) {
       const message =
         err?.message || 'Failed to update password. Your reset session may have expired.';
@@ -197,63 +202,6 @@ export default function ForgotPasswordPage() {
       setLoading(false);
     }
   };
-
-  // --------------------------------------------------------------------------
-  // STEP 4: Success Screen
-  // --------------------------------------------------------------------------
-  if (step === 'success') {
-    return (
-      <AuthCenteredLayout
-        title="Password Reset Complete"
-        subtitle="Your password has been changed successfully."
-        badge="Security"
-        backHref="/login"
-        backLabel="Back to Login"
-      >
-        <div className="text-center space-y-6 py-2 animate-in fade-in duration-300">
-          <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center mx-auto text-brand-400 shadow-lg shadow-brand-500/10">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-lg font-bold text-white">All Sessions Secured</h3>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-              {nextStatus === 'PENDING_APPROVAL'
-                ? 'Your password has been updated and your email address is now verified.'
-                : 'Your password has been updated. You can now Login to the FSA SuperApp Platform with your new credentials.'}
-            </p>
-          </div>
-
-          {/* A newly verified developer account still needs a Super Administrator */}
-          {nextStatus === 'PENDING_APPROVAL' && (
-            <div className="p-4 rounded-2xl bg-accent-500/10 border border-accent-500/25 text-left space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-accent-300">
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>Super Administrator Review Required</span>
-              </div>
-              <p className="text-[11px] text-slate-300/90 leading-relaxed">
-                Your account is pending Super Administrator approval. You can sign in once a Super Administrator activates it.
-              </p>
-            </div>
-          )}
-
-          <div className="pt-2">
-            <Link
-              href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`}
-              className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <span>{nextStatus === 'PENDING_APPROVAL' ? 'Return to Login' : 'Login'}</span>
-              <span className="text-accent-300">→</span>
-            </Link>
-          </div>
-        </div>
-      </AuthCenteredLayout>
-    );
-  }
 
   // --------------------------------------------------------------------------
   // STEP 3: Set New Password Form (Only shown after OTP is verified)

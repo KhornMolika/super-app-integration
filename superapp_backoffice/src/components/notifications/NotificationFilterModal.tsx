@@ -195,7 +195,7 @@ export function NotificationFilterModal({
                 </svg>
                 Read Status
               </label>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">Pick one view</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Pick one view</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -230,7 +230,7 @@ export function NotificationFilterModal({
                         {opt.count}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 block font-medium">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 block font-medium">
                       {opt.sub}
                     </span>
                   </button>
@@ -248,7 +248,7 @@ export function NotificationFilterModal({
                 </svg>
                 Categories
                 {draft.categories.length > 0 && draft.categories.length < 4 && (
-                  <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                  <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
                     ({draft.categories.length} selected)
                   </span>
                 )}
@@ -258,7 +258,7 @@ export function NotificationFilterModal({
                 <button
                   type="button"
                   onClick={handleSelectAllCategories}
-                  className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
                 >
                   Select All
                 </button>
@@ -266,7 +266,7 @@ export function NotificationFilterModal({
                 <button
                   type="button"
                   onClick={handleClearCategories}
-                  className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
                 >
                   Clear
                 </button>
@@ -309,7 +309,7 @@ export function NotificationFilterModal({
                           {cat.label}
                         </span>
                         <span
-                          className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+                          className={`text-xs px-1.5 py-0.2 rounded-full font-bold ${
                             selected
                               ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
                               : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
@@ -318,7 +318,7 @@ export function NotificationFilterModal({
                           {count}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
                         {cat.description}
                       </p>
                     </div>
@@ -327,7 +327,7 @@ export function NotificationFilterModal({
               })}
             </div>
             {draft.categories.length === 0 && (
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 italic">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 italic">
                 No specific categories chosen — showing all categories by default.
               </p>
             )}
@@ -342,7 +342,7 @@ export function NotificationFilterModal({
                 </svg>
                 Severity & Outcome
               </label>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">Optional</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Optional</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -381,7 +381,7 @@ export function NotificationFilterModal({
                 </svg>
                 Activity Timeframe
               </label>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">Recency</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Recency</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -449,7 +449,7 @@ export function NotificationFilterModal({
               className="px-5 py-2 text-xs font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <span>Apply Filters</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">
+              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-xs">
                 {previewMatchingCount}
               </span>
             </button>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ export function NotificationEventsCard() {
         <div>
           <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>Automated Notification Events</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
               Live Triggers
             </span>
           </h3>
@@ -32,7 +32,7 @@ export function NotificationEventsCard() {
           <div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5 flex-wrap">
               <span>Security Scans &amp; SAST</span>
-              <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+              <span className="text-xs uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                 PASSED / FAILED
               </span>
             </div>
@@ -49,7 +49,7 @@ export function NotificationEventsCard() {
           <div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5 flex-wrap">
               <span>Test Build APK &amp; Sandbox</span>
-              <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-700 dark:text-blue-300">
+              <span className="text-xs uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-700 dark:text-blue-300">
                 READY
               </span>
             </div>
@@ -66,7 +66,7 @@ export function NotificationEventsCard() {
           <div>
             <div className="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5 flex-wrap">
               <span>Review Decisions</span>
-              <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-violet-500/20 text-violet-700 dark:text-violet-300">
+              <span className="text-xs uppercase font-extrabold px-1.5 py-0.2 rounded-md bg-violet-500/20 text-violet-700 dark:text-violet-300">
                 APPROVALS
               </span>
             </div>

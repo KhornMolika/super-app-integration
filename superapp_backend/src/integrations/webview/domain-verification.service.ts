@@ -270,11 +270,13 @@ export class DomainVerificationService {
           ? `Domain ownership verified successfully for ${parsedUrl.hostname} (Whitelisted: ${otherDomains.join(', ')}).`
           : `Domain ownership verified successfully for ${parsedUrl.hostname}.`;
 
-      const detectedPerms = Array.isArray(payload.permissions)
-        ? payload.permissions
-        : Array.isArray(payload.requestedPermissions)
-          ? payload.requestedPermissions
-          : [];
+      const detectedPerms = Array.isArray(payload.capabilities)
+        ? payload.capabilities
+        : Array.isArray(payload.permissions)
+          ? payload.permissions
+          : Array.isArray(payload.requestedPermissions)
+            ? payload.requestedPermissions
+            : [];
 
       return {
         success: true,

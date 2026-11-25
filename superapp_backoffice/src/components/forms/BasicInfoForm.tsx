@@ -17,6 +17,21 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
+  const latestOrgDefaultsRef = React.useRef({
+    formDataId: formData.id,
+    formDataOrganization: formData.organization,
+    handleChange,
+    isSuperAdmin,
+  });
+  useEffect(() => {
+    latestOrgDefaultsRef.current = {
+      formDataId: formData.id,
+      formDataOrganization: formData.organization,
+      handleChange,
+      isSuperAdmin,
+    };
+  });
+
   useEffect(() => {
     let mounted = true;
     const loadOrgs = async () => {
@@ -26,6 +41,12 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         const data = unwrapData<Organization>(res);
         if (mounted && Array.isArray(data) && data.length > 0) {
           setDbOrganizations(data);
+          const {
+            formDataId,
+            formDataOrganization,
+            handleChange: onFieldChange,
+            isSuperAdmin: superAdmin,
+          } = latestOrgDefaultsRef.current;
 
           // Find organization that the current user belongs to
           const userOrg = user?.organization;
@@ -49,19 +70,19 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           });
 
           // If user belongs to an organization, bind default organization (super admins can freely re-select)
-          const targetOrg = matchedUserOrg || (userOrgName ? { name: userOrgName, code: userOrgCode || '', id: userOrgId || '' } : (!formData.organization ? data[0] : null));
+          const targetOrg = matchedUserOrg || (userOrgName ? { name: userOrgName, code: userOrgCode || '', id: userOrgId || '' } : (!formDataOrganization ? data[0] : null));
 
-          if (targetOrg && handleChange && (!formData.organization || (!isSuperAdmin && !formData.id && (matchedUserOrg || userOrgName)))) {
-            handleChange({
+          if (targetOrg && onFieldChange && (!formDataOrganization || (!superAdmin && !formDataId && (matchedUserOrg || userOrgName)))) {
+            onFieldChange({
               target: { name: 'organization', value: targetOrg.name },
             } as any);
             if (targetOrg.code) {
-              handleChange({
+              onFieldChange({
                 target: { name: 'organizationCode', value: targetOrg.code },
               } as any);
             }
             if (targetOrg.id) {
-              handleChange({
+              onFieldChange({
                 target: { name: 'organizationId', value: targetOrg.id },
               } as any);
             }

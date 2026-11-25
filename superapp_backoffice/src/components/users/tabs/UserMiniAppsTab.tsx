@@ -192,7 +192,7 @@ export function UserMiniAppsTab({
                           {app.name}
                         </h4>
                         {app.appId && (
-                          <span className="font-mono text-[11px] text-slate-400 block truncate">
+                          <span className="font-mono text-xs text-slate-400 block truncate">
                             {app.appId}
                           </span>
                         )}
@@ -200,7 +200,7 @@ export function UserMiniAppsTab({
                     </div>
 
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
                         isLive
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                           : isInReview
@@ -222,10 +222,10 @@ export function UserMiniAppsTab({
 
                   {/* Badges: Version & Integration */}
                   <div className="flex items-center gap-2 pt-1 flex-wrap">
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                       v{app.version || app.currentReleaseVersion || '0.1.0'}
                     </span>
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                       {app.integrationMethod || 'WEBVIEW'}
                     </span>
                   </div>
@@ -233,7 +233,7 @@ export function UserMiniAppsTab({
 
                 {/* Bottom Action Link */}
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-xs text-slate-400">
                     {app.updatedAt
                       ? `Updated ${new Date(app.updatedAt).toLocaleDateString(undefined, {
                           month: 'short',

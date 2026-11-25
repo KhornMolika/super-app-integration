@@ -174,7 +174,9 @@ export class AccessControlService {
         await this.staffProfileRepository.save(staffProfile);
       } else {
         let spChanged = false;
-        if (!staffProfile.role || staffProfile.role.name !== targetRoleName) {
+        // Only initialize the seed role when the profile has no role yet,
+        // so an administrator's explicit role reassignment is preserved.
+        if (!staffProfile.role) {
           staffProfile.role = role;
           staffProfile.roleId = role.id;
           spChanged = true;
@@ -841,6 +843,7 @@ export class AccessControlService {
       dto.staffId !== undefined ||
       dto.phoneNumber !== undefined ||
       dto.organizationId !== undefined ||
+      dto.roleId !== undefined ||
       dto.roleIds !== undefined ||
       dto.roleNames !== undefined;
 
@@ -903,23 +906,36 @@ export class AccessControlService {
       }
     }
 
-    if (dto.roleIds !== undefined || dto.roleNames !== undefined) {
+    if (
+      dto.roleId !== undefined ||
+      dto.roleIds !== undefined ||
+      dto.roleNames !== undefined
+    ) {
       if (isSelf && !isSuperAdmin) {
         throw new ForbiddenException('Users cannot change their own roles');
       }
       let newRoles: Role[] = [];
-      if (dto.roleIds !== undefined) {
-        newRoles =
-          dto.roleIds.length > 0
-            ? await this.roleRepository.findBy({ id: In(dto.roleIds) })
-            : [];
-      } else if (dto.roleNames !== undefined) {
-        newRoles =
-          dto.roleNames.length > 0
-            ? await this.roleRepository.findBy({ name: In(dto.roleNames) })
-            : [];
+      if (dto.roleId?.trim()) {
+        const singleRole = await this.roleRepository.findOne({
+          where: { id: dto.roleId.trim() },
+        });
+        if (singleRole) newRoles = [singleRole];
+      } else if (dto.roleIds && dto.roleIds.length > 0) {
+        newRoles = await this.roleRepository.findBy({ id: In(dto.roleIds) });
+      } else if (dto.roleNames && dto.roleNames.length > 0) {
+        newRoles = await this.roleRepository.findBy({
+          name: In(dto.roleNames),
+        });
       }
 
+      if (
+        isTargetSuperAdmin &&
+        !newRoles.some((r) => r.name === 'SUPER_ADMIN')
+      ) {
+        throw new ForbiddenException(
+          'Protected Role Guard: Super Admin role authority cannot be revoked or demoted.',
+        );
+      }
       if (!isSuperAdmin && newRoles.some((r) => r.name === 'SUPER_ADMIN')) {
         throw new ForbiddenException(
           'Only Super Administrators can assign the Super Admin role',
@@ -1074,7 +1090,11 @@ export class AccessControlService {
     }
 
     const roleName = identity.staffProfile?.role?.name;
-    const isPrivileged = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
+    const isPrivileged =
+      roleName === 'SUPER_ADMIN' ||
+      roleName === 'PLATFORM_ADMIN' ||
+      roleName === 'ORG_ADMIN' ||
+      roleName === 'ADMIN';
     const nextStatus = isPrivileged ? 'ACTIVE' : 'PENDING_APPROVAL';
     identity.status = nextStatus;
     identity.emailVerifiedAt = new Date();
@@ -1273,7 +1293,15 @@ export class AccessControlService {
   async updateRole(id: string, dto: UpdateRoleDto): Promise<Role> {
     const role = await this.findRoleById(id);
 
-    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+    const systemRoles = [
+      'SUPER_ADMIN',
+      'PLATFORM_ADMIN',
+      'APP_REVIEWER',
+      'ORG_ADMIN',
+      'ADMIN',
+      'MA_DEVELOPER',
+      'STAFF',
+    ];
     if (dto.name !== undefined) {
       if (systemRoles.includes(role.name.toUpperCase())) {
         throw new BadRequestException(
@@ -1302,7 +1330,15 @@ export class AccessControlService {
 
   async deleteRole(id: string): Promise<{ success: boolean; message: string }> {
     const role = await this.findRoleById(id);
-    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+    const systemRoles = [
+      'SUPER_ADMIN',
+      'PLATFORM_ADMIN',
+      'APP_REVIEWER',
+      'ORG_ADMIN',
+      'ADMIN',
+      'MA_DEVELOPER',
+      'STAFF',
+    ];
     if (systemRoles.includes(role.name.toUpperCase())) {
       throw new BadRequestException(
         `System role '${role.name}' is a core system role and cannot be deleted.`,

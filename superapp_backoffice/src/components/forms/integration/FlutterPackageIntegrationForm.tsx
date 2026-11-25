@@ -325,6 +325,7 @@ export default function FlutterPackageIntegrationForm({
           isSanitized: data.isSanitized,
           isArchiveSubmission: true,
           widgetCandidates: Array.isArray(data.widgetCandidates) ? data.widgetCandidates : [],
+          sdkWarning: data.sdkWarning || undefined,
         };
 
         if (onUpdateFlutterConfig) {
@@ -580,6 +581,31 @@ export default function FlutterPackageIntegrationForm({
     }
   };
 
+  const latestFlutterEffectRef = React.useRef({
+    handleCommitChange,
+    handleFlutterChange,
+    handleRefChange,
+    onUpdateFlutterConfig,
+    commitSha: flutterConfig.commitSha,
+    gitBranch: flutterConfig.gitBranch,
+    packageName: flutterConfig.packageName,
+    versionConstraint: flutterConfig.versionConstraint,
+    selectedRefType,
+  });
+  useEffect(() => {
+    latestFlutterEffectRef.current = {
+      handleCommitChange,
+      handleFlutterChange,
+      handleRefChange,
+      onUpdateFlutterConfig,
+      commitSha: flutterConfig.commitSha,
+      gitBranch: flutterConfig.gitBranch,
+      packageName: flutterConfig.packageName,
+      versionConstraint: flutterConfig.versionConstraint,
+      selectedRefType,
+    };
+  });
+
   // Commits of the chosen branch. Listed through the GitHub/GitLab API, so a
   // deploy-key repository gets only the newest commit (resolve-sha above).
   const commitBranch = selectedRef || flutterConfig.gitBranch || "";
@@ -605,7 +631,9 @@ export default function FlutterPackageIntegrationForm({
         if (list.length) {
           setBranchHeadSha(list[0].sha);
           // Keep a picked commit that belongs to this branch, else take the newest
-          if (!list.some((c) => c.sha === flutterConfig.commitSha)) handleCommitChange(list[0].sha);
+          if (!list.some((c) => c.sha === latestFlutterEffectRef.current.commitSha)) {
+            latestFlutterEffectRef.current.handleCommitChange(list[0].sha);
+          }
         }
       } catch {
         if (!cancelled) setCommits([]);
@@ -663,7 +691,7 @@ export default function FlutterPackageIntegrationForm({
         try {
           const valData = await integrationsApi.validateGit({
             url,
-            ref: selectedRef || flutterConfig.gitBranch || undefined,
+            ref: selectedRef || latestFlutterEffectRef.current.gitBranch || undefined,
             token: tokenToUse,
             path: path || undefined,
             isPrivate: isPrivateRepo || url.startsWith("git@"),
@@ -703,11 +731,11 @@ export default function FlutterPackageIntegrationForm({
             setDetectedProvider(rawVal?.provider || (valData as any)?.provider);
           }
 
-          if (effectivePkg && flutterConfig.packageName !== effectivePkg) {
-            if (onUpdateFlutterConfig) {
-              onUpdateFlutterConfig({ packageName: effectivePkg });
+          if (effectivePkg && latestFlutterEffectRef.current.packageName !== effectivePkg) {
+            if (latestFlutterEffectRef.current.onUpdateFlutterConfig) {
+              latestFlutterEffectRef.current.onUpdateFlutterConfig({ packageName: effectivePkg });
             } else {
-              handleFlutterChange({
+              latestFlutterEffectRef.current.handleFlutterChange({
                 target: {
                   name: "packageName",
                   value: effectivePkg,
@@ -731,10 +759,10 @@ export default function FlutterPackageIntegrationForm({
               if (
                 tagList.length > 0 &&
                 !selectedRef &&
-                !flutterConfig.gitBranch &&
-                selectedRefType === "tag"
+                !latestFlutterEffectRef.current.gitBranch &&
+                latestFlutterEffectRef.current.selectedRefType === "tag"
               ) {
-                handleRefChange(tagList[0]);
+                latestFlutterEffectRef.current.handleRefChange(tagList[0]);
               }
             }
           } catch {}
@@ -754,13 +782,13 @@ export default function FlutterPackageIntegrationForm({
               if (
                 branchList.length > 0 &&
                 !selectedRef &&
-                !flutterConfig.gitBranch &&
-                selectedRefType === "branch"
+                !latestFlutterEffectRef.current.gitBranch &&
+                latestFlutterEffectRef.current.selectedRefType === "branch"
               ) {
                 const defaultBranch = branchList.includes("main")
                   ? "main"
                   : branchList[0];
-                handleRefChange(defaultBranch);
+                latestFlutterEffectRef.current.handleRefChange(defaultBranch);
               }
             }
           } catch {}
@@ -769,16 +797,16 @@ export default function FlutterPackageIntegrationForm({
           try {
             const shaData: any = await integrationsApi.resolveGitSha({
               url,
-              ref: selectedRef || flutterConfig.gitBranch || "main",
+              ref: selectedRef || latestFlutterEffectRef.current.gitBranch || "main",
               token: tokenToUse,
               deployKey: flutterConfig.deployKey || undefined,
             });
             const sha = shaData?.sha || shaData?.data?.sha;
             if (sha) {
               setBranchHeadSha(sha);
-              if (!flutterConfig.commitSha) {
+              if (!latestFlutterEffectRef.current.commitSha) {
                 setLockedCommitSha(sha);
-                handleCommitChange(sha);
+                latestFlutterEffectRef.current.handleCommitChange(sha);
               }
             }
           } catch {}
@@ -792,11 +820,11 @@ export default function FlutterPackageIntegrationForm({
                 "Private repository configured with Deploy Key. Full verification will be orchestrated via Jenkins CI runner.",
               packageName: fallbackPkg,
             });
-            if (fallbackPkg && flutterConfig.packageName !== fallbackPkg) {
-              if (onUpdateFlutterConfig) {
-                onUpdateFlutterConfig({ packageName: fallbackPkg });
+            if (fallbackPkg && latestFlutterEffectRef.current.packageName !== fallbackPkg) {
+              if (latestFlutterEffectRef.current.onUpdateFlutterConfig) {
+                latestFlutterEffectRef.current.onUpdateFlutterConfig({ packageName: fallbackPkg });
               } else {
-                handleFlutterChange({
+                latestFlutterEffectRef.current.handleFlutterChange({
                   target: { name: "packageName", value: fallbackPkg },
                 } as any);
               }
@@ -823,11 +851,11 @@ export default function FlutterPackageIntegrationForm({
               });
               if (branchesData.branches && Array.isArray(branchesData.branches)) {
                 setBranches(branchesData.branches);
-                if (!selectedRef && !flutterConfig.gitBranch) {
+                if (!selectedRef && !latestFlutterEffectRef.current.gitBranch) {
                   const defB = branchesData.branches.includes("main")
                     ? "main"
                     : branchesData.branches[0];
-                  handleRefChange(defB);
+                  latestFlutterEffectRef.current.handleRefChange(defB);
                 }
               }
             } catch {}
@@ -835,14 +863,14 @@ export default function FlutterPackageIntegrationForm({
             try {
               const shaData = await integrationsApi.resolveGitSha({
                 url,
-                ref: selectedRef || flutterConfig.gitBranch || "main",
+                ref: selectedRef || latestFlutterEffectRef.current.gitBranch || "main",
                 deployKey: flutterConfig.deployKey || undefined,
               });
               if (shaData.sha) {
                 setBranchHeadSha(shaData.sha);
-                if (!flutterConfig.commitSha) {
+                if (!latestFlutterEffectRef.current.commitSha) {
                   setLockedCommitSha(shaData.sha);
-                  handleCommitChange(shaData.sha);
+                  latestFlutterEffectRef.current.handleCommitChange(shaData.sha);
                 }
               }
             } catch {}
@@ -894,11 +922,11 @@ export default function FlutterPackageIntegrationForm({
     }
 
     const update = (updates: Record<string, unknown>) => {
-      if (onUpdateFlutterConfig) {
-        onUpdateFlutterConfig(updates);
+      if (latestFlutterEffectRef.current.onUpdateFlutterConfig) {
+        latestFlutterEffectRef.current.onUpdateFlutterConfig(updates);
       } else {
         Object.entries(updates).forEach(([key, val]) => {
-          handleFlutterChange({
+          latestFlutterEffectRef.current.handleFlutterChange({
             target: { name: key, value: val },
           } as unknown as React.ChangeEvent<HTMLInputElement>);
         });
@@ -973,10 +1001,10 @@ export default function FlutterPackageIntegrationForm({
         if (
           data.exists &&
           data.latestVersion &&
-          !flutterConfig.versionConstraint
+          !latestFlutterEffectRef.current.versionConstraint
         ) {
           const cleanLatest = String(data.latestVersion).trim();
-          handleFlutterChange({
+          latestFlutterEffectRef.current.handleFlutterChange({
             target: {
               name: "versionConstraint",
               value: cleanLatest.startsWith("^")
@@ -1053,6 +1081,7 @@ export default function FlutterPackageIntegrationForm({
             existingFilename={flutterConfig?.archiveFilename}
             existingChecksum={flutterConfig?.archiveChecksum}
             existingSize={flutterConfig?.archiveSize}
+            sdkWarning={archiveUploadSuccess?.sdkWarning || flutterConfig?.sdkWarning}
           />
 
           <FlutterNexusConfigSection

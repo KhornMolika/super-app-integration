@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
@@ -67,6 +67,7 @@ export function TelegramTeamCard({
   onCleanupInactive,
 }: TelegramTeamCardProps) {
   const hasTeamChat = Boolean(telegramStatus?.user?.teamTelegramChatId);
+  const [revealTeamChatId, setRevealTeamChatId] = useState(false);
   const [testingGroupId, setTestingGroupId] = useState<string | null>(null);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [migratingGroupId, setMigratingGroupId] = useState<string | null>(null);
@@ -260,13 +261,22 @@ export function TelegramTeamCard({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2.5 mt-2">
-            <Input
-              type="text"
-              value={teamChatIdInput}
-              onChange={(e) => setTeamChatIdInput(e.target.value)}
-              placeholder="e.g. -5542396469 or -1002345678901"
-              className="font-mono text-xs sm:text-sm flex-1 rounded-xl"
-            />
+            <div className="relative flex-1">
+              <Input
+                type={revealTeamChatId ? 'text' : 'password'}
+                value={teamChatIdInput}
+                onChange={(e) => setTeamChatIdInput(e.target.value)}
+                placeholder="e.g. -5542396469 or -1002345678901"
+                className="font-mono text-xs sm:text-sm w-full pr-14 rounded-xl"
+              />
+              <button
+                type="button"
+                onClick={() => setRevealTeamChatId((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                {revealTeamChatId ? 'Hide' : 'Show'}
+              </button>
+            </div>
             <Button
               type="submit"
               disabled={savingTeamChat}
@@ -302,7 +312,7 @@ export function TelegramTeamCard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <span>Connected Telegram Groups &amp; Associated MiniApps</span>
-              <span className="text-[11px] px-2 py-0.2 rounded-full font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span className="text-xs px-2 py-0.2 rounded-full font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {detectedGroups.length} {detectedGroups.length === 1 ? 'Channel' : 'Channels'}
               </span>
             </h4>
@@ -412,7 +422,7 @@ export function TelegramTeamCard({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                               </svg>
                               <span>Connected MiniApps</span>
-                              <span className="px-1.5 py-0.2 text-[11px] font-bold rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                              <span className="px-1.5 py-0.2 text-xs font-bold rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
                                 {miniAppAssocs.length}
                               </span>
                             </div>
@@ -461,7 +471,7 @@ export function TelegramTeamCard({
                                     {assoc.name || assoc.appId}
                                   </span>
                                   {assoc.status && (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider border ${statusBg}`}>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider border ${statusBg}`}>
                                       {assoc.status}
                                     </span>
                                   )}

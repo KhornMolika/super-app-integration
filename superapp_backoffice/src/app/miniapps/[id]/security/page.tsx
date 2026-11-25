@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { miniappsApi } from '@/api';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
 
 function MiniAppSecurityPageContent() {
@@ -16,13 +17,15 @@ function MiniAppSecurityPageContent() {
   const [miniApp, setMiniApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
-  const fetchApp = async () => {
+  const fetchApp = useCallback(async (silent = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (!silent && !hasLoadedRef.current) setLoading(true);
       setError(null);
       const data = await miniappsApi.getById(id);
+      hasLoadedRef.current = true;
       setMiniApp(data);
     } catch (err: any) {
       console.error('Failed to load MiniApp for security report:', err);
@@ -30,18 +33,18 @@ function MiniAppSecurityPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchApp();
-  }, [id]);
+  }, [fetchApp]);
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-        <p className="text-sm text-slate-500">Loading security verification telemetry...</p>
-      </div>
+      <LoadingScreen
+        title="Loading Security Workspace"
+        subtitle="Retrieving real-time engine telemetry, compliance records, and CI pipelines..."
+      />
     );
   }
 
@@ -69,7 +72,7 @@ function MiniAppSecurityPageContent() {
   }
 
   return (
-    <div className="w-full min-w-0 pb-16 animate-in fade-in duration-300">
+    <div className="w-full min-w-0 pb-16">
       <ValidationReportTab
         miniApp={miniApp}
         onRefresh={fetchApp}
@@ -83,9 +86,10 @@ export default function MiniAppSecurityPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[70vh] flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-        </div>
+        <LoadingScreen
+          title="Loading Security Workspace"
+          subtitle="Initializing compliance and security modules..."
+        />
       }
     >
       <MiniAppSecurityPageContent />

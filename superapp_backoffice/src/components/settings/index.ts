@@ -8,4 +8,5 @@ export * from './NotificationEventsCard';
 export * from './AssignMiniAppModal';
 export * from './AccessTokensCard';
 export * from './DomainTokenGeneratorCard';
+export * from './SettingsPageHeader';
 

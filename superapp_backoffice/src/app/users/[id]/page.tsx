@@ -287,6 +287,7 @@ function UserDetailContent() {
       {/* Profile Header & Action Bar */}
       <UserDetailHeader
         user={user}
+        roles={roles}
         canManage={canManage}
         miniAppsCount={miniApps.length}
         auditLogsCount={auditLogs.length}

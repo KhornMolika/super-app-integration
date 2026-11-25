@@ -1,8 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
+
+function maskChatId(id?: string): string {
+  if (!id) return '—';
+  if (id.length <= 4) return '••••';
+  return `${'•'.repeat(Math.min(8, id.length - 4))}${id.slice(-4)}`;
+}
 
 interface TelegramPersonalCardProps {
   telegramStatus: any;
@@ -47,6 +53,7 @@ export function TelegramPersonalCard({
   setManualUsername,
   onCopyChatId,
 }: TelegramPersonalCardProps) {
+  const [revealChatId, setRevealChatId] = useState(false);
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
 
   return (
@@ -110,7 +117,7 @@ export function TelegramPersonalCard({
           <div className="p-5 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Connected Handle
                 </span>
                 <span className="font-bold text-slate-900 dark:text-slate-100 text-sm mt-1 block">
@@ -121,20 +128,31 @@ export function TelegramPersonalCard({
               </div>
 
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Personal Chat ID
                 </span>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {telegramStatus?.user?.telegramChatId}
+                    {revealChatId
+                      ? telegramStatus?.user?.telegramChatId
+                      : maskChatId(telegramStatus?.user?.telegramChatId)}
                   </span>
                   {telegramStatus?.user?.telegramChatId && (
-                    <button
-                      type="button"
-                      onClick={() => onCopyChatId(telegramStatus?.user?.telegramChatId || '')}
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded cursor-pointer"
-                      title="Copy Chat ID"
-                    >
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setRevealChatId((prev) => !prev)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded cursor-pointer text-[11px] font-medium"
+                        title={revealChatId ? 'Hide Chat ID' : 'Reveal Chat ID'}
+                      >
+                        {revealChatId ? 'Hide' : 'Show'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCopyChatId(telegramStatus?.user?.telegramChatId || '')}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded cursor-pointer"
+                        title="Copy Chat ID"
+                      >
                       {copiedChatId ? (
                         <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -149,13 +167,14 @@ export function TelegramPersonalCard({
                           />
                         </svg>
                       )}
-                    </button>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
 
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Channel Status
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-1">
@@ -198,7 +217,7 @@ export function TelegramPersonalCard({
                 1
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Open Telegram Bot</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Click 1-Click Connect to launch <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong>.
               </p>
             </div>
@@ -208,7 +227,7 @@ export function TelegramPersonalCard({
                 2
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Tap &quot;START&quot;</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 In Telegram, press <strong>START</strong> to register your personal Chat ID automatically.
               </p>
             </div>
@@ -218,7 +237,7 @@ export function TelegramPersonalCard({
                 3
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Sync &amp; Confirm</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Return here and click <strong>Check &amp; Sync Connection</strong> to activate real-time alerts.
               </p>
             </div>
@@ -273,7 +292,7 @@ export function TelegramPersonalCard({
               onSubmit={onManualConnect}
               className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200 text-xs"
             >
-              <div className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
+              <div className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-xs">
                 Manual Chat ID Entry
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

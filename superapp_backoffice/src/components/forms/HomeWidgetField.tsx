@@ -77,7 +77,7 @@ export default function HomeWidgetField({
   return (
     <div>
       <label
-        className={`flex items-center gap-3 text-[15px] font-semibold text-slate-800 dark:text-slate-200 ${
+        className={`flex items-center gap-3 text-sm font-semibold text-slate-800 dark:text-slate-200 ${
           !isEditable || !field ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
         }`}
       >

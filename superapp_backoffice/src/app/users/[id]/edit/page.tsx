@@ -8,10 +8,8 @@ import { useAuth } from '@/lib/auth';
 import {
   usersApi,
   organizationsApi,
-  rolesApi,
   User,
   Organization,
-  Role,
   unwrapData,
   unwrapItem,
 } from '@/api';
@@ -21,42 +19,7 @@ import { toast } from '@/components/ui/Toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ShieldCheckIcon, CheckIcon, BuildingIcon } from '@/components/ui/Icons';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles, AvatarUpload } from '@/components/users';
-import { isPlatformOwnerOrgCode } from '@/lib/config';
 import { OrganizationSelect } from '@/components/organizations/OrganizationSelect';
-
-
-interface RoleOption {
-  key: string;
-  label: string;
-  badge: string;
-  desc: string;
-  capabilities: string[];
-}
-
-
-const ROLE_OPTIONS: RoleOption[] = [
-  {
-    key: 'MA_DEVELOPER',
-    label: 'MiniApp Developer',
-    badge: 'Developer',
-    desc: 'Build, configure, publish mini applications and submit capability proposals',
-    capabilities: ['Create & submit MiniApps', 'Inspect build artifacts', 'Request bridge capabilities'],
-  },
-  {
-    key: 'ADMIN',
-    label: 'Organization Admin',
-    badge: 'Admin',
-    desc: 'Manages the users and mini apps of their own organization',
-    capabilities: ['Review & approve organization apps', 'Manage organization users', 'Resolve compliance issues'],
-  },
-  {
-    key: 'SUPER_ADMIN',
-    label: 'Super Administrator',
-    badge: 'Super Admin',
-    desc: 'Runs the platform across every organization (platform owner organization only)',
-    capabilities: ['Global system governance', 'Manage RBAC & permissions', 'Full audit registry inspection'],
-  },
-];
 
 
 function EditUserContent() {
@@ -85,14 +48,12 @@ function EditUserContent() {
 
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
 
   // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState('MA_DEVELOPER');
   const [organizationId, setOrganizationId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -166,9 +127,6 @@ function EditUserContent() {
 
       setName(data.name || '');
       setEmail(data.email || '');
-      const userRoles = getUserRoles(data);
-      const primaryRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
-      setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);
       setPosition(data.position || '');
@@ -188,25 +146,15 @@ function EditUserContent() {
   }, [id]);
 
 
-  // Load Organizations and Roles
+  // Load Organizations
   const fetchMetadata = useCallback(async () => {
     try {
       setLoadingOrgs(true);
-      const [orgsRes, rolesRes] = await Promise.allSettled([
-        organizationsApi.getAll({ limit: 100 }),
-        rolesApi.getAll(),
-      ]);
-
-
-      if (orgsRes.status === 'fulfilled') {
-        const orgs = unwrapData<Organization>(orgsRes.value);
-        setOrganizations(orgs);
-      }
-      if (rolesRes.status === 'fulfilled') {
-        setRoles(Array.isArray(rolesRes.value) ? rolesRes.value : []);
-      }
+      const orgsRes = await organizationsApi.getAll({ limit: 100 });
+      const orgs = unwrapData<Organization>(orgsRes);
+      setOrganizations(orgs);
     } catch (err) {
-      console.error('Failed to load metadata:', err);
+      console.error('Failed to load organizations:', err);
     } finally {
       setLoadingOrgs(false);
     }
@@ -234,30 +182,17 @@ function EditUserContent() {
     .toUpperCase();
 
 
-  const roleTheme = getRoleTheme(selectedRole);
+  const userRolesList = user ? getUserRoles(user) : [];
+  const rawPrimaryRole = userRolesList[0]?.name || user?.role?.name || 'MA_DEVELOPER';
+  const currentPrimaryRole = rawPrimaryRole === 'ADMIN' ? 'ORG_ADMIN' : rawPrimaryRole;
+  const roleTheme = getRoleTheme(currentPrimaryRole);
   const isTargetSuperAdmin = Boolean(
     user && (
       (user.roles && user.roles.some((r: any) => (typeof r === 'string' ? r : r?.name) === 'SUPER_ADMIN')) ||
       user.role?.name === 'SUPER_ADMIN' ||
-      getUserRoles(user).some((r) => r.name === 'SUPER_ADMIN')
+      userRolesList.some((r) => r.name === 'SUPER_ADMIN')
     )
   );
-  // Super Admin is only offered for members of the platform owner organization
-  const roleOptions = ROLE_OPTIONS.filter(
-    (opt) =>
-      opt.key !== 'SUPER_ADMIN' ||
-      isTargetSuperAdmin ||
-      isPlatformOwnerOrgCode(selectedOrg?.code),
-  );
-  useEffect(() => {
-    if (
-      selectedRole === 'SUPER_ADMIN' &&
-      !isTargetSuperAdmin &&
-      !isPlatformOwnerOrgCode(selectedOrg?.code)
-    ) {
-      setSelectedRole('ADMIN');
-    }
-  }, [selectedRole, isTargetSuperAdmin, selectedOrg]);
 
   const isSelf = Boolean(
     user && currentUser && (
@@ -293,15 +228,9 @@ function EditUserContent() {
     }
 
 
-    if (isTargetSuperAdmin) {
-      if (!isActive) {
-        toast.error('Protected Account Guard: Super Admin accounts cannot be set to inactive.');
-        return;
-      }
-      if (selectedRole !== 'SUPER_ADMIN') {
-        toast.error('Protected Role Guard: Super Admin clearance level cannot be downgraded or revoked.');
-        return;
-      }
+    if (isTargetSuperAdmin && !isActive) {
+      toast.error('Protected Account Guard: Super Admin accounts cannot be set to inactive.');
+      return;
     }
 
 
@@ -348,7 +277,6 @@ function EditUserContent() {
             position: position.trim() || undefined,
             staffId: staffId.trim() || undefined,
             phoneNumber: phoneNumber.trim() || undefined,
-            roleNames: [selectedRole],
             organizationId: organizationId.trim() || '',
             isActive,
           };
@@ -358,7 +286,7 @@ function EditUserContent() {
       }
 
       const updated = await usersApi.update(id, payload);
-      setUser({ ...updated, avatarUrl: latestAvatarUrl });
+      setUser({ ...unwrapItem<User>(updated), avatarUrl: latestAvatarUrl });
 
       if (currentUser?.id === id) {
         updateUserAvatar(latestAvatarUrl || null);
@@ -505,7 +433,7 @@ function EditUserContent() {
                     <Label htmlFor="user-email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Primary Email <span className="text-rose-500">*</span>
                     </Label>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <span className="w-1 h-1 rounded-full bg-emerald-500" />
                       Verified
                     </span>
@@ -527,7 +455,7 @@ function EditUserContent() {
                 <div className="space-y-1.5">
                   <Label htmlFor="user-password" className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span>New Password</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                    <span className="text-xs text-slate-400 font-normal">Optional</span>
                   </Label>
                   <div className="relative">
                     <Input
@@ -611,7 +539,7 @@ function EditUserContent() {
                       Account Status
                     </Label>
                     {isTargetSuperAdmin && (
-                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                         Protected Root Account
                       </span>
                     )}
@@ -644,81 +572,11 @@ function EditUserContent() {
                     </span>
                   </div>
                   {isTargetSuperAdmin && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 pt-0.5">
                       Super Administrator accounts maintain permanent active clearance and cannot be suspended.
                     </p>
                   )}
                 </div>
-              </div>
-            </div>
-
-
-            {/* Card 2: Role Authority & Access Scope */}
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
-              <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <ShieldCheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                  <span>Role Authority &amp; Access Scope</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Select the administrative clearance level and RBAC permissions for this operator
-                </p>
-              </div>
-
-
-              <div className={`grid grid-cols-1 gap-3 ${roleOptions.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-                {roleOptions.map((opt) => {
-                  const isSelected = selectedRole === opt.key;
-                  const theme = getRoleTheme(opt.key);
-                  return (
-                    <div
-                      key={opt.key}
-                      onClick={() => {
-                        if (isTargetSuperAdmin && opt.key !== 'SUPER_ADMIN') {
-                          toast.error('Protected Role Guard: Super Admin clearance level cannot be downgraded or revoked.');
-                          return;
-                        }
-                        setSelectedRole(opt.key);
-                      }}
-                      className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between space-y-3 ${
-                        isTargetSuperAdmin && opt.key !== 'SUPER_ADMIN'
-                          ? 'opacity-40 cursor-not-allowed border-slate-200/60 dark:border-slate-800/60 bg-slate-50/20 dark:bg-slate-900/20'
-                          : 'cursor-pointer ' + (isSelected
-                              ? 'border-brand-500 bg-brand-50/20 dark:bg-brand-500/10 shadow-sm'
-                              : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/40 dark:bg-slate-800/30')
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${theme.badge}`}>
-                            {opt.badge}
-                          </span>
-                          {isSelected && (
-                            <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs">
-                              <CheckIcon className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                          {opt.label}
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                          {opt.desc}
-                        </p>
-                      </div>
-
-
-                      <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/50 space-y-1">
-                        {opt.capabilities.map((c, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-600 dark:text-slate-300">
-                            <span className="w-1 h-1 rounded-full bg-brand-500 shrink-0" />
-                            <span>{c}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>
@@ -727,6 +585,7 @@ function EditUserContent() {
           {/* Right Column (4 of 12): Organization & Notification Channels */}
           <div className="lg:col-span-4 space-y-6">
             {/* Card 3: Assigned Organization Tenancy */}
+            {user?.accountType !== 'CONSUMER' && (
             <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -758,7 +617,7 @@ function EditUserContent() {
 
                 {selectedOrg ? (
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400">Tenancy Scope</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -766,7 +625,7 @@ function EditUserContent() {
                       </span>
                     </div>
                     {selectedOrg.code && (
-                      <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">Regulatory Code</span>
                         <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
                           {selectedOrg.code}
@@ -774,7 +633,7 @@ function EditUserContent() {
                       </div>
                     )}
                     {selectedOrg.parentAuthority && (
-                      <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">Regulatory Authority</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[150px]" title={selectedOrg.parentAuthority}>
                           {selectedOrg.parentAuthority}
@@ -783,12 +642,13 @@ function EditUserContent() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 italic">
+                  <p className="text-xs text-slate-400 italic">
                     Independent operator with global platform access scope.
                   </p>
                 )}
               </div>
             </div>
+            )}
 
 
             {/* Account Governance & Tenancy Profile */}
@@ -825,7 +685,7 @@ function EditUserContent() {
                 </div>
 
 
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-1">
                   <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -851,13 +711,13 @@ function EditUserContent() {
               Editing: <strong className="font-semibold">{name || user.name}</strong>
             </span>
             {pendingAvatarFile && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
                 Avatar change pending save
               </span>
             )}
             {pendingAvatarRemove && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 Avatar removal pending save
               </span>

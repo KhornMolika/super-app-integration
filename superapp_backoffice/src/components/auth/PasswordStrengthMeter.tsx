@@ -56,7 +56,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
 
   return (
     <div className="mt-2 space-y-2 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between text-[11px]">
+      <div className="flex items-center justify-between text-xs">
         <span className="text-slate-400">Password strength</span>
         <span className={`font-semibold ${getLabelColor()}`}>{label}</span>
       </div>
@@ -72,7 +72,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
       </div>
 
       {/* Live Requirement Checklist Pills */}
-      <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+      <div className="flex flex-wrap gap-2 pt-1 text-xs">
         <span
           className={`flex items-center gap-1 transition-colors ${
             hasLength ? 'text-brand-400 font-medium' : 'text-slate-500'

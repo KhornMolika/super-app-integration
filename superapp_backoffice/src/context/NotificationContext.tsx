@@ -3,20 +3,35 @@
 import React, { useEffect, ReactNode, useCallback } from 'react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { useAuth } from '@/lib/auth';
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
+  const userId = isAuthenticated ? (user?.id ?? null) : null;
+
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const syncUserScope = useNotificationStore((s) => s.syncUserScope);
 
   const handleNewNotification = useCallback((notificationData: any) => {
+    const item = notificationData?.data && typeof notificationData.data === 'object'
+      ? notificationData.data
+      : notificationData;
+    const targetUserId = item?.userId;
+    if (userId && targetUserId && targetUserId !== userId) {
+      return;
+    }
     addNotification(notificationData);
-  }, [addNotification]);
+  }, [addNotification, userId]);
 
-  useNotificationSocket(handleNewNotification);
+  useNotificationSocket(handleNewNotification, userId);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    syncUserScope(userId);
+    if (userId) {
+      fetchNotifications();
+    }
+  }, [userId, syncUserScope, fetchNotifications]);
 
   return <>{children}</>;
 }

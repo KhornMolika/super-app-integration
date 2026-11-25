@@ -127,6 +127,13 @@ export class ArtifactDistributionHelper {
         artifactUrl: v.integrationConfig?.artifactUrl || null,
         buildNumber: v.integrationConfig?.buildNumber ?? null,
         jenkinsJobUrl: v.integrationConfig?.jenkinsJobUrl || null,
+        endpointUrl:
+          v.integrationConfig?.productionUrl ||
+          v.integrationConfig?.stagingUrl ||
+          v.integrationConfig?.webUrl ||
+          null,
+        urlScheme: v.integrationConfig?.urlScheme || null,
+        integrationConfig: v.integrationConfig || null,
       };
     });
 

@@ -49,7 +49,7 @@ export function AuthCenteredLayout({
             <div className="text-xs font-bold text-white tracking-tight group-hover:text-brand-300 transition-colors">
               FSA SuperApp
             </div>
-            <div className="text-[10px] text-slate-400">Non-Bank Financial Services Authority</div>
+            <div className="text-xs text-slate-400">Non-Bank Financial Services Authority</div>
           </div>
         </Link>
 
@@ -78,7 +78,7 @@ export function AuthCenteredLayout({
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 rounded-3xl p-6 sm:p-9 shadow-2xl shadow-black/60 relative">
           {/* Badge */}
           {badge && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-500/10 border border-brand-500/25 text-brand-400 text-[10px] font-semibold uppercase tracking-wider mb-4">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-500/10 border border-brand-500/25 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
               {badge}
             </div>
@@ -94,7 +94,7 @@ export function AuthCenteredLayout({
       </div>
 
       {/* Bottom Footer */}
-      <div className="w-full max-w-[440px] z-10 py-4 flex items-center justify-between text-[11px] text-slate-500">
+      <div className="w-full max-w-[440px] z-10 py-4 flex items-center justify-between text-xs text-slate-500">
         <span>© 2026 FSA Cambodia</span>
         <span className="inline-flex items-center gap-1.5 text-emerald-400/80 font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

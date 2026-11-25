@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { AppStatusBadge, VersionStageBadge } from './MiniAppStatusBadges';
-import { ACCESS_LEVEL_INFO, toAccessLevel } from '@/lib/miniappAccess';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
@@ -63,7 +62,6 @@ export default function MiniAppDetailHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const accessInfo = ACCESS_LEVEL_INFO[toAccessLevel((formData as any).myAccess)];
   const testVersion =
     formData.activeTestVersion ||
     formData.integrationConfig?.superAppTestVersion ||
@@ -79,19 +77,11 @@ export default function MiniAppDetailHeader({
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight break-words mr-1">
               {formData.name || 'Manage MiniApp'}
             </h2>
-            {/* Can users get it (status), and where the version being worked on is */}
-            <AppStatusBadge app={formData} size="md" />
-            <VersionStageBadge app={formData} size="md" />
-            {/* The caller's access on this app (owner / collaborator role / admin) */}
-            <span
-              title={accessInfo.summary}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap"
-            >
-              <span className="sr-only">Your access: </span>
-              {accessInfo.label}
-            </span>
+            {/* Clear distinction between App Catalog Status and Version Lifecycle Stage */}
+            <AppStatusBadge app={formData} size="md" showPrefix={true} />
+            <VersionStageBadge app={formData} size="md" showPrefix={true} />
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-2.5 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {formData.appId && (
               <button
                 type="button"
@@ -109,11 +99,23 @@ export default function MiniAppDetailHeader({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                 )}
-                {copiedAppId && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>}
+                {copiedAppId && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>}
               </button>
             )}
+            {formData.organization && (
+              <>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span 
+                  className="inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300"
+                  title={getOrganizationFullName(formData.organization)}
+                >
+                  <BuildingIcon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                  <span>{getOrganizationCode(formData.organization)}</span>
+                </span>
+              </>
+            )}
             <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-medium text-xs">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
               {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE || formData.integrationMethod === 'FLUTTER_PACKAGE'
                 ? 'Flutter Package'
                 : formData.integrationMethod === IntegrationMethod.NATIVE_SDK || formData.integrationMethod === 'NATIVE_SDK'
@@ -122,65 +124,61 @@ export default function MiniAppDetailHeader({
                 ? 'Deep Link'
                 : 'WebView'}
             </span>
-            {(formData.organization) && (
-              <>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span 
-                  className="inline-flex items-center gap-1 font-semibold text-sky-600 dark:text-sky-400"
-                  title={getOrganizationFullName(formData.organization)}
-                >
-                  <BuildingIcon className="w-3.5 h-3.5" />
-                  <span>{getOrganizationCode(formData.organization)}</span>
-                </span>
-              </>
-            )}
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${
-                formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
-                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-              }`}
-              title={
-                formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'Target Audience: Strictly private to this organization staff'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'Target Audience: Accessible by all FSA regulatory staff'
-                  : 'Target Audience: Publicly accessible by all consumers and citizens'
-              }
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  formData.targetAudience === 'ORGANIZATION_ONLY'
-                    ? 'bg-amber-500'
-                    : formData.targetAudience === 'ALL_FSA_STAFF'
-                    ? 'bg-indigo-500'
-                    : 'bg-emerald-500'
-                }`}
-              />
-              <span>
-                {formData.targetAudience === 'ORGANIZATION_ONLY'
-                  ? 'Private Authority'
-                  : formData.targetAudience === 'ALL_FSA_STAFF'
-                  ? 'All FSA Staff'
-                  : 'Public'}
-              </span>
-            </span>
           </div>
         </div>
       </div>
       {/* Header Actions */}
-      <div className="flex items-center space-x-2.5">
-        {/* More Actions Dropdown (...) */}
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
+        {actions.sandbox && onOpenSandbox && (
+          <button
+            type="button"
+            onClick={onOpenSandbox}
+            disabled={isSubmitting}
+            className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span>Sandbox Preview</span>
+          </button>
+        )}
+
+        {actions.edit && (
+          <button
+            type="button"
+            onClick={onToggleEditing}
+            disabled={isSubmitting}
+            className={`h-9 px-3.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50 ${
+              isEditingUnlocked
+                ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d={
+                  isEditingUnlocked
+                    ? 'M6 18L18 6M6 6l12 12'
+                    : 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+                }
+              />
+            </svg>
+            <span>{isEditingUnlocked ? 'Cancel Edit' : 'Edit Configuration'}</span>
+          </button>
+        )}
+
+        {/* More Actions Dropdown (...) — Administration actions only */}
+        {(actions.suspend || actions.requestArchive || actions.archive || actions.delete || actions.deletePermanently) && (
         <div className="relative" ref={actionsMenuRef}>
           <button
             type="button"
             onClick={() => setShowActionsMenu(!showActionsMenu)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm focus:ring-2 focus:ring-brand-500/20"
+            className="w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs focus:ring-2 focus:ring-brand-500/20"
             aria-label="More actions"
-            title="More Actions"
+            title="Administration Actions"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -193,50 +191,12 @@ export default function MiniAppDetailHeader({
           </button>
 
           {showActionsMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
-              {(actions.edit || (actions.sandbox && onOpenSandbox)) && (
-                <div className="py-1">
-                  {actions.edit && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowActionsMenu(false);
-                        onToggleEditing();
-                      }}
-                      disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isEditingUnlocked ? 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' : 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'} />
-                      </svg>
-                      <span>{isEditingUnlocked ? 'Lock Configuration' : 'Edit Configuration'}</span>
-                    </button>
-                  )}
-                  {actions.sandbox && onOpenSandbox && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowActionsMenu(false);
-                        onOpenSandbox?.();
-                      }}
-                      disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span>Launch Sandbox Preview</span>
-                    </button>
-                  )}
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="py-1">
+                <div className="px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Administration
                 </div>
-              )}
-
-              {(actions.suspend || actions.requestArchive || actions.archive || actions.delete || actions.deletePermanently) && (
-                <div className="py-1">
-                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Administration
-                  </div>
-                  {actions.suspend && (
+                {actions.suspend && (
                     <button
                       type="button"
                       onClick={() => {
@@ -317,16 +277,10 @@ export default function MiniAppDetailHeader({
                     </button>
                   )}
                 </div>
-              )}
-
-              {!actions.edit && !(actions.sandbox && onOpenSandbox) && !actions.suspend && !actions.requestArchive && !actions.archive && !actions.delete && !actions.deletePermanently && (
-                <div className="px-3.5 py-2.5 text-xs text-slate-500 dark:text-slate-400">
-                  No actions available in this status.
-                </div>
-              )}
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
