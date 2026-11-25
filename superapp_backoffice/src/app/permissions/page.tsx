@@ -125,7 +125,7 @@ function PermissionsPageContent() {
               Permissions &amp; RBAC
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
             <SlidersHorizontal className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             <span>Roles &amp; Permissions</span>
           </h1>

@@ -13,7 +13,7 @@ export default function AccessTokensPage() {
         {/* Sleek, Decluttered Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Developer Settings
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-0.5 text-xs sm:text-sm">

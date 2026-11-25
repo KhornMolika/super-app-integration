@@ -128,7 +128,7 @@ function ReleaseCompareContent() {
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 SuperApp Release Comparator
               </h1>
               <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">

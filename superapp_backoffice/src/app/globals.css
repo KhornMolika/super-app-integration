@@ -320,3 +320,10 @@ body {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* Enforce consistent font family and minimum 12px size on third-party React Flow attribution */
+.react-flow__attribution,
+.react-flow__attribution a {
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+}
