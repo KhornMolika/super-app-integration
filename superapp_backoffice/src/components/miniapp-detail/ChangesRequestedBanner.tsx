@@ -218,26 +218,10 @@ export default function ChangesRequestedBanner({
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-          {miniAppId && (
-            <Link
-              href={`/miniapps/${miniAppId}/remediation`}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-colors ${
-                isRejected
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                  : isReviewOrHistory
-                  ? 'bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900'
-                  : 'bg-amber-600 hover:bg-amber-700 text-white'
-              }`}
-            >
-              <span>Open Remediation Workspace</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          )}
-
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shadow-2xs transition-colors"
             title="Expand checklist on this page"
           >
             <span>Details</span>
