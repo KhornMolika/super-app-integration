@@ -380,13 +380,13 @@ export default function BannersPage() {
             )}
 
             {/* Pagination Controls */}
-            {banners.length > 0 && (
+            {banners.length >= 5 && (
               <div className="pt-2 flex justify-center sm:justify-end">
                 <Pagination
                   currentPage={currentPage}
                   totalItems={banners.length}
                   pageSize={pageSize}
-                  pageSizeOptions={viewMode === 'grid' ? [8, 12, 24, 48] : [10, 20, 50]}
+                  pageSizeOptions={[5, 10, 20, 50]}
                   showPageSizeSelector
                   showTotal
                   onPageChange={(page) => setCurrentPage(page)}

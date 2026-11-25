@@ -600,14 +600,14 @@ function NotificationsPageContent() {
         </div>
 
         {/* Pagination Bar */}
-        {filteredNotifications.length > 0 && (
+        {totalItems >= 5 && (
           <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 px-4 py-3 shadow-xs">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               totalItems={totalItems}
               pageSize={pageSize}
-              pageSizeOptions={[10, 20, 50]}
+              pageSizeOptions={[5, 10, 20, 50]}
               showPageSizeSelector
               showTotal
               onPageChange={(page) => setCurrentPage(page)}
