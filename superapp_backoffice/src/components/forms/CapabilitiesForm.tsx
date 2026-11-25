@@ -13,7 +13,18 @@ import { getCapabilityVisual } from '@/lib/capability-visuals';
 
 export function normalizeCapabilityKey(raw: string): string {
   const lower = (raw || '').toLowerCase().trim();
-  if (lower === 'take_photo' || lower === 'camera' || lower === 'photo' || lower === 'camera & document capture') return 'camera';
+  if (
+    lower === 'take_photo' ||
+    lower === 'camera' ||
+    lower === 'photo' ||
+    lower === 'camera & document capture' ||
+    lower === 'camera & imaging' ||
+    lower === 'camera_imaging' ||
+    lower === 'qr_scanner' ||
+    lower === 'scan_qr'
+  ) {
+    return 'camera';
+  }
   if (lower === 'get_location' || lower === 'location' || lower === 'gps' || lower === 'geolocation services' || lower === 'location services') return 'location';
   if (lower === 'biometric_auth' || lower === 'biometrics' || lower === 'biometric' || lower === 'biometric authentication') return 'biometrics';
   if (lower === 'record' || lower === 'microphone' || lower === 'audio' || lower === 'microphone & audio') return 'microphone';
@@ -501,8 +512,11 @@ export default function CapabilitiesForm({
     const addType = (raw: string) => {
       if (!raw) return;
       const canon = normalizeCapabilityKey(raw);
-      if (!seen.has(canon)) {
+      const visualTitle = getPermissionVisual(raw).title;
+      const dedupeKey = visualTitle && visualTitle !== raw ? visualTitle.toLowerCase() : canon;
+      if (!seen.has(canon) && !seen.has(dedupeKey)) {
         seen.add(canon);
+        seen.add(dedupeKey);
         // Canonical display name matching Shell & Capabilities page
         const display = canon.charAt(0).toUpperCase() + canon.slice(1);
         list.push(display);

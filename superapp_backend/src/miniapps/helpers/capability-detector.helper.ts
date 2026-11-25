@@ -168,7 +168,7 @@ export class CapabilityDetectorHelper {
               const pPurpose =
                 typeof p === 'object' && p.purpose
                   ? p.purpose
-                  : `Required by MiniApp association configuration`;
+                  : `support features declared in MiniApp association configuration`;
               if (pType) {
                 addPerm(
                   pType,
