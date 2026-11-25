@@ -170,14 +170,15 @@ export default function MiniAppDetailHeader({
           </button>
         )}
 
-        {/* More Actions Dropdown (...) */}
+        {/* More Actions Dropdown (...) — Administration actions only */}
+        {(actions.suspend || actions.requestArchive || actions.archive || actions.delete || actions.deletePermanently) && (
         <div className="relative" ref={actionsMenuRef}>
           <button
             type="button"
             onClick={() => setShowActionsMenu(!showActionsMenu)}
             className="w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs focus:ring-2 focus:ring-brand-500/20"
             aria-label="More actions"
-            title="More Actions"
+            title="Administration Actions"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -190,50 +191,12 @@ export default function MiniAppDetailHeader({
           </button>
 
           {showActionsMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
-              {(actions.edit || (actions.sandbox && onOpenSandbox)) && (
-                <div className="py-1">
-                  {actions.edit && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowActionsMenu(false);
-                        onToggleEditing();
-                      }}
-                      disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isEditingUnlocked ? 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' : 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'} />
-                      </svg>
-                      <span>{isEditingUnlocked ? 'Lock Configuration' : 'Edit Configuration'}</span>
-                    </button>
-                  )}
-                  {actions.sandbox && onOpenSandbox && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowActionsMenu(false);
-                        onOpenSandbox?.();
-                      }}
-                      disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span>Launch Sandbox Preview</span>
-                    </button>
-                  )}
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="py-1">
+                <div className="px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Administration
                 </div>
-              )}
-
-              {(actions.suspend || actions.requestArchive || actions.archive || actions.delete || actions.deletePermanently) && (
-                <div className="py-1">
-                  <div className="px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Administration
-                  </div>
-                  {actions.suspend && (
+                {actions.suspend && (
                     <button
                       type="button"
                       onClick={() => {
@@ -314,16 +277,10 @@ export default function MiniAppDetailHeader({
                     </button>
                   )}
                 </div>
-              )}
-
-              {!actions.edit && !(actions.sandbox && onOpenSandbox) && !actions.suspend && !actions.requestArchive && !actions.archive && !actions.delete && !actions.deletePermanently && (
-                <div className="px-3.5 py-2.5 text-xs text-slate-500 dark:text-slate-400">
-                  No actions available in this status.
-                </div>
-              )}
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
