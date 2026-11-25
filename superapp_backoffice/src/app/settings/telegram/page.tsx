@@ -9,6 +9,7 @@ import {
   TelegramPersonalCard,
   TelegramTeamCard,
   TelegramGroupItem,
+  SettingsPageHeader,
 } from '@/components/settings';
 import { telegramApi } from '@/api';
 import { copyText } from '@/lib/clipboard';
@@ -263,7 +264,10 @@ export default function TelegramSettingsPage() {
       setCopiedChatId(true);
       setTimeout(() => setCopiedChatId(false), 2000);
     }
-    toast.info(`Copied "${text}" to clipboard!`, 'Copied');
+    toast.info(
+      isTeam ? 'Team Chat ID copied to clipboard.' : 'Personal Chat ID copied to clipboard.',
+      'Copied',
+    );
   };
 
   const isTelegramConnected = Boolean(telegramStatus?.user?.isConnected);
@@ -271,34 +275,16 @@ export default function TelegramSettingsPage() {
   return (
     <ProtectedRoute>
       <div className="w-full min-w-0 space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-1.5">
-              <span>Incident &amp; Review Alerts</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Telegram &amp; Alerts
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm max-w-2xl leading-relaxed">
-              Connect your personal Telegram account for direct operational alerts and configure team channels for automated MiniApp pipeline notifications.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            {isTelegramConnected ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Telegram Connected</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>Not Connected</span>
-              </span>
-            )}
-          </div>
-        </div>
+        <SettingsPageHeader
+          section="Incident & Review Alerts"
+          title="Telegram & Alerts"
+          description="Connect your personal Telegram account for direct operational alerts and configure team channels for automated MiniApp pipeline notifications."
+          badge={
+            isTelegramConnected
+              ? { label: 'Telegram Connected', tone: 'emerald', pulse: true }
+              : { label: 'Not Connected', tone: 'amber' }
+          }
+        />
 
         {/* Telegram Content */}
         <div className="space-y-6">

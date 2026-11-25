@@ -15,6 +15,7 @@ export function AccessTokensCard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRevealedModalOpen, setIsRevealedModalOpen] = useState(false);
   const [revealedToken, setRevealedToken] = useState<string>('');
+  const [showRevealedToken, setShowRevealedToken] = useState(false);
   const [creating, setCreating] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedNpmrc, setCopiedNpmrc] = useState(false);
@@ -61,6 +62,7 @@ export function AccessTokensCard() {
 
       if (res && res.token) {
         setRevealedToken(res.token);
+        setShowRevealedToken(false);
         setIsCreateModalOpen(false);
         setIsRevealedModalOpen(true);
         setTokenName('');
@@ -462,12 +464,21 @@ export function AccessTokensCard() {
 
             <div className="p-5 space-y-4">
               <div>
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                  Your Personal Access Token
-                </Label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Your Personal Access Token
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowRevealedToken((prev) => !prev)}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {showRevealedToken ? 'Hide Token' : 'Reveal Token'}
+                  </button>
+                </div>
                 <div className="relative">
                   <input
-                    type="text"
+                    type={showRevealedToken ? 'text' : 'password'}
                     readOnly
                     value={revealedToken}
                     className="w-full font-mono text-xs py-2.5 pl-3 pr-24 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white select-all"
@@ -502,7 +513,7 @@ export function AccessTokensCard() {
                   </div>
                   <pre className="text-emerald-400 overflow-x-auto whitespace-pre">
 {`@fsasuperapp:registry=https://app.fintechcenterfsa.com/api/sdk/
-//app.fintechcenterfsa.com/api/sdk/:_authToken="${revealedToken}"`}
+//app.fintechcenterfsa.com/api/sdk/:_authToken="${showRevealedToken ? revealedToken : 'fsa_pat_••••••••••••••••••••'}"`}
                   </pre>
                 </div>
 
