@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 import { superAppApi, miniappsApi, MiniApp } from '@/api';
 import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppReleaseCompareModal';
 import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
 import { useAuth } from '@/lib/auth';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
+import { Pagination } from '@/components/ui/Pagination';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
 import {
   AppStatusBadge,
@@ -25,6 +28,41 @@ export default function ReleasesPage() {
   const [gate2Result, setGate2Result] = useState<any>(null);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [ecosystemStatus, setEcosystemStatus] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [methodFilter, setMethodFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const filteredApps = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return apps.filter((app) => {
+      if (q) {
+        const name = (app.name || '').toLowerCase();
+        const appId = (app.appId || '').toLowerCase();
+        const pkg = (app.integrationConfig?.packageName || '').toLowerCase();
+        if (!name.includes(q) && !appId.includes(q) && !pkg.includes(q)) {
+          return false;
+        }
+      }
+      if (methodFilter !== 'ALL' && app.integrationMethod !== methodFilter) {
+        return false;
+      }
+      if (statusFilter !== 'ALL') {
+        const appStatus = appStatusOf(app);
+        const stage = versionStageOf(app);
+        if (appStatus !== statusFilter && stage !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [apps, searchQuery, methodFilter, statusFilter]);
+
+  const paginatedApps = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredApps.slice(start, start + pageSize);
+  }, [filteredApps, currentPage, pageSize]);
 
   const fetchNextVersion = () => {
     superAppApi.getNextVersion()
@@ -356,21 +394,75 @@ export default function ReleasesPage() {
 
       {/* Approved MiniApps List Table with Clear Version Badging */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <span>Bundled MiniApp Candidates for Assembly</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Approved MiniApps eligible to be bundled into SuperApp candidate release {releaseVersion}.
-            </p>
+        <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-4">
+          <div className="flex justify-between items-center gap-3 flex-wrap">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Bundled MiniApp Candidates for Assembly</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Approved MiniApps eligible to be bundled into SuperApp candidate release {releaseVersion}.
+              </p>
+            </div>
+            <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+              {filteredApps.length} MiniApps Queued
+            </span>
           </div>
-          <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-            {apps.length} MiniApps Queued
-          </span>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search by MiniApp name, appId, or package..."
+                className="w-full h-10 pl-9 pr-4 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <CleanDropdown
+                label="Method"
+                value={methodFilter}
+                onChange={(val) => {
+                  setMethodFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'ALL', label: 'All Methods' },
+                  { value: 'WEBVIEW', label: 'WebView' },
+                  { value: 'FLUTTER_PACKAGE', label: 'Flutter Package' },
+                  { value: 'NATIVE_SDK', label: 'Native SDK' },
+                  { value: 'DEEP_LINK', label: 'Deep Link' },
+                ]}
+                dropdownWidth="w-52"
+                align="right"
+              />
+              <CleanDropdown
+                label="Status"
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'LIVE', label: 'Live' },
+                  { value: 'APPROVED', label: 'Approved' },
+                  { value: 'TESTING', label: 'Testing' },
+                  { value: 'TEST_PASSED', label: 'Test Passed' },
+                ]}
+                dropdownWidth="w-48"
+                align="right"
+              />
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
@@ -385,12 +477,16 @@ export default function ReleasesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {apps.length === 0 ? (
+              {filteredApps.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">No approved mini apps queued for release.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                    {apps.length === 0
+                      ? 'No approved mini apps queued for release.'
+                      : 'No MiniApps match your search or filter criteria.'}
+                  </td>
                 </tr>
               ) : (
-                apps.map(app => {
+                paginatedApps.map(app => {
                   const hasLiveVersion = Boolean(app.currentReleaseVersion || app.status === 'ACTIVE');
                   const liveVerStr = app.currentReleaseVersion || (hasLiveVersion ? '1.0.0' : '-');
                   const candidateVerStr = app.version || '0.0.2';
@@ -454,6 +550,23 @@ export default function ReleasesPage() {
             </tbody>
           </table>
         </div>
+        {filteredApps.length >= 5 && (
+          <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredApps.length}
+              pageSize={pageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              showPageSizeSelector
+              showTotal
+            />
+          </div>
+        )}
       </div>
 
       {/* SuperApp Release Comparator Modal */}
