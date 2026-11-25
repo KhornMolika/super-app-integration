@@ -343,7 +343,7 @@ export function Section05Capabilities({
               <h5 className="font-bold text-slate-900 dark:text-white text-base">
                 Supported SuperApp Capabilities Directory
               </h5>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${
                 isLiveSource
                   ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
@@ -445,11 +445,11 @@ export function Section05Capabilities({
                             {cap.name || cap.key}
                           </h6>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-[10px] font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-1.5 py-0.2 rounded border border-brand-200/60 dark:border-brand-800/60">
+                            <span className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-1.5 py-0.2 rounded border border-brand-200/60 dark:border-brand-800/60">
                               {cap.key}
                             </span>
                             {cap.category && (
-                              <span className="text-[10px] uppercase font-bold text-slate-400">
+                              <span className="text-xs uppercase font-bold text-slate-400">
                                 {cap.category}
                               </span>
                             )}
@@ -458,7 +458,7 @@ export function Section05Capabilities({
                       </div>
 
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                        className={`text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                           isApproved
                             ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                             : "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
@@ -475,25 +475,25 @@ export function Section05Capabilities({
 
                   {/* Bridge method signature & permissions */}
                   <div className="pt-2.5 border-t border-slate-100 dark:border-slate-700/60 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                    <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                           Invocation ({syntax.lang})
                         </span>
-                        <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700/70 font-mono text-[9px] text-slate-600 dark:text-slate-300">
+                        <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700/70 font-mono text-xs text-slate-600 dark:text-slate-300">
                           {syntax.returnType}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => copyCode(syntax.code, cap.key)}
-                        className="text-[10px] text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 font-mono flex items-center gap-1 transition"
+                        className="text-xs text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 font-mono flex items-center gap-1 transition"
                         title="Copy method invocation"
                       >
                         <span>{copiedKey === cap.key ? "Copied ✓" : "📋 Copy"}</span>
                       </button>
                     </div>
-                    <div className="p-2 bg-slate-950 text-slate-200 font-mono text-[11px] rounded-lg overflow-x-auto no-scrollbar border border-slate-800">
+                    <div className="p-2 bg-slate-950 text-slate-200 font-mono text-xs rounded-lg overflow-x-auto no-scrollbar border border-slate-800">
                       <code>{syntax.code}</code>
                     </div>
                   </div>

@@ -433,7 +433,7 @@ function EditUserContent() {
                     <Label htmlFor="user-email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Primary Email <span className="text-rose-500">*</span>
                     </Label>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <span className="w-1 h-1 rounded-full bg-emerald-500" />
                       Verified
                     </span>
@@ -455,7 +455,7 @@ function EditUserContent() {
                 <div className="space-y-1.5">
                   <Label htmlFor="user-password" className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span>New Password</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                    <span className="text-xs text-slate-400 font-normal">Optional</span>
                   </Label>
                   <div className="relative">
                     <Input
@@ -539,7 +539,7 @@ function EditUserContent() {
                       Account Status
                     </Label>
                     {isTargetSuperAdmin && (
-                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                         Protected Root Account
                       </span>
                     )}
@@ -572,7 +572,7 @@ function EditUserContent() {
                     </span>
                   </div>
                   {isTargetSuperAdmin && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 pt-0.5">
                       Super Administrator accounts maintain permanent active clearance and cannot be suspended.
                     </p>
                   )}
@@ -617,7 +617,7 @@ function EditUserContent() {
 
                 {selectedOrg ? (
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400">Tenancy Scope</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -625,7 +625,7 @@ function EditUserContent() {
                       </span>
                     </div>
                     {selectedOrg.code && (
-                      <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">Regulatory Code</span>
                         <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
                           {selectedOrg.code}
@@ -633,7 +633,7 @@ function EditUserContent() {
                       </div>
                     )}
                     {selectedOrg.parentAuthority && (
-                      <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">Regulatory Authority</span>
                         <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[150px]" title={selectedOrg.parentAuthority}>
                           {selectedOrg.parentAuthority}
@@ -642,7 +642,7 @@ function EditUserContent() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 italic">
+                  <p className="text-xs text-slate-400 italic">
                     Independent operator with global platform access scope.
                   </p>
                 )}
@@ -685,7 +685,7 @@ function EditUserContent() {
                 </div>
 
 
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-1">
                   <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -711,13 +711,13 @@ function EditUserContent() {
               Editing: <strong className="font-semibold">{name || user.name}</strong>
             </span>
             {pendingAvatarFile && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
                 Avatar change pending save
               </span>
             )}
             {pendingAvatarRemove && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 Avatar removal pending save
               </span>

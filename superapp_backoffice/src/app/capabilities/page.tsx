@@ -242,7 +242,7 @@ function CapabilitiesContent() {
               </div>
               Capabilities
               {view.audience === 'overseer' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                   <Eye className="w-3 h-3" />
                   View only
                 </span>
@@ -317,7 +317,7 @@ function CapabilitiesContent() {
           >
             <Zap className="w-4 h-4" />
             Capabilities
-            <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+            <span className="ml-1 px-1.5 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
               {Array.isArray(capabilities) ? capabilities.length : 0}
             </span>
           </button>
@@ -335,11 +335,11 @@ function CapabilitiesContent() {
             <GitPullRequest className="w-4 h-4" />
             {view.text.requestsTab}
             {pendingProposalsCount > 0 && view.audience === 'decider' ? (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
                 {pendingProposalsCount}
               </span>
             ) : (
-              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
                 {proposals.length}
               </span>
             )}

@@ -418,7 +418,7 @@ export default function NativeSdkIntegrationForm({
           {label}
         </Label>
         {isLocked && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
             <Lock className="w-3 h-3 text-slate-400" />
             Auto-detected
           </span>
@@ -631,7 +631,7 @@ export default function NativeSdkIntegrationForm({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">iOS</h3>
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
                 Optional
               </span>
             </div>

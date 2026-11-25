@@ -39,7 +39,7 @@ export function MarkdownRenderer({
         parts.push(
           <code
             key={key++}
-            className="font-mono text-[11px] px-1.5 py-0.5 bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded"
+            className="font-mono text-xs px-1.5 py-0.5 bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded"
           >
             {codeMatch[1]}
           </code>

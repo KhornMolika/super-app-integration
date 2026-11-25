@@ -161,7 +161,7 @@ function IssuesContent() {
               {issue.miniApp?.name || 'Unknown App'}
             </Link>
             {issue.miniApp?.appId && (
-              <span className="text-[11px] font-mono text-slate-400 block truncate">
+              <span className="text-xs font-mono text-slate-400 block truncate">
                 {issue.miniApp.appId}
               </span>
             )}

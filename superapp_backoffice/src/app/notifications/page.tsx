@@ -310,7 +310,7 @@ function NotificationsPageContent() {
                   <span>{tab.label}</span>
                   {tab.count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      className={`text-xs px-1.5 py-0.2 rounded-full font-bold ${
                         isActive
                           ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400'
                           : 'bg-slate-300/60 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
@@ -340,7 +340,7 @@ function NotificationsPageContent() {
               </svg>
               <span>Deep Filter</span>
               {activeFilterCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center font-bold">
+                <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-xs flex items-center justify-center font-bold">
                   {activeFilterCount}
                 </span>
               )}
@@ -379,7 +379,7 @@ function NotificationsPageContent() {
         {/* Active Filter Chips / Indicators Row */}
         {hasAnyActiveFilters && (
           <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-            <span className="text-slate-400 dark:text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+            <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold uppercase tracking-wider">
               Active:
             </span>
 
@@ -546,12 +546,12 @@ function NotificationsPageContent() {
                         {item.title}
                       </h4>
 
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">
                         • {formatNotificationRelativeTime(item.createdAt)}
                       </span>
 
                       {item.miniApp?.name && (
-                        <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                        <span className="hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
                           {item.miniApp.name}
                         </span>
                       )}
@@ -575,7 +575,7 @@ function NotificationsPageContent() {
                       Mark read
                     </button>
                   ) : (
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5">Read</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 px-1.5 py-0.5">Read</span>
                   )}
 
                   <button

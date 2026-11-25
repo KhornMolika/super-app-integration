@@ -58,7 +58,7 @@ const NEUTRAL = 'bg-slate-500/10 text-slate-600 dark:text-slate-300 ring-slate-5
 function StatusPill({ status }: { status: string }) {
   const s = (status || 'PENDING').toUpperCase();
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${TONE[s] || NEUTRAL}`}>
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${TONE[s] || NEUTRAL}`}>
       {s.charAt(0) + s.slice(1).toLowerCase()}
     </span>
   );
@@ -92,7 +92,7 @@ function Stages({ stages }: { stages?: ScanRun['stages'] }) {
         <li key={key} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 dark:bg-slate-950/60 px-3 py-2">
           <div className="min-w-0">
             <div className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{st?.name || key}</div>
-            {st?.details && <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{st.details}</div>}
+            {st?.details && <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{st.details}</div>}
           </div>
           <StatusPill status={st?.status || 'PENDING'} />
         </li>
@@ -123,7 +123,7 @@ function RunRow({
       >
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{title}</div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{meta}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{meta}</div>
         </div>
         <StatusPill status={status} />
         <svg
@@ -301,7 +301,7 @@ export function RunHistoryTab({ miniAppId, versionFilter }: { miniAppId: string;
                 <>
                   {run.version ? `v${run.version.replace(/^v/, '')}` : 'Version not recorded'}
                   {run.scope === 'REVISION' && (
-                    <span className="ml-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">new version</span>
+                    <span className="ml-2 text-xs font-medium text-slate-500 dark:text-slate-400">new version</span>
                   )}
                 </>
               }
@@ -318,7 +318,7 @@ export function RunHistoryTab({ miniAppId, versionFilter }: { miniAppId: string;
               )}
               <Stages stages={run.stages} />
               {run.checks && run.checks.length > 0 && (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Checks: {run.checks.join(', ')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Checks: {run.checks.join(', ')}</p>
               )}
             </RunRow>
           );
@@ -343,7 +343,7 @@ export function RunHistoryTab({ miniAppId, versionFilter }: { miniAppId: string;
               <>
                 {run.version ? `Super App ${run.version}` : 'Version not recorded'}
                 {run.buildType && (
-                  <span className="ml-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="ml-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                     {run.buildType === 'release' ? 'release build' : 'test build'}
                   </span>
                 )}

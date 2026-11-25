@@ -94,7 +94,7 @@ export function HeaderProfile() {
                 <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                   {userName}
                 </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                   {userEmail}
                 </p>
               </div>

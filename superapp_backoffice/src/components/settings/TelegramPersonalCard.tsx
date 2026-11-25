@@ -110,7 +110,7 @@ export function TelegramPersonalCard({
           <div className="p-5 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Connected Handle
                 </span>
                 <span className="font-bold text-slate-900 dark:text-slate-100 text-sm mt-1 block">
@@ -121,7 +121,7 @@ export function TelegramPersonalCard({
               </div>
 
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Personal Chat ID
                 </span>
                 <div className="flex items-center gap-2 mt-1">
@@ -155,7 +155,7 @@ export function TelegramPersonalCard({
               </div>
 
               <div>
-                <span className="font-bold uppercase text-slate-400 block tracking-wider text-[11px]">
+                <span className="font-bold uppercase text-slate-400 block tracking-wider text-xs">
                   Channel Status
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 text-xs mt-1">
@@ -198,7 +198,7 @@ export function TelegramPersonalCard({
                 1
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Open Telegram Bot</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Click 1-Click Connect to launch <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong>.
               </p>
             </div>
@@ -208,7 +208,7 @@ export function TelegramPersonalCard({
                 2
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Tap &quot;START&quot;</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 In Telegram, press <strong>START</strong> to register your personal Chat ID automatically.
               </p>
             </div>
@@ -218,7 +218,7 @@ export function TelegramPersonalCard({
                 3
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">Sync &amp; Confirm</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Return here and click <strong>Check &amp; Sync Connection</strong> to activate real-time alerts.
               </p>
             </div>
@@ -273,7 +273,7 @@ export function TelegramPersonalCard({
               onSubmit={onManualConnect}
               className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200 text-xs"
             >
-              <div className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
+              <div className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-xs">
                 Manual Chat ID Entry
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -11,7 +11,7 @@ export default function StorageRetentionPage() {
         {/* Page Breadcrumb & Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-200/70 dark:border-slate-800/80">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">
               <span>Settings</span>
               <span className="text-slate-300 dark:text-slate-600">/</span>
               <span>Platform Infrastructure</span>

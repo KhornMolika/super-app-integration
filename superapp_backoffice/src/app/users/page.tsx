@@ -412,7 +412,7 @@ function UsersContent() {
                   {user.name}
                 </Link>
                 {user.staffId && (
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                     {user.staffId}
                   </span>
                 )}
@@ -848,7 +848,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
               Total Accounts
             </span>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
@@ -863,7 +863,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span>Active</span>
             </div>
@@ -879,7 +879,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               <span>Pending Review</span>
             </div>
@@ -895,7 +895,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
               <span>Unverified Email</span>
             </div>
@@ -911,7 +911,7 @@ function UsersContent() {
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
               }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               <span>Inactive</span>
             </div>

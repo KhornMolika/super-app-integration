@@ -82,7 +82,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         {error.digest && (
           <div className="mb-6 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs font-mono text-slate-600 dark:text-slate-300 flex items-center justify-between gap-3 text-left">
             <div>
-              <span className="font-semibold text-slate-400 block text-[10px] uppercase">Error Digest ID</span>
+              <span className="font-semibold text-slate-400 block text-xs uppercase">Error Digest ID</span>
               <span className="select-all font-bold">{error.digest}</span>
             </div>
             <button

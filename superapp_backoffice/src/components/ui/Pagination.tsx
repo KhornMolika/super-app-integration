@@ -139,7 +139,7 @@ export function Pagination({
         {showTotal && itemRange && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <span>Showing</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 font-semibold font-mono text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 font-semibold font-mono text-xs border border-slate-200/60 dark:border-slate-700/60">
               {itemRange.start}–{itemRange.end}
             </span>
             <span>of</span>

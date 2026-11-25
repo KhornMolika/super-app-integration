@@ -84,11 +84,11 @@ export function PublisherContactsSection({
           <div className="min-w-0">
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
               <span className="truncate">{ownerName}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/70 text-brand-800 dark:text-brand-300 font-bold uppercase tracking-wider border border-brand-200 dark:border-brand-900/60">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/70 text-brand-800 dark:text-brand-300 font-bold uppercase tracking-wider border border-brand-200 dark:border-brand-900/60">
                 Primary Creator
               </span>
             </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+            <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
               {ownerEmail || 'No email configured'}
             </div>
           </div>
@@ -198,7 +198,7 @@ export function PublisherContactsSection({
               <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
               <span>Organization Name</span>
             </Label>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium flex items-center gap-1">
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium flex items-center gap-1">
               <LockIcon className="w-3 h-3 text-slate-400" />
               <span>Bound to Organization</span>
             </span>
@@ -215,7 +215,7 @@ export function PublisherContactsSection({
               <LockIcon className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             Organization is locked to your registered organization ({agencyName}) to prevent cross-organization reassignment.
           </p>
         </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from 'react';
 import {
@@ -19,7 +19,7 @@ const StateNode = ({ data }: { data: any }) => {
     <div className={`px-3.5 py-2.5 rounded-lg shadow-sm border-2 font-mono text-xs tracking-wider font-bold text-center ${data.colorClass} min-w-[150px]`}>
       {data.targetHandle && <Handle type="target" position={data.targetHandle} className="!w-2 !h-2 !bg-slate-400 !border-0" />}
       <div>{data.label}</div>
-      {data.sublabel && <div className="text-[10px] font-sans font-normal opacity-80 mt-0.5">{data.sublabel}</div>}
+      {data.sublabel && <div className="text-xs font-sans font-normal opacity-80 mt-0.5">{data.sublabel}</div>}
       {data.sourceHandle && <Handle type="source" position={data.sourceHandle} className="!w-2 !h-2 !bg-slate-400 !border-0" />}
     </div>
   );

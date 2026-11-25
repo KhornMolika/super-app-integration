@@ -133,7 +133,7 @@ export function OrganizationSelect({
           {selectedOrg ? (
             <div className="flex items-center gap-2 min-w-0 truncate">
               {selectedOrg.code && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-brand-500/15 text-brand-300 border border-brand-500/30 shrink-0 uppercase tracking-wide">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-brand-500/15 text-brand-300 border border-brand-500/30 shrink-0 uppercase tracking-wide">
                   {selectedOrg.code}
                 </span>
               )}
@@ -207,7 +207,7 @@ export function OrganizationSelect({
           </div>
 
           {/* Authority Banner */}
-          <div className="px-3 py-1.5 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase text-slate-400">
+          <div className="px-3 py-1.5 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-xs font-semibold tracking-wider uppercase text-slate-400">
             <span>Regulator / Authority</span>
             <span>{filteredOrganizations.length} Available</span>
           </div>
@@ -247,7 +247,7 @@ export function OrganizationSelect({
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       {org.code && (
                         <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-md border shrink-0 transition-colors uppercase ${
+                          className={`text-xs font-bold px-2 py-0.5 rounded-md border shrink-0 transition-colors uppercase ${
                             isSelected
                               ? 'bg-brand-500/30 text-brand-200 border-brand-500/50'
                               : 'bg-slate-800/90 text-slate-300 border-slate-700 group-hover:border-slate-600 group-hover:text-white'
@@ -265,7 +265,7 @@ export function OrganizationSelect({
                           {org.name}
                         </div>
                         {org.parentAuthority && (
-                          <div className="text-[11px] text-slate-400 truncate">
+                          <div className="text-xs text-slate-400 truncate">
                             {org.parentAuthority}
                           </div>
                         )}

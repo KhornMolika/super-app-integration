@@ -498,10 +498,10 @@ export function CapabilityVisualBadge({
         <IconComponent className={`w-4 h-4 ${visual.iconColor}`} />
       </div>
       <div className="flex flex-col text-left">
-        <span className={`text-[11px] font-bold leading-tight ${visual.badgeTextColor}`}>
+        <span className={`text-xs font-bold leading-tight ${visual.badgeTextColor}`}>
           {visual.category}
         </span>
-        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
           Auto-matched
         </span>
       </div>

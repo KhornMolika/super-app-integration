@@ -223,7 +223,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
     >
       <div
         aria-hidden="true"
-        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 shadow-2xs ${getAvatarColor(
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(
           displayName,
         )}`}
       >
@@ -245,7 +245,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
         >
           <div className="flex items-center gap-2 mb-1 pb-1 border-b border-slate-700/60 dark:border-slate-700/80">
             <div
-              className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${getAvatarColor(
+              className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${getAvatarColor(
                 displayName,
               )}`}
             >
@@ -256,7 +256,7 @@ function AppOwnerCell({ name, email }: { name: string; email: string }) {
             </span>
           </div>
           {email && (
-            <span className="block text-[11px] text-slate-300 dark:text-slate-300 font-mono truncate select-all">
+            <span className="block text-xs text-slate-300 dark:text-slate-300 font-mono truncate select-all">
               {email}
             </span>
           )}

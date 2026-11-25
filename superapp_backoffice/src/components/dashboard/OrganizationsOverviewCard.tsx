@@ -48,7 +48,7 @@ export default function OrganizationsOverviewCard({
 
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
+              <span className="text-xs uppercase font-semibold text-slate-400 tracking-wider">
                 Assigned MiniApps
               </span>
               <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 mt-1">
@@ -56,7 +56,7 @@ export default function OrganizationsOverviewCard({
               </p>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
+              <span className="text-xs uppercase font-semibold text-slate-400 tracking-wider">
                 Team Members
               </span>
               <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 mt-1">
@@ -138,7 +138,7 @@ export default function OrganizationsOverviewCard({
                 <div key={org.id} className="group">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <div className="flex items-center gap-2.5 truncate pr-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600/40 shrink-0">
+                      <span className="px-2 py-0.5 text-xs font-mono font-bold rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600/40 shrink-0">
                         {code}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 truncate text-xs">
@@ -155,7 +155,7 @@ export default function OrganizationsOverviewCard({
                       >
                         {org.miniAppsCount}
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-xs text-slate-400">
                         {org.miniAppsCount === 1 ? 'app' : 'apps'}
                       </span>
                     </div>

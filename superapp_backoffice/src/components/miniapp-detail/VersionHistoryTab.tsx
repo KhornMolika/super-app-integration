@@ -404,18 +404,18 @@ export default function VersionHistoryTab({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                     MiniApp Current Version
                   </span>
                   {data?.packageName && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+                    <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
                       {data.packageName}
                     </span>
                   )}
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{data?.currentReleaseVersion || '1.0.0'}</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase ${
                     currentStatus === 'ACTIVE'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                       : currentStatus === 'IN_REVIEW'
@@ -435,7 +435,7 @@ export default function VersionHistoryTab({
           </p>
 
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Ref: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.gitRef || 'Tag: ' + (data?.currentReleaseVersion || 'v1.0.0')}</strong>
             </span>
             <div className="flex items-center gap-1.5">
@@ -464,16 +464,16 @@ export default function VersionHistoryTab({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
                     Sandbox Test Version
                   </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
+                  <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
                     STAGING
                   </span>
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{data?.activeTestVersion || 'develop'}</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
                     <span>TESTING</span>
                   </span>
                 </h4>
@@ -486,7 +486,7 @@ export default function VersionHistoryTab({
           </p>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Source: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.sourceType || 'Git Repository'}</strong>
             </span>
             <div className="flex items-center gap-1.5">
@@ -514,13 +514,13 @@ export default function VersionHistoryTab({
                 </svg>
               </div>
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   Pending Draft Revision
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{activeDraftVer || 'No Active Draft'}</span>
                   {pendingRevision && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
                       <span>{pendingRevision.revisionStatus || 'IN REVIEW'}</span>
                     </span>
                   )}
@@ -536,7 +536,7 @@ export default function VersionHistoryTab({
           </p>
 
           <div className="pt-3 border-t border-amber-100 dark:border-amber-900/40 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               State: <strong className="text-slate-700 dark:text-slate-300">{pendingRevision ? 'Pending Review' : 'Synced'}</strong>
             </span>
             {pendingRevision ? (
@@ -707,15 +707,15 @@ export default function VersionHistoryTab({
                           </div>
                           <div>
                             {rec.type === 'PRODUCTION' ? (
-                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                 Release
                               </span>
                             ) : rec.type === 'TEST' ? (
-                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
                                 Staging
                               </span>
                             ) : (
-                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                                 Draft
                               </span>
                             )}
@@ -734,7 +734,7 @@ export default function VersionHistoryTab({
                             {rec.changelog || (rec.type === 'PRODUCTION' ? `Release package build v${rec.version}` : `Sandbox testing revision v${rec.version}`)}
                           </p>
                           {rec.buildNumber && (
-                            <span className="text-[10px] font-mono font-medium text-slate-400 dark:text-slate-500">
+                            <span className="text-xs font-mono font-medium text-slate-400 dark:text-slate-500">
                               Build #{rec.buildNumber}
                             </span>
                           )}
@@ -761,18 +761,18 @@ export default function VersionHistoryTab({
                                   <svg className="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                                   </svg>
-                                  <span className="font-semibold text-[11px] text-slate-500 dark:text-slate-400">Web Endpoint</span>
+                                  <span className="font-semibold text-xs text-slate-500 dark:text-slate-400">Web Endpoint</span>
                                 </div>
                                 {targetUrl ? (
                                   <button
                                     type="button"
                                     onClick={() => handleCopyUrl(targetUrl, 'Web Endpoint URL')}
-                                    className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    className="group inline-flex items-center gap-1.5 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
                                     title={`Target URL: ${targetUrl}\nClick to copy`}
                                   >
                                     <span className="truncate">{targetUrl.replace(/^https?:\/\//, '')}</span>
                                     {copiedUrl === targetUrl ? (
-                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
                                     ) : (
                                       <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -780,7 +780,7 @@ export default function VersionHistoryTab({
                                     )}
                                   </button>
                                 ) : (
-                                  <span className="text-[11px] text-slate-400 italic">No URL configured</span>
+                                  <span className="text-xs text-slate-400 italic">No URL configured</span>
                                 )}
                               </div>
                             );
@@ -799,18 +799,18 @@ export default function VersionHistoryTab({
                                   <svg className="w-3.5 h-3.5 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                   </svg>
-                                  <span className="font-semibold text-[11px] text-slate-500 dark:text-slate-400">App Scheme</span>
+                                  <span className="font-semibold text-xs text-slate-500 dark:text-slate-400">App Scheme</span>
                                 </div>
                                 {targetScheme ? (
                                   <button
                                     type="button"
                                     onClick={() => handleCopyUrl(targetScheme, 'Deep Link Scheme')}
-                                    className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
+                                    className="group inline-flex items-center gap-1.5 font-mono text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer max-w-[200px]"
                                     title={`URI Scheme: ${targetScheme}\nClick to copy`}
                                   >
                                     <span className="truncate">{targetScheme}</span>
                                     {copiedUrl === targetScheme ? (
-                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Copied!</span>
                                     ) : (
                                       <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -818,7 +818,7 @@ export default function VersionHistoryTab({
                                     )}
                                   </button>
                                 ) : (
-                                  <span className="text-[11px] text-slate-400 italic">No Scheme configured</span>
+                                  <span className="text-xs text-slate-400 italic">No Scheme configured</span>
                                 )}
                               </div>
                             );
@@ -836,7 +836,7 @@ export default function VersionHistoryTab({
                                 <button
                                   type="button"
                                   onClick={() => handleCopyGitRef(rec.gitRef!)}
-                                  className="group inline-flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+                                  className="group inline-flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer"
                                   title={`Git Commit SHA: ${rec.gitRef}\nClick to copy full hash`}
                                 >
                                   <svg className="w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -845,7 +845,7 @@ export default function VersionHistoryTab({
                                   </svg>
                                   <span className="font-semibold">{rec.gitRef!.substring(0, 8)}</span>
                                   {copiedGitRef === rec.gitRef ? (
-                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
+                                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>
                                   ) : (
                                     <svg className="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -927,15 +927,15 @@ export default function VersionHistoryTab({
                               ? formatDate(rec.submittedAt)
                               : formatDate(rec.createdAt) || '—'}
                           </span>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                            <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[9px] font-bold shrink-0">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
                               {getDeveloperInitials(resolvedDev)}
                             </div>
                             <span className="truncate max-w-[110px]" title={resolvedDev}>
                               {resolvedDev}
                             </span>
                             <span className="text-slate-300 dark:text-slate-700">•</span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-xs text-slate-400">
                               {rec.releasedAt ? 'Released' : rec.submittedAt ? 'Submitted' : 'Created'}
                             </span>
                           </div>
@@ -1058,7 +1058,7 @@ export default function VersionHistoryTab({
 
               {selectedChangelog.checksum && (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[11px] font-bold uppercase text-slate-500 block mb-1">
+                  <span className="text-xs font-bold uppercase text-slate-500 block mb-1">
                     SHA-256 Package Checksum
                   </span>
                   <p className="font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all">

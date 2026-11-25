@@ -216,7 +216,7 @@ export default function SandboxBuildStatusIndicator() {
                         SuperApp Sandbox Build Pipeline
                       </h3>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
                           status.state === 'BUILDING'
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse'
                             : status.state === 'SUCCESS'
@@ -227,7 +227,7 @@ export default function SandboxBuildStatusIndicator() {
                         {status.state}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 font-mono">
+                    <p className="text-xs text-slate-400 font-mono">
                       Target: super-app (Flutter Web) • Base Href: /superapp-sandbox/
                     </p>
                   </div>
@@ -333,7 +333,7 @@ export default function SandboxBuildStatusIndicator() {
                           : 'text-slate-300'
                       }`}
                     >
-                      <span className="text-[10px] text-slate-600 select-none w-7 text-right flex-shrink-0 pt-0.5">
+                      <span className="text-xs text-slate-600 select-none w-7 text-right flex-shrink-0 pt-0.5">
                         {idx + 1}
                       </span>
                       <span className="leading-relaxed break-all flex-1">
@@ -363,7 +363,7 @@ export default function SandboxBuildStatusIndicator() {
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-1 text-[11px] text-emerald-400">
+                <div className="flex items-center gap-1 text-xs text-emerald-400">
                   <ShieldCheckIcon className="w-3.5 h-3.5" />
                   <span>CI Sync Active</span>
                 </div>

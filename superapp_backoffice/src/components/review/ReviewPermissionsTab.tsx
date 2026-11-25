@@ -75,25 +75,25 @@ export function ReviewPermissionsTab({
       {/* Overview Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Total Capabilities</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Total Capabilities</span>
           <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-1 block">
             {added.length + unchanged.length + modified.length}
           </span>
         </div>
         <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">Added</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">Added</span>
           <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-1 block">
             +{added.length}
           </span>
         </div>
         <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block">Removed</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 block">Removed</span>
           <span className="text-xl font-extrabold text-rose-700 dark:text-rose-400 mt-1 block">
             -{removed.length}
           </span>
         </div>
         <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">Modified</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">Modified</span>
           <span className="text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-1 block">
             ~{modified.length}
           </span>
@@ -123,7 +123,7 @@ export function ReviewPermissionsTab({
                     {perm.type}
                   </span>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                    className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                       perm.riskLevel === 'HIGH'
                         ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 border border-rose-300'
                         : perm.riskLevel === 'MEDIUM'
@@ -137,7 +137,7 @@ export function ReviewPermissionsTab({
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {perm.purpose || 'No developer justification provided for this capability request.'}
                 </p>
-                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Newly requested in target version</span>
                 </div>
@@ -169,7 +169,7 @@ export function ReviewPermissionsTab({
                   <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-400 line-through">
                     {perm.type}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
                     REMOVED
                   </span>
                 </div>
@@ -204,17 +204,17 @@ export function ReviewPermissionsTab({
                   <span className="font-mono text-xs font-extrabold text-slate-900 dark:text-slate-100">
                     {perm.type}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                     PURPOSE MODIFIED
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
                   <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Old Purpose</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Old Purpose</span>
                     <span className="text-slate-600 dark:text-slate-400">{perm.oldPurpose || '(none)'}</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-emerald-300 dark:border-emerald-700">
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase block mb-1">New Proposed Purpose</span>
+                    <span className="text-xs font-bold text-emerald-600 uppercase block mb-1">New Proposed Purpose</span>
                     <span className="text-emerald-800 dark:text-emerald-300 font-medium">{perm.newPurpose}</span>
                   </div>
                 </div>
@@ -244,7 +244,7 @@ export function ReviewPermissionsTab({
                   className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs flex items-center justify-between gap-2"
                 >
                   <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{perm.type}</span>
-                  <span className="text-[10px] text-slate-400 font-bold">Unchanged</span>
+                  <span className="text-xs text-slate-400 font-bold">Unchanged</span>
                 </div>
               ))}
             </div>

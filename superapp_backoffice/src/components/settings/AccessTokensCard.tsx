@@ -138,12 +138,12 @@ export function AccessTokensCard() {
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
                   Developer Access Tokens (PAT)
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                   SDK &amp; Registry Auth
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
-                Generate scoped tokens (<code className="text-slate-800 dark:text-slate-200 font-mono text-2xs font-bold">fsa_pat_...</code>) for private registries (<code className="text-slate-700 dark:text-slate-300 font-mono text-2xs">@fsasuperapp/*</code>, <code className="text-slate-700 dark:text-slate-300 font-mono text-2xs">fsa_superapp_flutter_sdk</code>) and local CLI workflows.
+                Generate scoped tokens (<code className="text-slate-800 dark:text-slate-200 font-mono text-xs font-bold">fsa_pat_...</code>) for private registries (<code className="text-slate-700 dark:text-slate-300 font-mono text-xs">@fsasuperapp/*</code>, <code className="text-slate-700 dark:text-slate-300 font-mono text-xs">fsa_superapp_flutter_sdk</code>) and local CLI workflows.
               </p>
             </div>
           </div>
@@ -189,14 +189,14 @@ export function AccessTokensCard() {
           {showSnippets && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-xs font-mono animate-in fade-in duration-200">
               <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
-                <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Web MiniApps (.npmrc):</div>
+                <div className="text-slate-400 text-xs mb-1 font-sans font-semibold">Web MiniApps (.npmrc):</div>
                 <div className="text-emerald-400 overflow-x-auto whitespace-nowrap">
                   //app.fintechcenterfsa.com/api/sdk/:_authToken=&quot;&lt;YOUR_TOKEN&gt;&quot;
                 </div>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800 relative group">
-                <div className="text-slate-400 text-2xs mb-1 font-sans font-semibold">Flutter MiniApps (Dart CLI):</div>
+                <div className="text-slate-400 text-xs mb-1 font-sans font-semibold">Flutter MiniApps (Dart CLI):</div>
                 <div className="text-sky-400 overflow-x-auto whitespace-nowrap">
                   dart pub token add https://app.fintechcenterfsa.com/pub
                 </div>
@@ -255,7 +255,7 @@ export function AccessTokensCard() {
                           <span>{t.name}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-2xs text-slate-500 dark:text-slate-400">
+                      <td className="py-3.5 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">
                         {t.tokenPrefix}
                       </td>
                       <td className="py-3.5 px-4">
@@ -263,7 +263,7 @@ export function AccessTokensCard() {
                           {(t.scopes || ['sdk:read']).map((scope) => (
                             <span
                               key={scope}
-                              className="px-2 py-0.5 rounded text-2xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                              className="px-2 py-0.5 rounded text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                             >
                               {scope}
                             </span>
@@ -333,7 +333,7 @@ export function AccessTokensCard() {
                   className="w-full text-xs"
                   required
                 />
-                <p className="text-2xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Use a friendly name to identify which computer or service is using this token.
                 </p>
               </div>
@@ -343,7 +343,7 @@ export function AccessTokensCard() {
                   <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                     Expiration
                   </Label>
-                  <span className="text-2xs text-brand-600 dark:text-brand-400 font-semibold">
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">
                     Zero-Trust Default: 7 Days
                   </span>
                 </div>
@@ -361,7 +361,7 @@ export function AccessTokensCard() {
                   <option value="180">180 days (Semi-Annual)</option>
                   <option value="365">1 year</option>
                 </select>
-                <p className="text-2xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Keep expiration brief for local development. Tokens can be revoked or re-issued anytime.
                 </p>
               </div>
@@ -399,10 +399,10 @@ export function AccessTokensCard() {
                         className="mt-0.5 rounded text-brand-600 focus:ring-brand-500"
                       />
                       <div>
-                        <div className="font-mono font-bold text-2xs text-slate-900 dark:text-white">
+                        <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                           {s.title}
                         </div>
-                        <div className="text-2xs text-slate-500 dark:text-slate-400">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                           {s.desc}
                         </div>
                       </div>
@@ -453,7 +453,7 @@ export function AccessTokensCard() {
                   <h4 className="font-bold text-slate-900 dark:text-white text-sm">
                     Token Generated Successfully
                   </h4>
-                  <p className="text-2xs text-amber-600 dark:text-amber-400 font-semibold">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
                     Make sure to copy your access token now. You will not be able to see it again!
                   </p>
                 </div>
@@ -475,7 +475,7 @@ export function AccessTokensCard() {
                   <button
                     type="button"
                     onClick={() => copyToClipboard(revealedToken, 'token')}
-                    className="absolute right-1.5 top-1.5 bottom-1.5 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-2xs transition-colors cursor-pointer"
+                    className="absolute right-1.5 top-1.5 bottom-1.5 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
                     {copiedToken ? '✓ Copied' : 'Copy Token'}
                   </button>
@@ -484,7 +484,7 @@ export function AccessTokensCard() {
 
               {/* Direct Setup Configurations */}
               <div className="space-y-3 pt-2">
-                <div className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-2xs border border-slate-800 relative">
+                <div className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs border border-slate-800 relative">
                   <div className="flex items-center justify-between mb-1.5 text-slate-400 font-sans font-semibold">
                     <span>Web MiniApp Config (.npmrc):</span>
                     <button
@@ -506,7 +506,7 @@ export function AccessTokensCard() {
                   </pre>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-2xs border border-slate-800 relative">
+                <div className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs border border-slate-800 relative">
                   <div className="flex items-center justify-between mb-1.5 text-slate-400 font-sans font-semibold">
                     <span>Flutter CLI Command:</span>
                     <button
@@ -525,7 +525,7 @@ export function AccessTokensCard() {
                   <pre className="text-sky-400 overflow-x-auto whitespace-pre">
 {`dart pub token add https://app.fintechcenterfsa.com/pub`}
                   </pre>
-                  <p className="text-2xs text-slate-400 font-sans mt-1.5">
+                  <p className="text-xs text-slate-400 font-sans mt-1.5">
                     When prompted by the Dart CLI, paste the token shown above.
                   </p>
                 </div>

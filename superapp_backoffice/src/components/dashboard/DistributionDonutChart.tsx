@@ -165,10 +165,10 @@ export default function DistributionDonutChart({
                   <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
                     {segments[hoveredIndex].value}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate max-w-[100px]">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate max-w-[100px]">
                     {segments[hoveredIndex].label}
                   </span>
-                  <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 mt-0.5">
+                  <span className="text-xs font-bold text-brand-600 dark:text-brand-400 mt-0.5">
                     {totalValue > 0
                       ? `${Math.round((segments[hoveredIndex].value / totalValue) * 100)}%`
                       : '0%'}
@@ -179,7 +179,7 @@ export default function DistributionDonutChart({
                   <span className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
                     {totalValue}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate max-w-[100px] mt-0.5">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate max-w-[100px] mt-0.5">
                     {currentTab?.centerLabel || 'Total'}
                   </span>
                 </>
@@ -229,7 +229,7 @@ export default function DistributionDonutChart({
                   </span>
 
                   {/* Clean Tabular Percent */}
-                  <span className="text-[11px] text-slate-400 dark:text-slate-400 font-mono text-right w-10">
+                  <span className="text-xs text-slate-400 dark:text-slate-400 font-mono text-right w-10">
                     {percent}%
                   </span>
                 </div>

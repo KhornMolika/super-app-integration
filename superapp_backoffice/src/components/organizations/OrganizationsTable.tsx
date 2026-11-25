@@ -54,7 +54,7 @@ export function OrganizationsTable({
                 <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors flex items-center gap-2">
                   <span className="truncate">{org.name}</span>
                   {isRoot && (
-                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+                    <span className="shrink-0 px-1.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
                       <svg
                         className="w-2.5 h-2.5 text-amber-500"
                         fill="none"

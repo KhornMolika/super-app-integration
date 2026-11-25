@@ -206,7 +206,7 @@ export function RoleModal({
                   <button
                     type="button"
                     onClick={() => applyRolePreset('ALL')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
                     <span>All Permissions</span>
@@ -214,7 +214,7 @@ export function RoleModal({
                   <button
                     type="button"
                     onClick={() => applyRolePreset('READ_ONLY')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <EyeIcon className="w-3.5 h-3.5 text-sky-500" />
                     <span>Read Only</span>
@@ -222,7 +222,7 @@ export function RoleModal({
                   <button
                     type="button"
                     onClick={() => applyRolePreset('MINI_APP')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <DevicePhoneIcon className="w-3.5 h-3.5 text-accent-500" />
                     <span>MiniApp Focus</span>
@@ -230,7 +230,7 @@ export function RoleModal({
                   <button
                     type="button"
                     onClick={() => applyRolePreset('CLEAR')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-600 hover:bg-rose-50 transition-colors cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -284,7 +284,7 @@ export function RoleModal({
                         <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                           {group.category}
                         </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {group.description}
                         </p>
                       </div>
@@ -321,10 +321,10 @@ export function RoleModal({
                               <span>{perm.label}</span>
                               {getSensitivityBadge(perm.level)}
                             </div>
-                            <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                            <div className="font-mono text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                               {perm.key}
                             </div>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                               {perm.desc}
                             </p>
                           </div>

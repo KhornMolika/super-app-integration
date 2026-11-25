@@ -158,7 +158,7 @@ function VerifyOtpContent() {
                 </svg>
                 <span>Super Administrator Review Required</span>
               </div>
-              <p className="text-[11px] text-slate-300/90 leading-relaxed">
+              <p className="text-xs text-slate-300/90 leading-relaxed">
                 As a regulated sovereign financial infrastructure platform, all new developer accounts require Super Administrator authorization before back-office access is granted.
               </p>
             </div>
@@ -189,7 +189,7 @@ function VerifyOtpContent() {
             </svg>
           </div>
           <div className="truncate">
-            <div className="text-[11px] text-slate-400">Sent code to</div>
+            <div className="text-xs text-slate-400">Sent code to</div>
             <div className="text-xs font-semibold text-white truncate">
               {rawEmail ? maskEmail(rawEmail) : 'your email address'}
             </div>

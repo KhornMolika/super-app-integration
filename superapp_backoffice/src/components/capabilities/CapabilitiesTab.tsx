@@ -330,11 +330,11 @@ export function CapabilitiesTab({
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 SuperApp Host Capability Whitelist
               </h4>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
                 {allowedCount} of {safeCapabilities.length} Allowed
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Decide which device and bridge capabilities MiniApps are authorized to declare during security validation.
             </p>
           </div>
@@ -503,7 +503,7 @@ export function CapabilitiesTab({
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <thead className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4 sm:px-5">Capability</th>
                   <th className="py-3 px-4">Category</th>
@@ -551,7 +551,7 @@ export function CapabilitiesTab({
                             <button
                               type="button"
                               onClick={(e) => handleCopy(e, cap.key || '', `key-${cap.id}`)}
-                              className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                              className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                               title="Click to copy key"
                             >
                               <span>#{cap.key}</span>
@@ -568,7 +568,7 @@ export function CapabilitiesTab({
                       {/* Category */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
                         >
                           {visual.category}
                         </span>
@@ -578,7 +578,7 @@ export function CapabilitiesTab({
                       <td className="py-3.5 px-4">
                         <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/40 transition-colors">
                           <span
-                            className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
+                            className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
                           >
                             {methodSyntax.badgeLabel}
                           </span>
@@ -606,7 +606,7 @@ export function CapabilitiesTab({
                       {/* Provider Package */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {cap.providerPackage ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs border border-slate-200/60 dark:border-slate-700/60">
                             <Package className="w-3 h-3 text-slate-400" />
                             <span className="truncate max-w-[150px]">{cap.providerPackage}</span>
                           </span>
@@ -619,7 +619,7 @@ export function CapabilitiesTab({
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="space-y-0.5">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${
                               isActive
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
                                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -630,7 +630,7 @@ export function CapabilitiesTab({
                             />
                             <span>{isActive ? 'Active' : 'Deprecated'}</span>
                           </span>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                          <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
                             <Smartphone className="w-2.5 h-2.5" />
                             <span>{cap.platform || 'Cross-Platform'}</span>
                           </div>
@@ -664,7 +664,7 @@ export function CapabilitiesTab({
                           )}
 
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                               cap.isAllowed !== false
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                 : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -739,11 +739,11 @@ export function CapabilitiesTab({
                           {cap.name}
                         </Link>
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                             {cap.key}
                           </span>
-                          <span className="text-[10px] text-slate-400">•</span>
-                          <span className={`text-[10px] font-semibold ${visual.badgeTextColor}`}>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className={`text-xs font-semibold ${visual.badgeTextColor}`}>
                             {visual.category}
                           </span>
                         </div>
@@ -751,7 +751,7 @@ export function CapabilitiesTab({
                     </div>
 
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
                         cap.status === 'Active'
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60'
                           : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60'
@@ -771,7 +771,7 @@ export function CapabilitiesTab({
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/30 transition-colors">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
+                          className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
                         >
                           {methodSyntax.badgeLabel}
                         </span>
@@ -783,7 +783,7 @@ export function CapabilitiesTab({
                             {methodSyntax.concise}
                           </code>
                           <span
-                            className="text-[10px] font-mono text-slate-400 truncate hidden xl:inline"
+                            className="text-xs font-mono text-slate-400 truncate hidden xl:inline"
                             title={methodSyntax.full}
                           >
                             {methodSyntax.full}
@@ -806,9 +806,9 @@ export function CapabilitiesTab({
                     </div>
 
                     {/* Badges Row: Provider Package & Permissions */}
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
                       {cap.providerPackage && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px]">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs">
                           <Package className="w-3 h-3 text-slate-400" />
                           {cap.providerPackage}
                         </span>
@@ -817,7 +817,7 @@ export function CapabilitiesTab({
                       {cap.requiredPermissions?.map((perm) => (
                         <span
                           key={perm}
-                          className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
+                          className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
                         >
                           {perm}
                         </span>
@@ -827,7 +827,7 @@ export function CapabilitiesTab({
                 </div>
 
                 {/* Footer with Allowlist Toggle & View Details Link */}
-                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     {canManageAllowlist && (
                       <button
@@ -852,7 +852,7 @@ export function CapabilitiesTab({
                       </button>
                     )}
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${
                         cap.isAllowed !== false
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                           : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'

@@ -280,7 +280,7 @@ export default function PreviewModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-slate-100 truncate max-w-[140px]" title={title}>{title}</h3>
-                <span className="text-[10px] bg-accent-500/20 text-accent-300 font-semibold px-2 py-0.5 rounded-full border border-accent-500/30 shrink-0">
+                <span className="text-xs bg-accent-500/20 text-accent-300 font-semibold px-2 py-0.5 rounded-full border border-accent-500/30 shrink-0">
                   {getMethodBadge()}
                 </span>
               </div>
@@ -315,7 +315,7 @@ export default function PreviewModal({
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-              <span className="text-slate-300 text-[11px] font-medium">Ready</span>
+              <span className="text-slate-300 text-xs font-medium">Ready</span>
             </span>
           )}
         </div>
@@ -346,7 +346,7 @@ export default function PreviewModal({
                 <svg className="w-3.5 h-3.5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="hidden xl:inline text-[11px]">{orientation}</span>
+                <span className="hidden xl:inline text-xs">{orientation}</span>
               </button>
             )}
           </div>
@@ -471,7 +471,7 @@ export default function PreviewModal({
                   <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-[11px] font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
+                      <span className="text-xs font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
@@ -513,12 +513,12 @@ export default function PreviewModal({
                     <div className="flex flex-col items-center text-center px-2">
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
                         <span className="truncate max-w-[130px]">{title}</span>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                           Preview Mode
                         </span>
                       </div>
-                      <span className="text-[9px] text-slate-400 font-mono truncate max-w-[180px]">
+                      <span className="text-xs text-slate-400 font-mono truncate max-w-[180px]">
                         {displayMiniAppSubtitle}
                       </span>
                     </div>

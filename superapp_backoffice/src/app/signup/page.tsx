@@ -209,7 +209,7 @@ export default function SignupPage() {
               {errors.email.toLowerCase().includes('already exists') && (
                 <Link
                   href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`}
-                  className="font-bold underline text-brand-400 hover:text-brand-300 whitespace-nowrap text-[11px]"
+                  className="font-bold underline text-brand-400 hover:text-brand-300 whitespace-nowrap text-xs"
                 >
                   Sign in &rarr;
                 </Link>
@@ -230,7 +230,7 @@ export default function SignupPage() {
               Organization
             </label>
             {loadingOrgs && (
-              <span className="text-[11px] text-slate-400 animate-pulse">Loading organizations...</span>
+              <span className="text-xs text-slate-400 animate-pulse">Loading organizations...</span>
             )}
           </div>
           <OrganizationSelect

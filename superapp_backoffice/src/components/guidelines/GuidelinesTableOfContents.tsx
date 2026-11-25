@@ -197,10 +197,10 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
       {/* Active Section Context Header */}
       <div className="mb-4 pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="flex items-center justify-between gap-1 mb-1.5">
-          <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider font-mono">
+          <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider font-mono">
             Section {currentSection.number}
           </span>
-          <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/60">
+          <span className="text-xs px-2 py-0.5 rounded-full font-semibold uppercase bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/60">
             {CATEGORY_FRIENDLY_NAMES[currentSection.category] || currentSection.category}
           </span>
         </div>
@@ -212,10 +212,10 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
       {/* Sub-Content Outline */}
       <div className="flex-1 space-y-1">
         <div className="flex items-center justify-between mb-2 px-1">
-          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Sub-Topics &amp; Details
           </span>
-          <span className="text-[10px] font-mono text-slate-400">
+          <span className="text-xs font-mono text-slate-400">
             {subTopics.length} topics
           </span>
         </div>
@@ -235,13 +235,13 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
-                  <span className={`text-[10px] font-mono shrink-0 ${isSubActive ? "text-brand-500 font-bold" : "text-slate-400"}`}>
+                  <span className={`text-xs font-mono shrink-0 ${isSubActive ? "text-brand-500 font-bold" : "text-slate-400"}`}>
                     {idx + 1}.
                   </span>
                   <span className="truncate">{topic.label}</span>
                 </div>
                 {topic.badge && (
-                  <span className={`text-[9px] font-mono px-1 py-0.2 rounded shrink-0 opacity-70 group-hover:opacity-100 ${
+                  <span className={`text-xs font-mono px-1 py-0.2 rounded shrink-0 opacity-70 group-hover:opacity-100 ${
                     isSubActive ? "bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
                   }`}>
                     {topic.badge}
@@ -255,7 +255,7 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
 
       {/* Bottom Section Navigator (Next/Prev) */}
       <div className="pt-4 mt-6 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
-        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-1">
+        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-1">
           Navigate Sections
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -265,8 +265,8 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
               onClick={() => handleSwitchSection(prevSection.id)}
               className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-left hover:border-brand-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition group"
             >
-              <span className="text-[9px] text-slate-400 block">← Prev</span>
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate block group-hover:text-brand-600 dark:group-hover:text-brand-400">
+              <span className="text-xs text-slate-400 block">← Prev</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 {prevSection.number} {prevSection.shortTitle || prevSection.title}
               </span>
             </button>
@@ -280,8 +280,8 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
               onClick={() => handleSwitchSection(nextSection.id)}
               className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-right hover:border-brand-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition group"
             >
-              <span className="text-[9px] text-slate-400 block">Next →</span>
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate block group-hover:text-brand-600 dark:group-hover:text-brand-400">
+              <span className="text-xs text-slate-400 block">Next →</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 {nextSection.number} {nextSection.shortTitle || nextSection.title}
               </span>
             </button>
@@ -296,7 +296,7 @@ const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
             const el = document.getElementById(activeSection);
             if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
-          className="w-full text-center py-1.5 text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition rounded hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+          className="w-full text-center py-1.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition rounded hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
         >
           ↑ Top of this Section
         </button>

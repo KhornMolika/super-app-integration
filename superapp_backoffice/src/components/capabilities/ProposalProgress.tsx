@@ -108,11 +108,11 @@ function StepRow({ step, last }: { step: ProgressStep; last: boolean }) {
             {step.label}
             <span className="sr-only"> ({STATE_WORD[step.state]})</span>
           </span>
-          {when && <span className="text-[10px] text-slate-400 tabular-nums">{when}</span>}
+          {when && <span className="text-xs text-slate-400 tabular-nums">{when}</span>}
         </div>
         {step.detail && (
           <p
-            className={`text-[11px] leading-relaxed break-words ${
+            className={`text-xs leading-relaxed break-words ${
               step.state === 'failed' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'
             }`}
           >
@@ -127,7 +127,7 @@ function StepRow({ step, last }: { step: ProgressStep; last: boolean }) {
                 href={l.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
               >
                 <ExternalLink className="w-3 h-3" />
                 {l.label}
@@ -165,12 +165,12 @@ export function ProposalProgress({ proposalId, refreshKey }: { proposalId: strin
   return (
     <section aria-label="Progress" className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-2.5">
       <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Progress</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Progress</h3>
         <button
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer disabled:opacity-50"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer disabled:opacity-50"
           aria-label="Refresh progress"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
@@ -178,12 +178,12 @@ export function ProposalProgress({ proposalId, refreshKey }: { proposalId: strin
         </button>
       </div>
       {error ? (
-        <p className="flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+        <p className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400">
           <AlertCircle className="w-3.5 h-3.5" />
           {error}
         </p>
       ) : !progress ? (
-        <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+        <p className="flex items-center gap-1.5 text-xs text-slate-400">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
           Loading...
         </p>
@@ -233,7 +233,7 @@ export function ProposalProgressModal({
             <h2 id="proposal-progress-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">
               {proposal.permissionName || proposal.permissionKey}
             </h2>
-            <p className="font-mono text-[11px] text-slate-500">{proposal.permissionKey}</p>
+            <p className="font-mono text-xs text-slate-500">{proposal.permissionKey}</p>
           </div>
           <button
             type="button"

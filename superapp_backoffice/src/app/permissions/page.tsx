@@ -177,7 +177,7 @@ function PermissionsPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {TOTAL_PERMISSIONS_COUNT}
           </div>
-          <span className="text-[11px] text-slate-400">Across 4 categories</span>
+          <span className="text-xs text-slate-400">Across 4 categories</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
@@ -190,7 +190,7 @@ function PermissionsPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {criticalCount}
           </div>
-          <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+          <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
             High-impact privileges
           </span>
         </div>
@@ -205,7 +205,7 @@ function PermissionsPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {systemCount}
           </div>
-          <span className="text-[11px] text-violet-600 dark:text-violet-400 font-medium">
+          <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
             RBAC &amp; core settings
           </span>
         </div>
@@ -220,7 +220,7 @@ function PermissionsPageContent() {
           <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             {roles.length}
           </div>
-          <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium">
+          <span className="text-xs text-sky-600 dark:text-sky-400 font-medium">
             Active in access matrix
           </span>
         </div>

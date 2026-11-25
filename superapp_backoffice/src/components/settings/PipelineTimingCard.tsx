@@ -45,7 +45,7 @@ export function PipelineTimingCard({
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                   Pipeline Automation &amp; Stage Timing
                 </h3>
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono font-bold bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200/80 dark:border-accent-800 uppercase">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200/80 dark:border-accent-800 uppercase">
                   {pipelineTiming.preset}
                 </span>
               </div>
@@ -85,7 +85,7 @@ export function PipelineTimingCard({
               <ZapIcon className="w-3.5 h-3.5 text-accent-500" />
               <span>Quick Duration Presets</span>
             </span>
-            <span className="text-[11px] text-slate-500 block mt-0.5">
+            <span className="text-xs text-slate-500 block mt-0.5">
               Select a pre-configured timing template or customize individual stage seconds below.
             </span>
           </div>
@@ -157,7 +157,7 @@ export function PipelineTimingCard({
               }}
               className="font-mono text-xs sm:text-sm rounded-lg"
             />
-            <p className="text-[11px] text-slate-500 leading-tight">
+            <p className="text-xs text-slate-500 leading-tight">
               Delay before scanning begins after registration.
             </p>
           </div>
@@ -188,7 +188,7 @@ export function PipelineTimingCard({
               }}
               className="font-mono text-xs sm:text-sm rounded-lg"
             />
-            <p className="text-[11px] text-slate-500 leading-tight">
+            <p className="text-xs text-slate-500 leading-tight">
               Pacing between AST, SAST, and digest checks.
             </p>
           </div>
@@ -219,7 +219,7 @@ export function PipelineTimingCard({
               }}
               className="font-mono text-xs sm:text-sm rounded-lg"
             />
-            <p className="text-[11px] text-slate-500 leading-tight">
+            <p className="text-xs text-slate-500 leading-tight">
               Delay before emitting &quot;Validation Passed&quot; card.
             </p>
           </div>
@@ -250,7 +250,7 @@ export function PipelineTimingCard({
               }}
               className="font-mono text-xs sm:text-sm rounded-lg"
             />
-            <p className="text-[11px] text-slate-500 leading-tight">
+            <p className="text-xs text-slate-500 leading-tight">
               Delay before queuing Jenkins compilation.
             </p>
           </div>
@@ -276,7 +276,7 @@ export function PipelineTimingCard({
               <option value="rich_cards">Rich Cards with Formatted Badges (Recommended)</option>
               <option value="compact">Compact Plain Summary</option>
             </select>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Controls visual layout, status banners, and quote formatting in Telegram.
             </p>
           </div>
@@ -287,7 +287,7 @@ export function PipelineTimingCard({
                 <RadioButtonIcon className="w-3.5 h-3.5 text-brand-500" />
                 <span>Interactive Action Buttons</span>
               </span>
-              <span className="text-[11px] text-slate-500 block mt-0.5">
+              <span className="text-xs text-slate-500 block mt-0.5">
                 Attach <code>[View Backoffice]</code>, <code>[Download APK]</code> buttons.
               </span>
             </div>

@@ -154,7 +154,7 @@ export function ReviewDiffViewer({
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold font-mono shrink-0 ${
+                        className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold font-mono shrink-0 ${
                           file.status === 'modified'
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                             : file.status === 'added'
@@ -168,13 +168,13 @@ export function ReviewDiffViewer({
                         <span className="text-xs font-semibold block truncate leading-tight">
                           {file.filename}
                         </span>
-                        <span className="text-[10px] text-slate-400 block truncate leading-tight font-mono">
+                        <span className="text-xs text-slate-400 block truncate leading-tight font-mono">
                           {file.path}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 font-mono text-[10px] shrink-0 font-bold">
+                    <div className="flex items-center gap-1 font-mono text-xs shrink-0 font-bold">
                       {file.additions > 0 && (
                         <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
                       )}
@@ -201,7 +201,7 @@ export function ReviewDiffViewer({
                     {activeFile.path}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                       activeFile.status === 'modified'
                         ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                         : activeFile.status === 'added'
@@ -234,7 +234,7 @@ export function ReviewDiffViewer({
               </div>
 
               {/* Diff Lines Table */}
-              <div className="flex-1 overflow-auto font-mono text-[11px] leading-relaxed bg-white dark:bg-slate-950">
+              <div className="flex-1 overflow-auto font-mono text-xs leading-relaxed bg-white dark:bg-slate-950">
                 {viewMode === 'unified' ? (
                   // Unified View
                   <table className="w-full border-collapse">

@@ -47,7 +47,7 @@ export function SidebarGuidelines() {
               <span className="text-sm font-bold text-white tracking-wide truncate">
                 Guidelines
               </span>
-              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-brand-800/80 dark:bg-slate-800 text-brand-300 border border-brand-700/50">
+              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded bg-brand-800/80 dark:bg-slate-800 text-brand-300 border border-brand-700/50">
                 Docs
               </span>
             </div>

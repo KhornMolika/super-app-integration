@@ -320,7 +320,7 @@ export function ProposalsTab({
             }`}
           >
             <span className={`block text-xl font-bold tabular-nums ${t.tone}`}>{counts[t.key]}</span>
-            <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">{t.label}</span>
+            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">{t.label}</span>
           </button>
         ))}
       </div>
@@ -448,10 +448,10 @@ export function ProposalsTab({
                       <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                         {prop.permissionName || prop.permissionKey}
                       </span>
-                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <span className="font-mono text-xs px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                         {prop.permissionKey}
                       </span>
-                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${chip.className}`}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full border ${chip.className}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />
                         {chip.label}
                       </span>
@@ -459,7 +459,7 @@ export function ProposalsTab({
                     {prop.description && (
                       <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1">{prop.description}</p>
                     )}
-                    <div className="flex items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                    <div className="flex items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                       <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
                         {isPlatform ? <Globe className="w-3 h-3 text-brand-500" /> : <Smartphone className="w-3 h-3 text-brand-500" />}
                         {miniAppName}
@@ -477,7 +477,7 @@ export function ProposalsTab({
                         </span>
                       )}
                       {prop.targetSuperAppVersion && (
-                        <span className="inline-flex items-center gap-1 font-mono text-[10px]">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs">
                           <Tag className="w-3 h-3 text-slate-400" />v{prop.targetSuperAppVersion}
                         </span>
                       )}

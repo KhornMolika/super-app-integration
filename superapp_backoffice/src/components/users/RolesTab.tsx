@@ -362,16 +362,16 @@ export function RolesTab({
                           <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                             {theme.label || role.name}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/70 shrink-0">
+                          <span className="px-1.5 py-0.5 rounded font-mono text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/70 shrink-0">
                             {role.name}
                           </span>
                           {isSys && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/50 shrink-0 hidden xl:inline-block">
+                            <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/50 shrink-0 hidden xl:inline-block">
                               System
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                        <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400 shrink-0">
                           {permCount} / {TOTAL_PERMISSIONS_COUNT} scopes
                         </span>
                       </div>
@@ -509,7 +509,7 @@ export function RolesTab({
                       </div>
 
                       {/* Grant Status Pills */}
-                      <div className="inline-flex items-center rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-[11px] font-semibold">
+                      <div className="inline-flex items-center rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold">
                         <button
                           type="button"
                           onClick={() => setGrantFilter('ALL')}
@@ -649,7 +649,7 @@ export function RolesTab({
                           </div>
 
                           <span
-                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${
+                            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border shrink-0 ${
                               grantedInGroup > 0
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60'
                                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
@@ -682,14 +682,14 @@ export function RolesTab({
 
                                   {/* Column 3: Monospace Scope Key */}
                                   <div className="md:col-span-2 min-w-0">
-                                    <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200/70 dark:border-slate-700/70 inline-block truncate max-w-full" title={perm.key}>
+                                    <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200/70 dark:border-slate-700/70 inline-block truncate max-w-full" title={perm.key}>
                                       {perm.key}
                                     </span>
                                   </div>
 
                                   {/* Column 4: Description */}
                                   <div className="md:col-span-3 min-w-0">
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={perm.desc}>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={perm.desc}>
                                       {perm.desc}
                                     </p>
                                   </div>
@@ -707,7 +707,7 @@ export function RolesTab({
                                       <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs" />
                                     </div>
                                     <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap ${
+                                      className={`px-2 py-0.5 rounded-md text-xs font-semibold border whitespace-nowrap ${
                                         isGranted
                                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                                           : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200/80 dark:border-slate-700/80'
@@ -839,7 +839,7 @@ export function RolesTab({
                             >
                               {r.name}
                             </button>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {permCount} / {TOTAL_PERMISSIONS_COUNT} scopes
                             </span>
                           </div>
@@ -891,7 +891,7 @@ export function RolesTab({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                               </svg>
                               <span className="text-slate-900 dark:text-white font-bold">{group.category}</span>
-                              <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
                                 ({matchingPerms.length} scopes)
                               </span>
                             </div>
@@ -911,7 +911,7 @@ export function RolesTab({
                                       {perm.label}
                                     </span>
                                     {getSensitivityBadge(perm.level)}
-                                    <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
+                                    <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700/60">
                                       {perm.key}
                                     </span>
                                   </div>

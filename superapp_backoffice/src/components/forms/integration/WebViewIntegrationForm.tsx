@@ -639,7 +639,7 @@ export default function WebViewIntegrationForm({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
             {isEditingCustomToken ? (
               <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                   Custom Challenge Token (from Settings or pre-deployed project)
                 </span>
                 <div className="flex items-center gap-2">
@@ -666,7 +666,7 @@ export default function WebViewIntegrationForm({
               </div>
             ) : (
               <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
                   Verification Challenge Token
                 </span>
                 <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
@@ -777,9 +777,9 @@ export default function WebViewIntegrationForm({
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-500">Record Type / Host</span>
+                  <span className="text-xs font-bold text-slate-500">Record Type / Host</span>
                   <div className="flex items-center gap-1.5">
-                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] truncate">
+                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-xs truncate">
                       {`_superapp-challenge.${host || 'yourdomain.com'}`}
                     </code>
                     <button
@@ -792,9 +792,9 @@ export default function WebViewIntegrationForm({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-500">TXT Value</span>
+                  <span className="text-xs font-bold text-slate-500">TXT Value</span>
                   <div className="flex items-center gap-1.5">
-                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-brand-300 font-mono text-[11px] truncate">
+                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-brand-300 font-mono text-xs truncate">
                       {`superapp-site-verification=${token}`}
                     </code>
                     <button

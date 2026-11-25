@@ -289,7 +289,7 @@ export function RevisionReviewModal({
                   >
                     <span>{t.label}</span>
                     {t.count > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 dark:bg-slate-800 font-bold">
+                      <span className="px-1.5 py-0.2 rounded-full text-xs bg-slate-100 dark:bg-slate-800 font-bold">
                         {t.count}
                       </span>
                     )}
@@ -326,7 +326,7 @@ export function RevisionReviewModal({
                               <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                 <span className="font-mono">{p.type}</span>
                                 <span
-                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                  className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
                                     p.riskLevel === 'HIGH'
                                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
                                       : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
@@ -335,7 +335,7 @@ export function RevisionReviewModal({
                                   {p.riskLevel} RISK
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                                 {p.purpose || 'Required for MiniApp runtime integration'}
                               </p>
                             </div>
@@ -390,11 +390,11 @@ export function RevisionReviewModal({
                       </span>
                       <div className="grid grid-cols-2 gap-2 mt-1">
                         <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Live Base URL</span>
+                          <span className="text-xs text-slate-400 uppercase font-bold block">Live Base URL</span>
                           <span className="font-mono text-slate-600 dark:text-slate-400 break-all">{d.integration.productionUrl.base || 'None'}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700">
-                          <span className="text-[10px] text-emerald-600 uppercase font-bold block">New Proposed URL</span>
+                          <span className="text-xs text-emerald-600 uppercase font-bold block">New Proposed URL</span>
                           <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold break-all">{d.integration.productionUrl.target}</span>
                         </div>
                       </div>

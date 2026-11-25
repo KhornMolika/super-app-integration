@@ -89,7 +89,7 @@ export function OrganizationDetailTabs({
             <UserGroupIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
             <span>Assigned Users</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === 'users'
                   ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
                   : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
@@ -111,7 +111,7 @@ export function OrganizationDetailTabs({
             <PackageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Registered Mini Apps</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === 'miniapps'
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                   : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
@@ -134,7 +134,7 @@ export function OrganizationDetailTabs({
               <BuildingIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <span>Subordinate Entities</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === 'subordinates'
                     ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
                     : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
@@ -186,7 +186,7 @@ export function OrganizationDetailTabs({
                       {child.code || 'ORG'}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
                         child.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
                           : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'

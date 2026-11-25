@@ -64,7 +64,7 @@ export function ReviewWebviewTab({
               <h4 className="font-extrabold text-sky-950 dark:text-sky-100 uppercase tracking-wider text-sm">
                 WebView Sandbox &amp; SSRF Isolation
               </h4>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-200/80 text-sky-900 dark:bg-sky-900 dark:text-sky-200">
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-sky-200/80 text-sky-900 dark:bg-sky-900 dark:text-sky-200">
                 L4/L7 Gate Active
               </span>
             </div>
@@ -109,11 +109,11 @@ export function ReviewWebviewTab({
                 <span>Production Entry URL</span>
               </span>
               {productionUrlDiff?.changed ? (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
                   MODIFIED
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
                   Current Live
                 </span>
               )}
@@ -122,7 +122,7 @@ export function ReviewWebviewTab({
             <div className="space-y-2 text-xs">
               {productionUrlDiff?.changed && (
                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Base Version URL</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase block mb-0.5">Base Version URL</span>
                   <span className="font-mono text-slate-500 line-through break-all block">
                     {productionUrlDiff.base || '(none)'}
                   </span>
@@ -130,7 +130,7 @@ export function ReviewWebviewTab({
               )}
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-brand-600 font-bold uppercase block mb-0.5">Target Version URL</span>
+                <span className="text-xs text-brand-600 font-bold uppercase block mb-0.5">Target Version URL</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-slate-100 break-all block">
                   {prodUrl}
                 </span>
@@ -138,7 +138,7 @@ export function ReviewWebviewTab({
 
               <div className="flex items-center justify-between pt-1">
                 <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-bold ${
+                  className={`inline-flex items-center gap-1 text-xs font-bold ${
                     isHttps(prodUrl)
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-rose-600 dark:text-rose-400'
@@ -169,11 +169,11 @@ export function ReviewWebviewTab({
                 <span>Staging / Sandbox URL</span>
               </span>
               {stagingUrlDiff?.changed ? (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
                   MODIFIED
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   Active Staging
                 </span>
               )}
@@ -182,7 +182,7 @@ export function ReviewWebviewTab({
             <div className="space-y-2 text-xs">
               {stagingUrlDiff?.changed && (
                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">Base Version URL</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase block mb-0.5">Base Version URL</span>
                   <span className="font-mono text-slate-500 line-through break-all block">
                     {stagingUrlDiff.base || '(none)'}
                   </span>
@@ -190,7 +190,7 @@ export function ReviewWebviewTab({
               )}
 
               <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-sky-600 font-bold uppercase block mb-0.5">Target Version URL</span>
+                <span className="text-xs text-sky-600 font-bold uppercase block mb-0.5">Target Version URL</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-slate-100 break-all block">
                   {stagingUrl}
                 </span>
@@ -198,7 +198,7 @@ export function ReviewWebviewTab({
 
               <div className="flex items-center justify-between pt-1">
                 <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-bold ${
+                  className={`inline-flex items-center gap-1 text-xs font-bold ${
                     isHttps(stagingUrl)
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-amber-600 dark:text-amber-400'
@@ -307,7 +307,7 @@ export function ReviewWebviewTab({
             <span className="font-bold text-slate-800 dark:text-slate-200 block">
               Cookie &amp; Storage Partitioning
             </span>
-            <p className="text-slate-500 leading-relaxed text-[11px]">
+            <p className="text-slate-500 leading-relaxed text-xs">
               MiniApp cookies and IndexedDB storage are sandboxed per appId. Cross-app tracking and SuperApp core session leakage are strictly blocked.
             </p>
           </div>
@@ -316,7 +316,7 @@ export function ReviewWebviewTab({
             <span className="font-bold text-slate-800 dark:text-slate-200 block">
               JS Bridge Capability Gate
             </span>
-            <p className="text-slate-500 leading-relaxed text-[11px]">
+            <p className="text-slate-500 leading-relaxed text-xs">
               `window.SuperAppBridge` exposes only explicitly approved capabilities. Undeclared RPC methods return immediate rejection errors.
             </p>
           </div>
@@ -325,7 +325,7 @@ export function ReviewWebviewTab({
             <span className="font-bold text-slate-800 dark:text-slate-200 block">
               Content-Security-Policy (CSP)
             </span>
-            <p className="text-slate-500 leading-relaxed text-[11px]">
+            <p className="text-slate-500 leading-relaxed text-xs">
               Strict CSP headers injected at webview navigation boundary: `default-src 'self'` restricted to declared domain whitelist.
             </p>
           </div>

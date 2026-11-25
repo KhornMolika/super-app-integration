@@ -159,7 +159,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
                   Database Assignment
                 </span>
                 {matchedRole?.id && (
-                  <span className="font-mono text-[11px] text-slate-400">
+                  <span className="font-mono text-xs text-slate-400">
                     ID: #{matchedRole.id.slice(0, 8)}
                   </span>
                 )}
@@ -305,13 +305,13 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                         {group.category}
                       </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {group.description}
                       </p>
                     </div>
                   </div>
 
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
                     {grantedCount} / {group.permissions.length} Granted
                   </span>
                 </div>
@@ -331,7 +331,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
                             <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                               {item.label}
                             </span>
-                            <span className="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                            <span className="font-mono text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                               {item.key}
                             </span>
                             {getSensitivityBadge(item.level)}

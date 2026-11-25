@@ -85,20 +85,20 @@ export function ReviewNetworkTab({
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
                     <span>Production URL Modified</span>
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
                     CHANGED
                   </span>
                 </div>
 
                 <div className="space-y-1.5 text-xs">
                   <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Previous Live Base</span>
+                    <span className="text-xs text-slate-400 font-bold uppercase block">Previous Live Base</span>
                     <span className="font-mono text-slate-600 dark:text-slate-400 line-through break-all">
                       {productionUrlDiff.base || '(none)'}
                     </span>
                   </div>
                   <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700">
-                    <span className="text-[10px] text-emerald-600 font-bold uppercase block">Proposed Target URL</span>
+                    <span className="text-xs text-emerald-600 font-bold uppercase block">Proposed Target URL</span>
                     <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold break-all">
                       {productionUrlDiff.target}
                     </span>
@@ -116,13 +116,13 @@ export function ReviewNetworkTab({
                 </div>
                 <div className="space-y-1.5 text-xs">
                   <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Old Staging URL</span>
+                    <span className="text-xs text-slate-400 font-bold uppercase block">Old Staging URL</span>
                     <span className="font-mono text-slate-600 dark:text-slate-400 line-through break-all">
                       {stagingUrlDiff.base || '(none)'}
                     </span>
                   </div>
                   <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700">
-                    <span className="text-[10px] text-emerald-600 font-bold uppercase block">New Staging URL</span>
+                    <span className="text-xs text-emerald-600 font-bold uppercase block">New Staging URL</span>
                     <span className="font-mono text-emerald-700 dark:text-emerald-300 font-bold break-all">
                       {stagingUrlDiff.target}
                     </span>

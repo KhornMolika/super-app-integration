@@ -586,7 +586,7 @@ function SidebarNavContent() {
         return (
           <div key={group.label} className="space-y-1">
             {!isCollapsed ? (
-              <h3 className="px-3 text-[11px] font-bold uppercase tracking-widest text-brand-400 mb-1.5">{group.label}</h3>
+              <h3 className="px-3 text-xs font-bold uppercase tracking-widest text-brand-400 mb-1.5">{group.label}</h3>
             ) : (
               <div className="h-px bg-brand-900/60 dark:bg-slate-800/80 my-2 mx-2" />
             )}
@@ -681,7 +681,7 @@ function SidebarNavContent() {
                       <span className="truncate tracking-wide">{displayName}</span>
                     )}
                     {!isCollapsed && group.label === 'AUDIT WORKSPACES' && (
-                      <span className="ml-auto text-[9px] font-sans font-extrabold uppercase px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 shrink-0">
+                      <span className="ml-auto text-xs font-sans font-extrabold uppercase px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 shrink-0">
                         Launch ↗
                       </span>
                     )}

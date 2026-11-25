@@ -230,7 +230,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
               </svg>
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                 App Registrant &amp; Technical Ownership
               </span>
               <div className="flex items-center gap-2 flex-wrap">
@@ -401,7 +401,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     href={formData.termsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                    className="text-xs font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
                   >
                     <span>{formData.termsUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,9 +409,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </svg>
                   </a>
                 ) : formData.termsDescription ? (
-                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Default Container Terms</span>
+                  <span className="text-xs text-slate-400">Default Container Terms</span>
                 )}
               </div>
               {formData.termsDescription && (
@@ -433,7 +433,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     href={formData.privacyPolicyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                    className="text-xs font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
                   >
                     <span>{formData.privacyPolicyUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,9 +441,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </svg>
                   </a>
                 ) : formData.privacyPolicyDescription ? (
-                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">Bundled Document</span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Default Container Privacy</span>
+                  <span className="text-xs text-slate-400">Default Container Privacy</span>
                 )}
               </div>
               {formData.privacyPolicyDescription && (
@@ -632,7 +632,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     <ShieldCheckIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                     <span>Isolated Package Quarantine Staging</span>
                   </span>
-                  <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                  <span className="font-mono text-xs bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
                     Pre-Approval Verification
                   </span>
                 </div>
@@ -644,11 +644,11 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       <AppleIcon className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
                       <span>iOS Framework Target</span>
                     </span>
-                    <span className="font-mono text-[11px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       {formData.integrationConfigNativeSdk?.iosArtifactFilename || '-'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-slate-400 block">Module:</span>
                       <code className="font-mono font-bold text-slate-800 dark:text-slate-200">
@@ -671,11 +671,11 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       <AndroidIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Android Maven Artifact Target</span>
                     </span>
-                    <span className="font-mono text-[11px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       {formData.integrationConfigNativeSdk?.androidArtifactFilename || '-'}
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-[11px]">
+                  <div className="space-y-1.5 text-xs">
                     <div>
                       <span className="text-slate-400 block">Maven Coordinates:</span>
                       <code className="font-mono font-bold text-brand-700 dark:text-brand-300">
@@ -861,7 +861,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                           <span className="font-bold text-sm text-slate-900 dark:text-slate-100 capitalize">
                             {p.type}
                           </span>
-                          <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          <span className="text-xs font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                             Required
                           </span>
                         </div>

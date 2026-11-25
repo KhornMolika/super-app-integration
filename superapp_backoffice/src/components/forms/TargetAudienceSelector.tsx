@@ -77,7 +77,7 @@ export function TargetAudienceSelector({
         <Label htmlFor="target-audience-group" className="text-xs font-semibold text-slate-800 dark:text-slate-200">
           Target Audience & Visibility Scope <span className="text-rose-500">*</span>
         </Label>
-        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           Controls mobile store catalog visibility
         </span>
       </div>
@@ -125,7 +125,7 @@ export function TargetAudienceSelector({
 
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border ${opt.badgeColor}`}
+                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${opt.badgeColor}`}
                   >
                     {opt.badge}
                   </span>
@@ -154,7 +154,7 @@ export function TargetAudienceSelector({
               </h4>
 
               {/* Description */}
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
                 {opt.description}
               </p>
             </button>

@@ -276,7 +276,7 @@ export function ReviewOverviewTab({
                     : 'Auditor Attention Required'}
                 </h3>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                     allGatesPassing
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                       : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
@@ -297,7 +297,7 @@ export function ReviewOverviewTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
             {/* Gate 1: SAST Scan */}
             <div className="p-2 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase">
+              <span className="text-xs text-slate-400 font-bold block uppercase">
                 SAST Scan
               </span>
               <span
@@ -314,7 +314,7 @@ export function ReviewOverviewTab({
 
             {/* Gate 2: Checksum Match */}
             <div className="p-2 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase">
+              <span className="text-xs text-slate-400 font-bold block uppercase">
                 SHA-256
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -325,7 +325,7 @@ export function ReviewOverviewTab({
 
             {/* Gate 3: HTTPS Policy */}
             <div className="p-2 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase">
+              <span className="text-xs text-slate-400 font-bold block uppercase">
                 Legal URLs
               </span>
               <span
@@ -346,7 +346,7 @@ export function ReviewOverviewTab({
 
             {/* Gate 4: Boundary Isolation */}
             <div className="p-2 px-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase">
+              <span className="text-xs text-slate-400 font-bold block uppercase">
                 Isolation
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -375,7 +375,7 @@ export function ReviewOverviewTab({
                   <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
                     Release Notes &amp; Changelog
                   </h3>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-xs text-slate-500">
                     Developer declared updates for target version {targetVersion}
                   </span>
                 </div>
@@ -393,7 +393,7 @@ export function ReviewOverviewTab({
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Clock className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[11px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
                   Platform Justification (Why Required)
                 </span>
               </div>
@@ -415,7 +415,7 @@ export function ReviewOverviewTab({
                   <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
                     App Metadata &amp; Governance Delta
                   </h3>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-xs text-slate-500">
                     Comparing base <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{baseVersion}</span> vs target <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{targetVersion}</span>
                   </span>
                 </div>
@@ -483,7 +483,7 @@ export function ReviewOverviewTab({
                             {item.label}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
                               item.changed
                                 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-700'
                                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
@@ -492,7 +492,7 @@ export function ReviewOverviewTab({
                             {item.statusLabel}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                        <span className="text-xs text-slate-400 block mt-0.5">
                           {item.description}
                         </span>
                       </div>
@@ -501,7 +501,7 @@ export function ReviewOverviewTab({
                       <div className="min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         {/* Base Value */}
                         <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                          <span className="text-xs text-slate-400 font-bold uppercase block mb-1">
                             Base ({baseVersion})
                           </span>
                           {item.type === 'logo' ? (
@@ -522,7 +522,7 @@ export function ReviewOverviewTab({
                           }`}
                         >
                           <span
-                            className={`text-[10px] font-bold uppercase block mb-1 ${
+                            className={`text-xs font-bold uppercase block mb-1 ${
                               item.changed ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
                             }`}
                           >
@@ -596,7 +596,7 @@ export function ReviewOverviewTab({
                 <span className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block truncate">
                   {submitterName}
                 </span>
-                <span className="text-[11px] text-slate-500 block truncate">
+                <span className="text-xs text-slate-500 block truncate">
                   {submitterEmail}
                 </span>
               </div>
@@ -635,7 +635,7 @@ export function ReviewOverviewTab({
             </div>
 
             {/* Cryptographic Ledger Signed Chip */}
-            <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 text-[11px] text-sky-800 dark:text-sky-300 leading-relaxed">
+            <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 text-xs text-sky-800 dark:text-sky-300 leading-relaxed">
               <span className="font-bold flex items-center gap-1.5 mb-0.5">
                 <Lock className="w-3 h-3 text-sky-600" />
                 Audit Trail Active
@@ -658,11 +658,11 @@ export function ReviewOverviewTab({
 
             <div className="space-y-2 text-xs">
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                <span className="text-xs text-slate-400 font-bold uppercase block mb-1">
                   SHA-256 Checksum
                 </span>
                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate select-all">
+                  <span className="font-mono text-xs text-slate-700 dark:text-slate-300 truncate select-all">
                     {checksum}
                   </span>
                   <button

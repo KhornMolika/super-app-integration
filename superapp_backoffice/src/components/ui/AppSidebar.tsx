@@ -25,7 +25,7 @@ export function AppSidebar() {
             {!isCollapsed && (
               <div className="overflow-hidden transition-all duration-300">
                 <h1 className="text-2xl font-extrabold text-white tracking-tight whitespace-nowrap">SuperApp</h1>
-                <p className="text-[10px] font-semibold text-brand-300 uppercase tracking-widest whitespace-nowrap">
+                <p className="text-xs font-semibold text-brand-300 uppercase tracking-widest whitespace-nowrap">
                   FSA SuperApp Platform
                 </p>
               </div>

@@ -147,7 +147,7 @@ export function SystemHealthIndicator() {
                         System Health &amp; Infrastructure
                       </h3>
                       <span
-                        className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
                           isHealthy
                             ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                             : isDegraded
@@ -188,7 +188,7 @@ export function SystemHealthIndicator() {
                     <div className="text-xs space-y-1">
                       <div className="font-bold">Gateway Connection Failed</div>
                       <div>{error}</div>
-                      <div className="text-[11px] text-rose-600 dark:text-rose-400 font-mono">
+                      <div className="text-xs text-rose-600 dark:text-rose-400 font-mono">
                         Target endpoint: http://localhost:3000/health (BFF Proxy: /api/health)
                       </div>
                     </div>
@@ -208,11 +208,11 @@ export function SystemHealthIndicator() {
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">PostgreSQL DB</h4>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">TypeORM Driver</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">TypeORM Driver</span>
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                        className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider border ${
                           health?.services?.database?.status === 'connected'
                             ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
                             : 'bg-rose-50 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800/50'
@@ -224,7 +224,7 @@ export function SystemHealthIndicator() {
 
                     <div className="pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Latency</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Latency</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {health?.services?.database?.responseTimeMs !== undefined
                             ? `${health.services.database.responseTimeMs} ms`
@@ -232,7 +232,7 @@ export function SystemHealthIndicator() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Query Check</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Query Check</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           SELECT 1
                         </span>
@@ -251,11 +251,11 @@ export function SystemHealthIndicator() {
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">MinIO Storage</h4>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">S3 AIStor Buckets</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">S3 AIStor Buckets</span>
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                        className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider border ${
                           health?.services?.storage?.status === 'connected'
                             ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
                             : 'bg-rose-50 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800/50'
@@ -267,7 +267,7 @@ export function SystemHealthIndicator() {
 
                     <div className="pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Latency</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Latency</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {health?.services?.storage?.responseTimeMs !== undefined
                             ? `${health.services.storage.responseTimeMs} ms`
@@ -275,7 +275,7 @@ export function SystemHealthIndicator() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Asset Bucket</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Asset Bucket</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm truncate block" title="mini-app-assets">
                           mini-app-assets
                         </span>
@@ -294,17 +294,17 @@ export function SystemHealthIndicator() {
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">API Runtime</h4>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">NestJS 11 • Node.js</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">NestJS 11 • Node.js</span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
+                      <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
                         v{health?.version || '1.0.0'}
                       </span>
                     </div>
 
                     <div className="pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Uptime</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Uptime</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {health?.uptime !== undefined
                             ? `${Math.floor(health.uptime / 60)}m ${health.uptime % 60}s`
@@ -312,7 +312,7 @@ export function SystemHealthIndicator() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Environment</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Environment</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm uppercase">
                           {health?.environment || 'development'}
                         </span>
@@ -331,17 +331,17 @@ export function SystemHealthIndicator() {
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">Process Memory</h4>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">Heap &amp; RSS Allocations</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">Heap &amp; RSS Allocations</span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
+                      <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
                         Active
                       </span>
                     </div>
 
                     <div className="pt-2.5 border-t border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Heap Used</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Heap Used</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {health?.memory?.heapUsedMB !== undefined
                             ? `${health.memory.heapUsedMB} MB`
@@ -349,7 +349,7 @@ export function SystemHealthIndicator() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">Resident Set (RSS)</span>
+                        <span className="text-slate-400 block text-xs uppercase font-semibold tracking-wider">Resident Set (RSS)</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                           {health?.memory?.rssMB !== undefined
                             ? `${health.memory.rssMB} MB`

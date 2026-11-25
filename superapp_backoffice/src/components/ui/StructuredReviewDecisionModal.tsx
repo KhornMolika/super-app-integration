@@ -324,7 +324,7 @@ export default function StructuredReviewDecisionModal({
             <div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                  className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                     isReject
                       ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900'
                       : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
@@ -362,7 +362,7 @@ export default function StructuredReviewDecisionModal({
                 <span>1. Root-Cause Category</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Helps developers prioritize remediation
               </span>
             </div>
@@ -411,7 +411,7 @@ export default function StructuredReviewDecisionModal({
                     href={`/miniapps/${appId}/legal`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline"
                     title="Open app's legal terms & privacy policy page in a new tab"
                   >
                     <span>View App Legal Documents</span>
@@ -443,7 +443,7 @@ export default function StructuredReviewDecisionModal({
                 <span>2. Required Remediation Checklist</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Gated: Developer must address every item before resubmission
               </span>
             </div>
@@ -511,7 +511,7 @@ export default function StructuredReviewDecisionModal({
                 <span>3. Detailed Reviewer Notes & Explanation</span>
                 <span className="text-rose-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Visible to developer in detail view & activity log
               </span>
             </div>
@@ -533,7 +533,7 @@ export default function StructuredReviewDecisionModal({
               <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Target Files or Modules (Optional)
               </label>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">Comma-separated</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Comma-separated</span>
             </div>
             <input
               type="text"
@@ -558,7 +558,7 @@ export default function StructuredReviewDecisionModal({
                 <Bell className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
                 <span>Notify Developer Immediately</span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Dispatches real-time WebSocket alert, Telegram group notification, and email to registered maintainers.
               </p>
             </label>

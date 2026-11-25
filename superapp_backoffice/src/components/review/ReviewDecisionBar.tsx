@@ -111,7 +111,7 @@ function UnifiedComparator({
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-2xs transition-all cursor-pointer group"
         title="Open Comparison Version Scope"
       >
-        <span className="text-[10px] font-sans font-extrabold uppercase tracking-wider text-slate-400">
+        <span className="text-xs font-sans font-extrabold uppercase tracking-wider text-slate-400">
           Compare:
         </span>
 
@@ -133,7 +133,7 @@ function UnifiedComparator({
 
         {/* Delta Risk Pill */}
         <span
-          className={`inline-flex items-center gap-1 text-[11px] font-sans font-bold ${
+          className={`inline-flex items-center gap-1 text-xs font-sans font-bold ${
             isHighRiskChange
               ? 'text-rose-600 dark:text-rose-400'
               : 'text-emerald-600 dark:text-emerald-400'
@@ -172,7 +172,7 @@ function UnifiedComparator({
                 <h4 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
                   Version Comparison Scope
                 </h4>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Select baseline and candidate versions to compute delta
                 </p>
               </div>
@@ -191,11 +191,11 @@ function UnifiedComparator({
             {/* Column 1: Base Version */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span>Base (Baseline)</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-xs text-slate-400 font-mono">
                   {versionsList.length} total
                 </span>
               </div>
@@ -221,7 +221,7 @@ function UnifiedComparator({
                         <span className="truncate">{v.version}</span>
                         <div className="flex items-center gap-1 shrink-0">
                           {isProd && (
-                            <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                            <span className="text-xs font-sans font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
                               Active
                             </span>
                           )}
@@ -239,11 +239,11 @@ function UnifiedComparator({
             {/* Column 2: Target Version */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
                   <span>Target (Candidate)</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-xs text-slate-400 font-mono">
                   {versionsList.length} total
                 </span>
               </div>
@@ -268,7 +268,7 @@ function UnifiedComparator({
                         <span className="truncate">{v.version}</span>
                         <div className="flex items-center gap-1 shrink-0">
                           {v.status && (
-                            <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                            <span className="text-xs font-sans font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
                               {v.status}
                             </span>
                           )}
@@ -286,7 +286,7 @@ function UnifiedComparator({
 
           {/* Footer: Current Summary */}
           <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-500 text-[11px]">
+            <span className="text-slate-500 text-xs">
               Comparing{' '}
               <strong className="text-slate-800 dark:text-slate-200 font-mono">
                 {baseVersion}
@@ -402,13 +402,13 @@ export function ReviewDecisionBar({
                     {miniAppName || 'MiniApp Review'}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${methodBadge.classes}`}
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${methodBadge.classes}`}
                   >
                     {methodBadge.label}
                   </span>
                 </div>
                 {appId && (
-                  <span className="text-[11px] font-mono text-slate-400 block truncate max-w-[240px]">
+                  <span className="text-xs font-mono text-slate-400 block truncate max-w-[240px]">
                     {appId}
                   </span>
                 )}
@@ -517,7 +517,7 @@ export function ReviewDecisionBar({
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                   <span
-                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                    className={`px-1.5 py-0.2 rounded text-xs font-mono ${
                       isTabActive
                         ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
                         : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'

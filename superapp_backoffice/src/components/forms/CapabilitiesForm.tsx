@@ -697,7 +697,7 @@ export default function CapabilitiesForm({
                       }`}
                   />
                   {purposeError && (
-                    <p className="text-[11px] text-rose-600 font-medium">{purposeError}</p>
+                    <p className="text-xs text-rose-600 font-medium">{purposeError}</p>
                   )}
                 </div>
               )}

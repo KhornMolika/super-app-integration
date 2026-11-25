@@ -126,7 +126,7 @@ export function NotificationBell() {
         </svg>
 
         {mounted && unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-xs animate-in zoom-in duration-200">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-bold text-xs flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-xs animate-in zoom-in duration-200">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -142,11 +142,11 @@ export function NotificationBell() {
                 Notifications
               </h4>
               {mounted && unreadCount > 0 ? (
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                   {unreadCount} new
                 </span>
               ) : (
-                <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                   All read
                 </span>
               )}
@@ -156,7 +156,7 @@ export function NotificationBell() {
                 type="button"
                 onClick={handleMarkAllAsRead}
                 disabled={isMarkingAll}
-                className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer"
+                className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer"
               >
                 {isMarkingAll ? 'Marking...' : 'Mark all read'}
               </button>
@@ -171,7 +171,7 @@ export function NotificationBell() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span className="text-[11px] font-medium">Loading notifications...</span>
+                <span className="text-xs font-medium">Loading notifications...</span>
               </div>
             ) : displayedNotifications.length === 0 ? (
               <div className="py-10 px-4 text-center">
@@ -183,7 +183,7 @@ export function NotificationBell() {
                 <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   No notifications
                 </h5>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   You are all caught up!
                 </p>
               </div>
@@ -211,12 +211,12 @@ export function NotificationBell() {
                         <h5 className={`text-xs truncate ${!item.isRead ? 'font-bold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-300'}`}>
                           {item.title}
                         </h5>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 font-medium">
                           {formatNotificationRelativeTime(item.createdAt)}
                         </span>
                       </div>
 
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-relaxed">
                         {item.message}
                       </p>
 
@@ -225,7 +225,7 @@ export function NotificationBell() {
                           <button
                             type="button"
                             onClick={(e) => handleQuickNavigate(e, item)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors shadow-2xs cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors shadow-2xs cursor-pointer"
                           >
                             <span>{target.label}</span>
                             <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,12 +233,12 @@ export function NotificationBell() {
                             </svg>
                           </button>
                         ) : (
-                          <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
                             Notification Detail
                           </span>
                         )}
 
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors font-medium">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors font-medium">
                           Page Details →
                         </span>
                       </div>

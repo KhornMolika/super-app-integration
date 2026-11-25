@@ -42,7 +42,7 @@ export function UserOverviewTab({
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
             Associated MiniApps
           </h3>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300">
+          <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300">
             {effectiveMiniAppsCount}
           </span>
         </div>
@@ -76,13 +76,13 @@ export function UserOverviewTab({
                       {app.name}
                     </span>
                     {app.version && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                      <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
                         v{app.version}
                       </span>
                     )}
                     {app.status && (
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           app.status === 'PUBLISHED' || app.status === 'ACTIVE'
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                             : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
@@ -92,7 +92,7 @@ export function UserOverviewTab({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 truncate max-w-xl">
+                  <p className="text-xs text-slate-400 truncate max-w-xl">
                     {app.tagline || app.description || `Application ID: ${app.appId || app.id}`}
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export function UserOverviewTab({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             <p className="font-medium text-slate-600 dark:text-slate-300">No MiniApps Associated</p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-xs text-slate-400">
               This operator account currently does not own or develop any registered applications.
             </p>
           </div>

@@ -171,7 +171,7 @@ export default function MobilePreviewPage() {
             <div>
               <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                 <span>FSA SuperApp</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-accent-500/20 text-accent-300 rounded border border-accent-500/30">
+                <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-accent-500/20 text-accent-300 rounded border border-accent-500/30">
                   Mobile Simulator
                 </span>
               </h1>
@@ -246,7 +246,7 @@ export default function MobilePreviewPage() {
 
         {/* Floating Scale & Finish Toolbar */}
         <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 shadow-xl">
-          <span className="text-[11px] font-medium text-slate-400 px-2">Finish:</span>
+          <span className="text-xs font-medium text-slate-400 px-2">Finish:</span>
           {(['titanium', 'space-black', 'midnight-blue'] as DeviceFinish[]).map((f) => (
             <button
               key={f}
@@ -264,12 +264,12 @@ export default function MobilePreviewPage() {
 
           <div className="h-4 w-px bg-slate-700 mx-1" />
 
-          <span className="text-[11px] font-medium text-slate-400 px-1">Scale:</span>
+          <span className="text-xs font-medium text-slate-400 px-1">Scale:</span>
           {(['fit', '100', '90', '80'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setScaleMode(m)}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 scaleMode === m
                   ? 'bg-accent-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -331,7 +331,7 @@ export default function MobilePreviewPage() {
                   )}
 
                   {/* Right Status Icons (5G, WiFi, Battery) */}
-                  <div className="flex items-center gap-1.5 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-xs">
                     <span className="font-bold">5G</span>
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 3C7.5 3 3.5 4.8 0.5 7.7L12 21.5L23.5 7.7C20.5 4.8 16.5 3 12 3Z" />

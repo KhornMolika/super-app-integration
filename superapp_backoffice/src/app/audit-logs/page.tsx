@@ -239,7 +239,7 @@ function AuditLogsContent() {
                 year: 'numeric',
               })}
             </span>
-            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+            <span className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
               {date.toLocaleTimeString(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -309,7 +309,7 @@ function AuditLogsContent() {
                 {actorName}
               </div>
               <div
-                className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate"
+                className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate"
                 title={actorEmail || log.actorId || ''}
               >
                 {actorEmail || (log.actorId ? `ID: ${log.actorId.substring(0, 8)}...` : 'System')}
@@ -368,7 +368,7 @@ function AuditLogsContent() {
         return (
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 {log.resourceType}
               </span>
               {targetName && (
@@ -382,7 +382,7 @@ function AuditLogsContent() {
             </div>
             {log.resourceId && (
               <div
-                className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate max-w-[150px] mt-0.5"
+                className="text-xs font-mono text-slate-400 dark:text-slate-500 truncate max-w-[150px] mt-0.5"
                 title={log.resourceId}
               >
                 {log.resourceId}
@@ -528,7 +528,7 @@ function AuditLogsContent() {
                           ? 'System Engine'
                           : 'Operator')}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
                       {selectedLog.actorEmail || (selectedLog.actorId ? `ID: ${selectedLog.actorId.substring(0, 8)}...` : 'System')}
                     </div>
                   </div>
@@ -538,7 +538,7 @@ function AuditLogsContent() {
                       {selectedLog.resourceType}
                     </div>
                     {selectedLog.resourceId && (
-                      <div className="text-[11px] text-slate-400 font-mono truncate max-w-[140px]" title={selectedLog.resourceId}>
+                      <div className="text-xs text-slate-400 font-mono truncate max-w-[140px]" title={selectedLog.resourceId}>
                         {selectedLog.resourceId}
                       </div>
                     )}

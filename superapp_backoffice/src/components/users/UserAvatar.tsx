@@ -59,7 +59,7 @@ const SIZE_STYLES: Record<
 > = {
   xs: {
     container: 'w-6 h-6',
-    text: 'text-[10px]',
+    text: 'text-xs',
     ring: 'ring-1 ring-white dark:ring-slate-900',
     shadow: 'shadow-2xs',
   },

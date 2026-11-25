@@ -44,7 +44,7 @@ export function BannerTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               <th className="px-5 py-3.5 w-16 text-center">Order</th>
               <th className="px-4 py-3.5 min-w-[280px]">Banner Details</th>
               <th className="px-4 py-3.5 min-w-[180px]">Action Destination</th>
@@ -113,7 +113,7 @@ export function BannerTable({
                             loading="lazy"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
                             No Image
                           </div>
                         )}
@@ -131,7 +131,7 @@ export function BannerTable({
                           {banner.title}
                         </button>
                         {banner.description && (
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
                             {banner.description}
                           </p>
                         )}
@@ -143,32 +143,32 @@ export function BannerTable({
                   <td className="px-4 py-3 align-middle">
                     <div className="space-y-1">
                       {banner.actionType === 'MINI_APP' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
                           <Package className="w-3 h-3" />
                           <span>MiniApp</span>
                         </span>
                       )}
                       {banner.actionType === 'EXTERNAL_URL' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                           <ExternalLink className="w-3 h-3" />
                           <span>External URL</span>
                         </span>
                       )}
                       {banner.actionType === 'IN_APP_ROUTE' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                           <Compass className="w-3 h-3" />
                           <span>In-App Route</span>
                         </span>
                       )}
                       {banner.actionType === 'NONE' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                           <Eye className="w-3 h-3" />
                           <span>Visual Display</span>
                         </span>
                       )}
 
                       {banner.actionValue && banner.actionType !== 'NONE' && (
-                        <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[170px]" title={banner.actionValue}>
+                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400 truncate max-w-[170px]" title={banner.actionValue}>
                           {banner.actionValue}
                         </div>
                       )}
@@ -178,12 +178,12 @@ export function BannerTable({
                   {/* Target Audience */}
                   <td className="px-4 py-3 align-middle">
                     {banner.targetAudience === 'ALL_FSA_STAFF' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                         <Users className="w-3 h-3" />
                         <span>FSA Staff</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         <Globe className="w-3 h-3" />
                         <span>Public</span>
                       </span>
@@ -193,7 +193,7 @@ export function BannerTable({
                   {/* Schedule */}
                   <td className="px-4 py-3 align-middle">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
                         <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                         <span className="truncate">
                           {banner.startDate
@@ -209,12 +209,12 @@ export function BannerTable({
                       {/* Timeliness badges */}
                       <div className="flex items-center gap-1">
                         {isExpired && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                          <span className="px-1.5 py-0.2 rounded text-xs font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
                             Expired
                           </span>
                         )}
                         {isPending && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                          <span className="px-1.5 py-0.2 rounded text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
                             Scheduled
                           </span>
                         )}

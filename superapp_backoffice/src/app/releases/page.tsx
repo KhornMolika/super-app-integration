@@ -180,7 +180,7 @@ export default function ReleasesPage() {
               <DotBadge color="bg-emerald-500 animate-pulse" />
               <span>OFFICIAL PRODUCTION RELEASE</span>
             </span>
-            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">superapp-release-build</span>
+            <span className="text-xs font-mono text-emerald-700 dark:text-emerald-400 font-bold">superapp-release-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
@@ -209,7 +209,7 @@ export default function ReleasesPage() {
               <DotBadge color="bg-accent-500" />
               <span>CANDIDATE STAGING ASSEMBLY</span>
             </span>
-            <span className="text-[11px] font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
+            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
@@ -274,7 +274,7 @@ export default function ReleasesPage() {
                   <h3 className="font-bold text-slate-900 dark:text-slate-100">
                     Candidate Staging Assembly & Gate 2 Verification
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
                     superapp-test-build
                   </span>
                 </div>
@@ -302,7 +302,7 @@ export default function ReleasesPage() {
                 {gate2Result.verifiedApps?.map((app: any) => (
                   <div key={app.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/50 last:border-0">
                     <span className="font-medium text-slate-800 dark:text-slate-200">{app.packageName}</span>
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                       <CheckIcon className="w-3 h-3" />
                       <span>Digest Matched</span>
                     </span>
@@ -316,7 +316,7 @@ export default function ReleasesPage() {
               <div className="font-mono text-xs text-accent-600 dark:text-accent-400 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
                 SHA256: {gate2Result.manifest?.integrityDigest}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2">
+              <div className="text-xs text-slate-500 mt-2">
                 Consolidated Permissions: {gate2Result.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function ReleasesPage() {
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                     SuperApp Candidate Test APK Ready
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
                       {releaseVersion} (Staging Candidate) • superapp-test-build
                     </span>
                   </h4>

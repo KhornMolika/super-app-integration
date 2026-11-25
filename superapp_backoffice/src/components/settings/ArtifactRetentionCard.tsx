@@ -215,7 +215,7 @@ export function ArtifactRetentionCard() {
               <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
                 Nexus Artifact Storage &amp; APK Retention Policy
               </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                 Super Admin
               </span>
             </div>
@@ -278,7 +278,7 @@ export function ArtifactRetentionCard() {
                 Storage Pruning Completed Successfully
               </div>
               <p className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-0.5 leading-relaxed">
-                Reclaimed <strong>{pruneResult.freedMb || formatBytes(pruneResult.freedBytes)}</strong> across <strong>{pruneResult.prunedCount || 0} candidate test builds</strong>. All official releases in <code className="font-mono text-[11px] bg-emerald-500/20 px-1 py-0.5 rounded">apk-releases</code> were preserved.
+                Reclaimed <strong>{pruneResult.freedMb || formatBytes(pruneResult.freedBytes)}</strong> across <strong>{pruneResult.prunedCount || 0} candidate test builds</strong>. All official releases in <code className="font-mono text-xs bg-emerald-500/20 px-1 py-0.5 rounded">apk-releases</code> were preserved.
               </p>
             </div>
           </div>
@@ -299,7 +299,7 @@ export function ArtifactRetentionCard() {
         {/* Metric 1: Test Build Storage */}
         <div className="group relative p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-brand-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-bold uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-bold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">
               Test Build Storage
             </span>
             <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
@@ -313,7 +313,7 @@ export function ArtifactRetentionCard() {
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between">
             <span>{stats.nexusTestBuildsCount} candidate debug builds</span>
-            <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded-full border border-brand-200/60 dark:border-brand-800/60">
+            <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded-full border border-brand-200/60 dark:border-brand-800/60">
               Nexus
             </span>
           </div>
@@ -322,7 +322,7 @@ export function ArtifactRetentionCard() {
         {/* Metric 2: Official Releases */}
         <div className="group relative p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 dark:border-emerald-800/60 shadow-xs">
           <div className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 mb-2">
-            <span className="font-bold uppercase tracking-wider text-[11px]">
+            <span className="font-bold uppercase tracking-wider text-xs">
               Official Releases
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -339,7 +339,7 @@ export function ArtifactRetentionCard() {
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>{stats.nexusReleasesCount} locked releases</span>
             </span>
-            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">
               Permanent
             </span>
           </div>
@@ -348,7 +348,7 @@ export function ArtifactRetentionCard() {
         {/* Metric 3: Estimated Prunable */}
         <div className="group relative p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-rose-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-bold uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-bold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">
               Estimated Prunable
             </span>
             <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
@@ -362,7 +362,7 @@ export function ArtifactRetentionCard() {
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between">
             <span>{dynamicEstimated.count} builds exceed quota</span>
-            <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200/60 dark:border-rose-800/60">
+            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200/60 dark:border-rose-800/60">
               Reclaimable
             </span>
           </div>
@@ -371,7 +371,7 @@ export function ArtifactRetentionCard() {
         {/* Metric 4: Last Storage Pruning */}
         <div className="group relative p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-sky-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-bold uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-bold uppercase tracking-wider text-xs text-slate-500 dark:text-slate-400">
               Last Storage Pruning
             </span>
             <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -385,7 +385,7 @@ export function ArtifactRetentionCard() {
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between">
             <span className="truncate">Freed: {formatBytes(policy.lastFreedBytes || stats.lastFreedBytes)}</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
               {policy.lastPrunedCount || 0} builds
             </span>
           </div>
@@ -413,7 +413,7 @@ export function ArtifactRetentionCard() {
               </div>
             </div>
 
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200/80 dark:border-emerald-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200/80 dark:border-emerald-800">
               Guaranteed Safe
             </span>
           </div>
@@ -429,7 +429,7 @@ export function ArtifactRetentionCard() {
                       {policy.maxTestBuildsPerApp} Builds
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     Guarantees the last <strong>{policy.maxTestBuildsPerApp} test builds</strong> per app are never deleted.
                   </p>
                 </div>
@@ -463,7 +463,7 @@ export function ArtifactRetentionCard() {
                     key={item.val}
                     type="button"
                     onClick={() => setPolicy({ ...policy, maxTestBuildsPerApp: item.val })}
-                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border text-center transition-all cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold border text-center transition-all cursor-pointer ${
                       policy.maxTestBuildsPerApp === item.val
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/30'
                         : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -485,7 +485,7 @@ export function ArtifactRetentionCard() {
                       {policy.retentionDays} Days
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     Builds exceeding the threshold older than <strong>{policy.retentionDays} days</strong> will be permanently pruned.
                   </p>
                 </div>
@@ -519,7 +519,7 @@ export function ArtifactRetentionCard() {
                     key={item.val}
                     type="button"
                     onClick={() => setPolicy({ ...policy, retentionDays: item.val })}
-                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border text-center transition-all cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold border text-center transition-all cursor-pointer ${
                       policy.retentionDays === item.val
                         ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 shadow-xs ring-1 ring-amber-500/30'
                         : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -572,7 +572,7 @@ export function ArtifactRetentionCard() {
                   <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">
                     apk-test-builds
                   </span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                  <span className={`text-xs font-bold px-1.5 py-0.2 rounded ${
                     policy.pruneSuperAppTestBuilds
                       ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300'
                       : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
@@ -580,7 +580,7 @@ export function ArtifactRetentionCard() {
                     {policy.pruneSuperAppTestBuilds ? 'ACTIVE TARGET' : 'EXCLUDED'}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   SuperApp CI/CD debug APKs and test binaries generated from Git push builds.
                 </p>
               </div>
@@ -613,7 +613,7 @@ export function ArtifactRetentionCard() {
                   <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">
                     Stale MiniApp Snapshots
                   </span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                  <span className={`text-xs font-bold px-1.5 py-0.2 rounded ${
                     policy.pruneMiniAppArtifacts
                       ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300'
                       : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
@@ -621,7 +621,7 @@ export function ArtifactRetentionCard() {
                     {policy.pruneMiniAppArtifacts ? 'ACTIVE TARGET' : 'EXCLUDED'}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Intermediate upload zips and expired temporary package snapshots.
                 </p>
               </div>
@@ -639,11 +639,11 @@ export function ArtifactRetentionCard() {
                   <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 font-mono">
                     apk-releases
                   </span>
-                  <span className="text-[10px] font-extrabold bg-emerald-200/80 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200 px-1.5 py-0.2 rounded uppercase">
+                  <span className="text-xs font-extrabold bg-emerald-200/80 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-200 px-1.5 py-0.2 rounded uppercase">
                     Immune
                   </span>
                 </div>
-                <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed">
+                <p className="text-xs text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed">
                   Official signed production releases are cryptographically anchored and never pruned.
                 </p>
               </div>

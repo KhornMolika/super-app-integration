@@ -131,7 +131,7 @@ function ReleaseCompareContent() {
               <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 SuperApp Release Comparator
               </h1>
-              <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+              <span className="px-2.5 py-0.5 text-xs font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
                 Gate 2 Ecosystem Manifest
               </span>
             </div>
@@ -243,7 +243,7 @@ function ReleaseCompareContent() {
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                <span className="px-1.5 py-0.2 rounded-full text-xs font-mono bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                   {tab.count}
                 </span>
               )}
@@ -326,7 +326,7 @@ function ReleaseCompareContent() {
                       </svg>
                       <span>Upgraded MiniApps in Target Release ({upgradedApps.length})</span>
                     </span>
-                    <span className="text-[11px] font-normal lowercase text-slate-500 dark:text-slate-400">
+                    <span className="text-xs font-normal lowercase text-slate-500 dark:text-slate-400">
                       new version manifests included
                     </span>
                   </div>
@@ -340,7 +340,7 @@ function ReleaseCompareContent() {
                           >
                             {app.name}
                           </Link>
-                          <div className="font-mono text-[11px] text-slate-400">{app.packageName || app.id}</div>
+                          <div className="font-mono text-xs text-slate-400">{app.packageName || app.id}</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1.5 font-mono font-bold">
@@ -376,7 +376,7 @@ function ReleaseCompareContent() {
                       <SparklesIcon className="w-4 h-4 text-emerald-600" />
                       <span>Newly Added to SuperApp ({addedApps.length})</span>
                     </span>
-                    <span className="text-[11px] font-normal lowercase text-slate-500 dark:text-slate-400">
+                    <span className="text-xs font-normal lowercase text-slate-500 dark:text-slate-400">
                       brand new integration
                     </span>
                   </div>
@@ -390,7 +390,7 @@ function ReleaseCompareContent() {
                           >
                             {app.name}
                           </Link>
-                          <div className="font-mono text-[11px] text-slate-400">{app.packageName || app.id}</div>
+                          <div className="font-mono text-xs text-slate-400">{app.packageName || app.id}</div>
                         </div>
                         <span className="px-2.5 py-1 rounded font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                           v{app.version}
@@ -412,7 +412,7 @@ function ReleaseCompareContent() {
                       <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs">
                         <div>
                           <span className="font-bold text-slate-900 dark:text-slate-100">{app.name}</span>
-                          <div className="font-mono text-[11px] text-slate-400">{app.packageName || app.id}</div>
+                          <div className="font-mono text-xs text-slate-400">{app.packageName || app.id}</div>
                         </div>
                         <span className="px-2.5 py-1 rounded font-mono font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
                           v{app.version}
@@ -427,13 +427,13 @@ function ReleaseCompareContent() {
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-3 shadow-xs">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
                   <span>Unchanged Bundled MiniApps ({unchangedApps.length})</span>
-                  <span className="text-[11px] font-normal lowercase">identical bytecode digests</span>
+                  <span className="text-xs font-normal lowercase">identical bytecode digests</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
                   {unchangedApps.map((app: any, idx: number) => (
                     <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between text-xs">
                       <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{app.name}</span>
-                      <span className="font-mono text-[10px] text-slate-400 font-semibold">{app.version}</span>
+                      <span className="font-mono text-xs text-slate-400 font-semibold">{app.version}</span>
                     </div>
                   ))}
                 </div>

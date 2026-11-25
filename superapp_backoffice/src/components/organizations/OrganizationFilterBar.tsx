@@ -42,7 +42,7 @@ export function OrganizationFilterBar({
         >
           <span>All Entities</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'ALL'
+            className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${statusFilter === 'ALL'
                 ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
@@ -62,7 +62,7 @@ export function OrganizationFilterBar({
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>Active</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'ACTIVE'
+            className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${statusFilter === 'ACTIVE'
                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
@@ -82,7 +82,7 @@ export function OrganizationFilterBar({
           <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           <span>Inactive</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'INACTIVE'
+            className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${statusFilter === 'INACTIVE'
                 ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}

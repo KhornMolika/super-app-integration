@@ -514,7 +514,7 @@ export default function MiniAppLifecycleBanners({
                       <span>{st.icon}</span>
                       <span>{st.name}</span>
                     </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
                       isRunning
                         ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/60 dark:text-accent-300 animate-pulse'
                         : isCompleted
@@ -526,7 +526,7 @@ export default function MiniAppLifecycleBanners({
                       {recorded?.status || (idx === 0 ? 'RUNNING' : 'PENDING')}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
                     {recorded?.details || st.defaultDetails}
                   </p>
                 </div>
@@ -621,7 +621,7 @@ export default function MiniAppLifecycleBanners({
 
             {/* Technical Failure Log / Raw Diagnostic */}
             <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs space-y-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+              <div className="flex items-center justify-between text-xs text-slate-400 pb-1 border-b border-slate-800">
                 <span className="uppercase tracking-wider font-semibold">Technical Console Diagnostic</span>
                 <span>Jenkins Fastlane Pipeline</span>
               </div>

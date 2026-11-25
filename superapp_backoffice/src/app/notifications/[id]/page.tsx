@@ -246,7 +246,7 @@ export default function NotificationDetailPage() {
               </span>
 
               {notification.type && (
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span className="px-2 py-0.5 rounded-md text-xs font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                   {notification.type}
                 </span>
               )}
@@ -355,7 +355,7 @@ export default function NotificationDetailPage() {
             {showTargetButton && (
               <div className="mt-5 p-4 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Action Target
                   </span>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
@@ -419,28 +419,28 @@ export default function NotificationDetailPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Application Name</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Application Name</span>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 truncate">
                     {notification.miniApp.name}
                   </p>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">App ID</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">App ID</span>
                   <p className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-100 mt-1 truncate" title={notification.miniApp.appId || ''}>
                     {notification.miniApp.appId || '—'}
                   </p>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Category</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Category</span>
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 mt-1">
                     {notification.miniApp.category || 'General'}
                   </p>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/70 dark:border-slate-700/60">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Integration</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Integration</span>
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 mt-1">
                     {notification.miniApp.integrationMethod || 'Default'}
                   </p>
@@ -478,7 +478,7 @@ export default function NotificationDetailPage() {
 
                 <button
                   onClick={() => handleCopyText(typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails, null, 2), 'error')}
-                  className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
                 >
                   {copiedKey === 'error' ? 'Copied!' : 'Copy Error Log'}
                 </button>
@@ -555,7 +555,7 @@ export default function NotificationDetailPage() {
 
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">Event Type</span>
-                <span className="font-mono text-[11px] font-semibold text-slate-900 dark:text-slate-100">{notification.type || 'SYSTEM'}</span>
+                <span className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">{notification.type || 'SYSTEM'}</span>
               </div>
 
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
@@ -567,14 +567,14 @@ export default function NotificationDetailPage() {
 
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">Created At</span>
-                <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                <span className="font-mono text-xs text-slate-700 dark:text-slate-300">
                   {formatNotificationRelativeTime(notification.createdAt)}
                 </span>
               </div>
 
               <div>
                 <span className="text-slate-500 dark:text-slate-400 block mb-1">Notification UUID</span>
-                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 font-mono text-xs text-slate-700 dark:text-slate-300">
                   <span className="truncate flex-1">{notification.id}</span>
                   <button
                     onClick={() => handleCopyText(notification.id, 'uuid')}
@@ -624,7 +624,7 @@ export default function NotificationDetailPage() {
                         key={key}
                         className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs"
                       >
-                        <span className="font-mono text-[10px] text-slate-500 uppercase tracking-wider">{key}</span>
+                        <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">{key}</span>
                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px] text-right" title={valStr}>
                           {valStr || '—'}
                         </span>
@@ -637,7 +637,7 @@ export default function NotificationDetailPage() {
               {isJsonExpanded && (
                 <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                       Payload JSON
                     </span>
                     <button
@@ -647,7 +647,7 @@ export default function NotificationDetailPage() {
                       {copiedKey === 'metadata' ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-slate-950 text-slate-100 text-[11px] font-mono overflow-x-auto leading-relaxed border border-slate-800 max-h-60">
+                  <pre className="p-3 rounded-xl bg-slate-950 text-slate-100 text-xs font-mono overflow-x-auto leading-relaxed border border-slate-800 max-h-60">
                     {JSON.stringify(metadata, null, 2)}
                   </pre>
                 </div>

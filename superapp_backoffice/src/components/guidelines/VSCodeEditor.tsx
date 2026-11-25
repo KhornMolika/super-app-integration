@@ -183,7 +183,7 @@ export function VSCodeEditor({ files }: { files: EditorFile[] }) {
 
         {/* Right Side: Language Badge & Action Copy Button */}
         <div className="flex items-center gap-2 shrink-0 pl-3 border-l border-slate-800/80 bg-[#070a12] select-none z-10">
-          <span className={`hidden md:inline-flex text-[10px] font-mono uppercase tracking-wider font-semibold border px-2 py-0.5 rounded-md ${getLanguageBadgeColor(activeFile?.language || "")}`}>
+          <span className={`hidden md:inline-flex text-xs font-mono uppercase tracking-wider font-semibold border px-2 py-0.5 rounded-md ${getLanguageBadgeColor(activeFile?.language || "")}`}>
             {activeFile?.language || "code"}
           </span>
 
@@ -210,7 +210,7 @@ export function VSCodeEditor({ files }: { files: EditorFile[] }) {
       {/* Code Content Area with Line Numbers */}
       <div className="overflow-x-auto text-xs font-mono leading-relaxed text-slate-200 flex py-3.5">
         {/* Line Numbers Column */}
-        <div className="select-none text-right pr-3.5 pl-3 border-r border-slate-800/70 text-slate-600 dark:text-slate-600 font-mono text-[11px] leading-relaxed shrink-0">
+        <div className="select-none text-right pr-3.5 pl-3 border-r border-slate-800/70 text-slate-600 dark:text-slate-600 font-mono text-xs leading-relaxed shrink-0">
           {codeLines.map((_, i) => (
             <div key={i}>{i + 1}</div>
           ))}

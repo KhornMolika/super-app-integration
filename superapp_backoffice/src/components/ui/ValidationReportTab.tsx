@@ -344,24 +344,24 @@ function VersionSelectorPopover({
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-2xs transition-all cursor-pointer group"
         title="Switch Release Version"
       >
-        <span className="text-[10px] font-sans font-extrabold uppercase tracking-wider text-slate-400">
+        <span className="text-xs font-sans font-extrabold uppercase tracking-wider text-slate-400">
           Version:
         </span>
         <span className="font-bold text-slate-900 dark:text-white">
           {selectedVersion || 'v1.0.0'}
         </span>
         {isLive && (
-          <span className="px-1.5 py-0.2 text-[9px] font-sans font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
             Live
           </span>
         )}
         {isTesting && (
-          <span className="px-1.5 py-0.2 text-[9px] font-sans font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
             Testing
           </span>
         )}
         {isReview && (
-          <span className="px-1.5 py-0.2 text-[9px] font-sans font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+          <span className="px-1.5 py-0.2 text-xs font-sans font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
             Review
           </span>
         )}
@@ -371,10 +371,10 @@ function VersionSelectorPopover({
       {isOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150">
           <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
               Select Release Version
             </span>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-xs font-mono text-slate-400">
               {versionList.length} total
             </span>
           </div>
@@ -404,17 +404,17 @@ function VersionSelectorPopover({
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold">{verName}</span>
                       {vLive && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                           Live
                         </span>
                       )}
                       {vTesting && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
                           Testing
                         </span>
                       )}
                       {vReview && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                        <span className="px-1.5 py-0.5 text-xs font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
                           Review
                         </span>
                       )}
@@ -1369,15 +1369,15 @@ export default function ValidationReportTab({
                       <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100 truncate leading-tight">
                         {miniApp.name || miniApp.appId}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${methodBadge.classes}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border shrink-0 ${methodBadge.classes}`}>
                         {methodBadge.label}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
                         {selectedVersion || miniApp.currentReleaseVersion || '1.0.0'}
                       </span>
                     </div>
                     {miniApp.appId && (
-                      <span className="text-[11px] font-mono text-slate-400 block truncate max-w-[240px]">
+                      <span className="text-xs font-mono text-slate-400 block truncate max-w-[240px]">
                         {miniApp.appId}
                       </span>
                     )}
@@ -1419,7 +1419,7 @@ export default function ValidationReportTab({
                   >
                     <ShieldIcon className="w-3.5 h-3.5 text-slate-500" />
                     <span className="hidden sm:inline">Configure Profile</span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-mono font-bold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                       {activeProfileChecks.length}
                     </span>
                   </Button>
@@ -1517,7 +1517,7 @@ export default function ValidationReportTab({
                 <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-500" />
                 <span>Security Engines & Telemetry</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                  className={`px-1.5 py-0.2 rounded text-xs font-mono ${
                     activeViewTab === 'engines'
                       ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold'
                       : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
@@ -1539,7 +1539,7 @@ export default function ValidationReportTab({
                 <AlertTriangleIcon className={`w-3.5 h-3.5 ${allFindings.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
                 <span>Findings & Remediation</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                  className={`px-1.5 py-0.2 rounded text-xs font-mono ${
                     activeViewTab === 'findings'
                       ? allFindings.length > 0
                         ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold'
@@ -1566,7 +1566,7 @@ export default function ValidationReportTab({
                   <ClipboardCheckIcon className="w-3.5 h-3.5 text-emerald-500" />
                   <span>SBOM & Dependencies</span>
                   <span
-                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
+                    className={`px-1.5 py-0.2 rounded text-xs font-mono ${
                       activeViewTab === 'sbom'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold'
                         : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
@@ -1663,17 +1663,17 @@ export default function ValidationReportTab({
                         >
                           <span className="font-mono font-semibold">{verName}</span>
                           {isLive && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                               Live
                             </span>
                           )}
                           {isTesting && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
                               Testing
                             </span>
                           )}
                           {isReview && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                            <span className="px-1.5 py-0.5 text-xs font-black uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
                               Review
                             </span>
                           )}
@@ -1746,7 +1746,7 @@ export default function ValidationReportTab({
                       <span className="text-sm font-black font-mono text-slate-900 dark:text-white leading-none">
                         {scanProgressPercent}%
                       </span>
-                      <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5">
                         AUDIT
                       </span>
                     </div>
@@ -1756,7 +1756,7 @@ export default function ValidationReportTab({
                     <span className={`text-2xl font-black ${scoreColor}`}>
                       {score !== null ? score : '--'}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Score</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score</span>
                   </>
                 )}
               </div>
@@ -1803,7 +1803,7 @@ export default function ValidationReportTab({
                     {scannedTargetLabel}
                   </code>
                   {isScanningActive && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       <Activity className="w-3 h-3 animate-pulse" />
                       <span>Live Telemetry Active</span>
                     </span>
@@ -1816,13 +1816,13 @@ export default function ValidationReportTab({
                       Report generated: {new Date(report.completedAt).toLocaleString()}
                     </span>
                     {report?.reportPath?.startsWith('local-scan://') && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50">
                         <ShieldCheckIcon className="w-3 h-3" />
                         Local Security Engine
                       </span>
                     )}
                     {sbomComponents.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
                         <ClipboardCheckIcon className="w-3 h-3" />
                         CycloneDX 1.5 SBOM ({sbomComponents.length} pkgs)
                       </span>
@@ -1991,7 +1991,7 @@ export default function ValidationReportTab({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                     {runningStage?.description || 'Automated SAST, SCA, Secret Scanning & Network Policy Validation in progress...'}
                   </p>
                 </div>
@@ -2048,12 +2048,12 @@ export default function ValidationReportTab({
                       ) : isFailed ? (
                         <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
                       ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[9px] font-mono text-slate-400">
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center text-xs font-mono text-slate-400">
                           {stage.index}
                         </div>
                       )}
                     </div>
-                    <span className="truncate font-medium text-[11px] leading-tight">
+                    <span className="truncate font-medium text-xs leading-tight">
                       {stage.title}
                     </span>
                   </div>
@@ -2094,7 +2094,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '1. MinIO Quarantine' : '1. Package Ingestion'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate font-mono">
                       {published
                         ? (isSuperAdmin ? 'Promoted & Graduated to Nexus' : 'Ingested & Released')
                         : minioStepState === 'done'
@@ -2103,7 +2103,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   minioStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
@@ -2149,7 +2149,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '2. Security Audit & Gates' : '2. Security Clearance'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {securityScanStepState === 'done'
                         ? (isSuperAdmin ? 'Clearance Approved (All Gates Passed)' : 'All Security Checks Cleared')
                         : securityScanStepState === 'running'
@@ -2160,7 +2160,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   securityScanStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : securityScanStepState === 'running'
@@ -2201,7 +2201,7 @@ export default function ValidationReportTab({
                     <div className="text-xs font-bold truncate">
                       {isSuperAdmin ? '3. Nexus Pub-Hosted' : '3. SuperApp Release'}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {nexusStepState === 'done'
                         ? (isSuperAdmin
                             ? (conf.nexusPublishedVersion ? `Published to Nexus (v${conf.nexusPublishedVersion})` : 'Published to Nexus')
@@ -2214,7 +2214,7 @@ export default function ValidationReportTab({
                     </div>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all duration-200 ${
                   nexusStepState === 'done'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : nexusStepState === 'failed'
@@ -2237,7 +2237,7 @@ export default function ValidationReportTab({
                 <h4 className="text-sm font-bold text-amber-950 dark:text-amber-100">
                   Dart SDK Version Compatibility Warning
                 </h4>
-                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                <span className="text-xs px-2 py-0.5 rounded font-mono font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
                   Platform Runtime: Dart 3.12.0
                 </span>
               </div>
@@ -2262,7 +2262,7 @@ export default function ValidationReportTab({
                       ? 'Jenkins CI Unreachable — Completed via Local Security Engine'
                       : 'Completed via Fallback Security Engine'}
                   </h4>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-200/70 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300">
                     Auto-Recovered
                   </span>
                 </div>
@@ -2290,7 +2290,7 @@ export default function ValidationReportTab({
                     <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
                       Platform Infrastructure Error (Super App Team Action Required)
                     </h4>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-200/80 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-200/80 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
                       Not a MiniApp Defect
                     </span>
                   </div>
@@ -2653,7 +2653,7 @@ export default function ValidationReportTab({
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                               finding.severity === 'CRITICAL'
                                 ? 'bg-rose-200 text-rose-900 dark:bg-rose-900 dark:text-rose-200'
                                 : finding.severity === 'HIGH'
@@ -2666,7 +2666,7 @@ export default function ValidationReportTab({
                               {finding.title}
                             </span>
                           </div>
-                          <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             {finding.id}
                           </span>
                         </div>
@@ -2676,14 +2676,14 @@ export default function ValidationReportTab({
                         </p>
 
                         {finding.filePath && (
-                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-400 pt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600 dark:text-slate-400 pt-0.5">
                             <FileText className="w-3 h-3 text-slate-400" />
                             <span>Location: {finding.filePath}{finding.lineNumber ? `:${finding.lineNumber}` : ''}</span>
                           </div>
                         )}
 
                         {finding.recommendation && (
-                          <div className="p-2 rounded bg-white/80 dark:bg-slate-800/80 border border-rose-200/50 dark:border-rose-900/40 text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                          <div className="p-2 rounded bg-white/80 dark:bg-slate-800/80 border border-rose-200/50 dark:border-rose-900/40 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
                             <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 flex-shrink-0 mt-0.5" />
                             <div>
                               <strong className="text-slate-900 dark:text-white font-semibold">Remediation: </strong>
@@ -2787,7 +2787,7 @@ export default function ValidationReportTab({
                         <div className="flex items-center gap-2">
                           <PackageIcon className="w-4 h-4 text-brand-500 flex-shrink-0" />
                           <span className="font-semibold text-slate-900 dark:text-white">{comp.name}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                          <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
                             {comp.type || 'library'}
                           </span>
                         </div>
@@ -2856,7 +2856,7 @@ export default function ValidationReportTab({
                     }`}
                   >
                     <span>{sev}</span>
-                    <span className="text-[10px] opacity-80">({count})</span>
+                    <span className="text-xs opacity-80">({count})</span>
                   </button>
                 );
               })}
@@ -2951,7 +2951,7 @@ export default function ValidationReportTab({
                           {f.id}
                         </span>
                         {f.engineId && (
-                          <span className="text-[10px] uppercase font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">
+                          <span className="text-xs uppercase font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">
                             {f.engineId}
                           </span>
                         )}
@@ -3022,7 +3022,7 @@ export default function ValidationReportTab({
                       Security & Compliance Report
                     </h3>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
                         valStatus === 'PASSED'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
                           : valStatus === 'FAILED'
@@ -3034,7 +3034,7 @@ export default function ValidationReportTab({
                         }`} />
                         {valStatus || 'PENDING'}
                       </span>
-                      <span className="inline-flex items-center text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
+                      <span className="inline-flex items-center text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80">
                         Score: <span className="ml-1 text-slate-900 dark:text-white">{score ?? '--'}/100</span>
                       </span>
                     </div>
@@ -3228,7 +3228,7 @@ export default function ValidationReportTab({
                             {filteredModalFindings.map((f, i) => (
                               <tr key={f.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                                 <td className="px-3.5 py-3 align-top">
-                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase ${
                                     f.severity === 'CRITICAL'
                                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
                                       : f.severity === 'HIGH'
@@ -3243,18 +3243,18 @@ export default function ValidationReportTab({
                                 <td className="px-3.5 py-3 align-top font-semibold text-slate-900 dark:text-white">
                                   <div>{f.title || f.id}</div>
                                   {f.cveId && (
-                                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">{f.cveId}</div>
+                                    <div className="text-xs font-mono text-slate-400 mt-0.5">{f.cveId}</div>
                                   )}
                                 </td>
                                 <td className="px-3.5 py-3 align-top text-slate-600 dark:text-slate-400">
-                                  <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
                                     {f.engineId || 'gatekeeper'}
                                   </span>
                                 </td>
                                 <td className="px-3.5 py-3 align-top text-slate-700 dark:text-slate-300">
                                   <div>{f.description}</div>
                                   {f.filePath && (
-                                    <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
+                                    <div className="mt-1 flex items-center gap-1 text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/60 px-1.5 py-0.5 rounded">
                                       <CodeIcon className="w-3 h-3 text-slate-400 shrink-0" />
                                       <span className="truncate">{f.filePath}{f.lineNumber ? `:${f.lineNumber}` : ''}</span>
                                     </div>
@@ -3305,17 +3305,17 @@ export default function ValidationReportTab({
                               <tr key={stage.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                                 <td className="px-3.5 py-3 font-semibold text-slate-900 dark:text-white">
                                   <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">
                                       {idx + 1}
                                     </span>
                                     <span>{stage.title || stage.name}</span>
                                   </div>
                                 </td>
-                                <td className="px-3.5 py-3 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                                <td className="px-3.5 py-3 text-slate-600 dark:text-slate-400 font-mono text-xs">
                                   {stage.tool}
                                 </td>
                                 <td className="px-3.5 py-3">
-                                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase ${
                                     stStatus === 'PASSED'
                                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
                                       : stStatus === 'FAILED'
@@ -3389,7 +3389,7 @@ export default function ValidationReportTab({
                     <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
                       CycloneDX 1.5 SBOM
                     </h3>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold shrink-0">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold shrink-0">
                       {sbomComponents.length} Pkgs
                     </span>
                   </div>
@@ -3529,7 +3529,7 @@ export default function ValidationReportTab({
                                 {comp.version}
                               </td>
                               <td className="px-4 py-3">
-                                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                   {comp.type || 'library'}
                                 </span>
                               </td>
@@ -3712,7 +3712,7 @@ export default function ValidationReportTab({
                   <div className="space-y-1.5">
                     {selectedStageLog.findings.map((f: any, i: number) => (
                       <div key={i} className="text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
-                        <span className="font-bold uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
+                        <span className="font-bold uppercase font-mono text-xs px-1.5 py-0.5 rounded bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
                           {f.severity}
                         </span>
                         <span className="font-semibold text-slate-900 dark:text-white">{f.title}:</span>

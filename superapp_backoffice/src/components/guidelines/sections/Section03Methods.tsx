@@ -68,7 +68,7 @@ export function Section03Methods({
                   <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                     Add a TXT record to your root or subdomain DNS zone. Verification is cached and automatically checked during pre-flight.
                   </p>
-                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
                     <p className="text-slate-400"># Host / Name:</p>
                     <p className="text-brand-300">_superapp-challenge.yourdomain.com</p>
                     <p className="text-slate-400 mt-2"># Value / Content:</p>
@@ -84,7 +84,7 @@ export function Section03Methods({
                   <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                     Place a verification meta tag in the <code>&lt;head&gt;</code> section of your production URL homepage.
                   </p>
-                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
                     <p className="text-slate-400">&lt;!-- Inside &lt;head&gt; of index.html --&gt;</p>
                     <p className="text-brand-300">&lt;meta name=&quot;superapp-site-verification&quot; content=&quot;&lt;token&gt;&quot; /&gt;</p>
                   </div>
@@ -221,7 +221,7 @@ export function Section03Methods({
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                 Upload your compiled <code>.aar</code> binary. In the registration form, specify the Android Package Name (e.g. <code>com.fsa.enterprise.hr</code>) and Plugin Entry Class (e.g. <code>MiniAppPlugin</code>).
               </p>
-              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
                 <p className="text-slate-400">// Kotlin Implementation</p>
                 <p className="text-brand-300">class MiniAppPlugin : FSAMiniAppNativePlugin &#123;</p>
                 <p className="text-slate-300 pl-4">override fun initialize(context: Context, appCtx: MiniAppNativeContext) &#123; ... &#125;</p>
@@ -242,7 +242,7 @@ export function Section03Methods({
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                 Upload a <code>.zip</code> archive containing your compiled <code>.xcframework</code> or <code>.framework</code>. Specify the iOS Module Name (e.g. <code>FsaHrMiniApp</code>) and Entry Type (e.g. <code>MiniAppPlugin</code>).
               </p>
-              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+              <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-xs space-y-1">
                 <p className="text-slate-400">// Swift Implementation</p>
                 <p className="text-brand-300">@objc public class MiniAppPlugin: NSObject, FSASuperAppMiniAppNativeProtocol &#123;</p>
                 <p className="text-slate-300 pl-4">public static func initialize(with context: MiniAppNativeContext) &#123; ... &#125;</p>

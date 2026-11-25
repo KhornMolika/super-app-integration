@@ -82,7 +82,7 @@ export default function NotFound() {
                 <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>MiniApp Directory</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Packages & sandbox
               </p>
             </Link>
@@ -95,7 +95,7 @@ export default function NotFound() {
                 <Layers className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>Banners</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Promotional heroes
               </p>
             </Link>
@@ -108,7 +108,7 @@ export default function NotFound() {
                 <BookOpen className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-500" />
                 <span>Guidelines</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                 Regulatory standards
               </p>
             </Link>

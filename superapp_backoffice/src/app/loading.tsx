@@ -70,7 +70,7 @@ export default function Loading() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
             FSA SuperApp Platform
           </span>
         </div>
@@ -91,7 +91,7 @@ export default function Loading() {
         </div>
 
         {/* Real-time Subsystem Status Pips */}
-        <div className="flex items-center justify-center gap-4 sm:gap-5 mt-5 text-[10.5px] font-medium text-slate-400 dark:text-slate-500 font-mono">
+        <div className="flex items-center justify-center gap-4 sm:gap-5 mt-5 text-xs font-medium text-slate-400 dark:text-slate-500 font-mono">
           <span className="inline-flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span>Gateways</span>

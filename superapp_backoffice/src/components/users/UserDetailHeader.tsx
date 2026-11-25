@@ -233,7 +233,7 @@ export function UserDetailHeader({
           <div className="flex-1 flex flex-col justify-between gap-6 py-1 min-w-0">
             {/* Section 1: User Information */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -325,7 +325,7 @@ export function UserDetailHeader({
 
             {/* Section 2: Organization Information */}
             <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-4">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 <BuildingIcon className="w-3.5 h-3.5 text-slate-400" />
                 <span>Organization Information</span>
               </div>
@@ -404,7 +404,7 @@ export function UserDetailHeader({
                 <span>Alerts &amp; Notifications</span>
               </h3>
               <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${
                   isTelegramLinked
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
@@ -459,7 +459,7 @@ export function UserDetailHeader({
 
           {/* Bottom Action Footer */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">
+            <span className="text-xs text-slate-400">
               {isTelegramLinked ? 'Multi-channel dispatch active' : 'In-app & email dispatch active'}
             </span>
             <div className="flex items-center gap-2">

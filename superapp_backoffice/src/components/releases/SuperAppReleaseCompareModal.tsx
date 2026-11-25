@@ -128,7 +128,7 @@ export function SuperAppReleaseCompareModal({
                 <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
                   SuperApp Release Comparator (SA vs SA)
                 </h3>
-                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                <span className="px-2 py-0.5 text-xs font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
                   Gate 2 Ecosystem Manifest
                 </span>
               </div>
@@ -228,7 +228,7 @@ export function SuperAppReleaseCompareModal({
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                  <span className="px-1.5 py-0.2 rounded-full text-xs font-mono bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                     {tab.count}
                   </span>
                 )}
@@ -319,7 +319,7 @@ export function SuperAppReleaseCompareModal({
                           <div key={idx} className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-accent-200/80 dark:border-accent-800 flex items-center justify-between text-xs">
                             <div>
                               <span className="font-bold text-slate-900 dark:text-slate-100">{app.name}</span>
-                              <div className="font-mono text-[11px] text-slate-400">{app.packageName}</div>
+                              <div className="font-mono text-xs text-slate-400">{app.packageName}</div>
                             </div>
                             <div className="flex items-center gap-1.5 font-mono font-bold">
                               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">{app.baseVersion}</span>
@@ -344,7 +344,7 @@ export function SuperAppReleaseCompareModal({
                           <div key={idx} className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-between text-xs">
                             <div>
                               <span className="font-bold text-slate-900 dark:text-slate-100">{app.name}</span>
-                              <div className="font-mono text-[11px] text-slate-400">{app.packageName || app.id}</div>
+                              <div className="font-mono text-xs text-slate-400">{app.packageName || app.id}</div>
                             </div>
                             <span className="px-2 py-0.5 rounded font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                               v{app.version}
@@ -364,7 +364,7 @@ export function SuperAppReleaseCompareModal({
                       {unchangedApps.map((app: any, idx: number) => (
                         <div key={idx} className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
                           <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{app.name}</span>
-                          <span className="font-mono text-[10px] text-slate-400">{app.version}</span>
+                          <span className="font-mono text-xs text-slate-400">{app.version}</span>
                         </div>
                       ))}
                     </div>
@@ -425,7 +425,7 @@ export function SuperAppReleaseCompareModal({
                           <span>Gate 2 Verified</span>
                         </span>
                       </div>
-                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all border border-slate-200 dark:border-slate-700">
+                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl font-mono text-xs text-slate-600 dark:text-slate-300 break-all border border-slate-200 dark:border-slate-700">
                         {diffData?.baseRelease?.integrityDigest}
                       </div>
                     </div>
@@ -438,7 +438,7 @@ export function SuperAppReleaseCompareModal({
                           <span>Candidate Signed</span>
                         </span>
                       </div>
-                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl font-mono text-[11px] text-accent-800 dark:text-accent-300 break-all border border-accent-200 dark:border-accent-700">
+                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl font-mono text-xs text-accent-800 dark:text-accent-300 break-all border border-accent-200 dark:border-accent-700">
                         {diffData?.targetRelease?.integrityDigest}
                       </div>
                     </div>

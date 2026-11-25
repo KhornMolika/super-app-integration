@@ -292,14 +292,14 @@ export default function GuidelinesPage() {
                       <span className="text-xs font-bold text-brand-600 dark:text-brand-400 font-mono uppercase">
                         Web MiniApp
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-bold">
                         React / Vue
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-3 line-clamp-2">
                       Modern web apps running in secure SuperApp WebViews.
                     </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-[11px] flex items-center justify-between mb-3 border border-slate-800">
+                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
                       <span className="truncate mr-2">pnpm add @fsasuperapp/miniapp-web-sdk</span>
                       <button
                         onClick={() => copyCommand("pnpm add @fsasuperapp/miniapp-web-sdk", "web")}
@@ -326,14 +326,14 @@ export default function GuidelinesPage() {
                       <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono uppercase">
                         Flutter MiniApp
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold">
                         Dart / Pub
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-3 line-clamp-2">
                       Modular Flutter packages embedded in the SuperApp host shell.
                     </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-[11px] flex items-center justify-between mb-3 border border-slate-800">
+                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
                       <span className="truncate mr-2">flutter pub add fsa_superapp_miniapp_flutter_sdk</span>
                       <button
                         onClick={() => copyCommand("flutter pub add fsa_superapp_miniapp_flutter_sdk", "flutter")}
@@ -360,14 +360,14 @@ export default function GuidelinesPage() {
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono uppercase">
                         Native SDK
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold">
                         AAR / XCFramework
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-3 line-clamp-2">
                       Compiled Android &amp; iOS platform libraries with native performance.
                     </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-[11px] flex items-center justify-between mb-3 border border-slate-800">
+                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
                       <span className="truncate mr-2">FSASuperAppMiniAppNativeSDK</span>
                       <button
                         onClick={() => copyCommand("implementation 'com.fsasuperapp:miniapp-native-sdk:1.0.0'", "native")}
@@ -394,14 +394,14 @@ export default function GuidelinesPage() {
                       <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono uppercase">
                         Deep Link
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-bold">
                         URI Protocol
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-3 line-clamp-2">
                       Seamless app-to-app handoff with cryptographic return callbacks.
                     </p>
-                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-[11px] flex items-center justify-between mb-3 border border-slate-800">
+                    <div className="p-2 rounded-lg bg-slate-950 text-slate-200 font-mono text-xs flex items-center justify-between mb-3 border border-slate-800">
                       <span className="truncate mr-2">@fsasuperapp/miniapp-deeplink-sdk</span>
                       <button
                         onClick={() => copyCommand("pnpm add @fsasuperapp/miniapp-deeplink-sdk", "deeplink")}
@@ -475,7 +475,7 @@ export default function GuidelinesPage() {
                     {CATEGORY_FRIENDLY_NAMES[sec.category] || sec.category}
                   </span>
                   {sec.badge && (
-                    <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                       {sec.badge}
                     </span>
                   )}

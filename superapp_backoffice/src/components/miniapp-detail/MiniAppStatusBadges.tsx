@@ -143,7 +143,7 @@ function Chip({
     <span
       title={title}
       className={`inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap ${
-        size === 'md' ? 'px-3 py-1 text-xs' : 'px-2.5 py-0.5 text-[11px]'
+        size === 'md' ? 'px-3 py-1 text-xs' : 'px-2.5 py-0.5 text-xs'
       }`}
     >
       <span

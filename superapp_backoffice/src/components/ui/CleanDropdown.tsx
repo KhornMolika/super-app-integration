@@ -89,7 +89,7 @@ export function CleanDropdown({
         </span>
 
         {selectedOption?.count !== undefined && (
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0">
+          <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 shrink-0">
             {selectedOption.count}
           </span>
         )}
@@ -115,7 +115,7 @@ export function CleanDropdown({
           role="listbox"
         >
           {/* Header */}
-          <div className="px-2.5 py-1 mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
+          <div className="px-2.5 py-1 mb-1 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
             <span>Filter by {label.replace(':', '')}</span>
             {value !== 'ALL' && (
               <button
@@ -125,7 +125,7 @@ export function CleanDropdown({
                   onChange('ALL');
                   setIsOpen(false);
                 }}
-                className="text-brand-600 dark:text-brand-400 hover:underline capitalize font-semibold cursor-pointer text-[10px]"
+                className="text-brand-600 dark:text-brand-400 hover:underline capitalize font-semibold cursor-pointer text-xs"
               >
                 Reset
               </button>
@@ -163,7 +163,7 @@ export function CleanDropdown({
                   <div className="flex items-center gap-1.5 shrink-0">
                     {option.count !== undefined && (
                       <span
-                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                           isSelected
                             ? 'bg-brand-100 text-brand-700 dark:bg-brand-800/60 dark:text-brand-300'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'

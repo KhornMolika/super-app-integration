@@ -24,7 +24,7 @@ export function AppLogoAvatar({
   const initial = (name?.trim()?.charAt(0) || 'A').toUpperCase();
 
   const sizeClasses = {
-    xs: 'w-6 h-6 text-[10px] rounded-md',
+    xs: 'w-6 h-6 text-xs rounded-md',
     sm: 'w-8 h-8 text-xs rounded-lg',
     md: 'w-9 h-9 text-xs rounded-xl',
     lg: 'w-12 h-12 text-base rounded-xl',

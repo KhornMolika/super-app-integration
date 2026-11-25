@@ -263,7 +263,7 @@ export function BannerModal({
                       or drag and drop
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     PNG, JPG or WEBP (Max 5MB)
                   </p>
                 </div>
@@ -374,7 +374,7 @@ export function BannerModal({
             {/* Dynamic Value Input */}
             {actionType === 'MINI_APP' && (
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                   Select MiniApp to Launch
                 </label>
                 {loadingApps ? (
@@ -401,7 +401,7 @@ export function BannerModal({
 
             {actionType === 'EXTERNAL_URL' && (
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                   External Web Link (HTTPS)
                 </label>
                 <input
@@ -416,7 +416,7 @@ export function BannerModal({
 
             {actionType === 'IN_APP_ROUTE' && (
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                   In-App Route Path
                 </label>
                 <div className="flex gap-2">

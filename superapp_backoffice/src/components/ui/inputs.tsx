@@ -271,7 +271,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
                       if (groupItems.length === 0) return null;
                       return (
                         <div key={grp} className="mb-2 last:mb-0">
-                          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          <div className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                             {grp}
                           </div>
                           {groupItems.map((opt) => {

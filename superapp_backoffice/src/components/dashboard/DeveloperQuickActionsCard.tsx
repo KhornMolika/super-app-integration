@@ -28,7 +28,7 @@ export default function DeveloperQuickActionsCard() {
               <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 1. Register MiniApp Package
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
+              <div className="text-xs text-slate-400 mt-0.5">
                 Define basic info, team telegram chat, and upload your Flutter or Web package.
               </div>
             </div>
@@ -45,7 +45,7 @@ export default function DeveloperQuickActionsCard() {
               <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 2. Propose System Capabilities
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
+              <div className="text-xs text-slate-400 mt-0.5">
                 Request high-risk device capabilities (Camera, Location, Biometrics) with justification.
               </div>
             </div>
@@ -56,7 +56,7 @@ export default function DeveloperQuickActionsCard() {
         </div>
       </div>
 
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-700/60 text-[11px] text-slate-400">
+      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-400">
         <span>SuperApp Platform SDK Compliance: Version 1.0.0</span>
       </div>
     </div>

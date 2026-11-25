@@ -368,7 +368,7 @@ export default function CapabilityDetailPage({
                   type="button"
                   onClick={() => handleCopy(capability.key || '', 'Capability Key')}
                   title="Click to copy unique key"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 >
                   <span>#{capability.key}</span>
                   <Copy className="w-3 h-3 opacity-60" />
@@ -480,7 +480,7 @@ export default function CapabilityDetailPage({
               <Layers className="w-4 h-4" />
               <span>{view.text.appsUsingIt}</span>
               <span
-                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === 'apps'
                     ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/20 dark:text-brand-300'
                     : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
@@ -602,7 +602,7 @@ export default function CapabilityDetailPage({
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
                         Authorizes MiniApps to declare and bind this capability during security scans.
                       </span>
                     </div>
@@ -629,7 +629,7 @@ export default function CapabilityDetailPage({
                       )}
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                           capability.isAllowed !== false
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -660,7 +660,7 @@ export default function CapabilityDetailPage({
                       {requiredPermissions.map((perm: string) => (
                         <span
                           key={perm}
-                          className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
+                          className="font-mono text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40"
                         >
                           {perm}
                         </span>
@@ -689,7 +689,7 @@ export default function CapabilityDetailPage({
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="font-semibold text-slate-800 dark:text-slate-200 block">Host Allowlist Policy</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
                         Authorizes MiniApps to declare and bind this capability during security scans.
                       </span>
                     </div>
@@ -716,7 +716,7 @@ export default function CapabilityDetailPage({
                       )}
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
                           capability.isAllowed !== false
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
@@ -848,7 +848,7 @@ export default function CapabilityDetailPage({
                           <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-brand-600 transition-colors">
                             {app.name}
                           </h4>
-                          <span className="font-mono text-[11px] text-slate-400 block truncate">
+                          <span className="font-mono text-xs text-slate-400 block truncate">
                             {app.appId}
                           </span>
                         </div>
@@ -860,7 +860,7 @@ export default function CapabilityDetailPage({
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                         v{app.version || '1.0.0'}
                       </span>
                       <Link
@@ -929,7 +929,7 @@ export default function CapabilityDetailPage({
                 <div>
                   <Label>Capability Unique Key</Label>
                   <Input value={capability.key || ''} disabled className="bg-slate-50 dark:bg-slate-800/50 font-mono text-xs" />
-                  <p className="text-[11px] text-slate-400 mt-1">Unique platform bridge identifier (immutable).</p>
+                  <p className="text-xs text-slate-400 mt-1">Unique platform bridge identifier (immutable).</p>
                 </div>
 
                 <div>
@@ -1002,7 +1002,7 @@ export default function CapabilityDetailPage({
                     rows={8}
                     className="font-mono text-xs leading-relaxed"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     Advanced configuration including Flutter plugin, iOS usage strings, and Android permissions.
                   </p>
                 </div>

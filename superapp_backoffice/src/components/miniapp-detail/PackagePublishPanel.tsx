@@ -249,7 +249,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
                   Package Publishing{inRevision ? ' (New Version)' : ''}
                 </span>
                 <span
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
                     allDone
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                       : hasError
@@ -260,7 +260,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
                   {allDone ? '3/3 Steps Complete' : hasError ? 'Issue Detected' : 'Pipeline Active'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                 {allDone
                   ? (isSuperAdmin
                       ? `${conf.nexusPublishedPackage || conf.packageName} ${conf.nexusPublishedVersion || ''} hosted in Nexus pub-hosted`
@@ -310,7 +310,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
                   ? `Package Publishing Pipeline${inRevision ? ' (New Version)' : ''}`
                   : `Release Distribution Pipeline${inRevision ? ' (New Version)' : ''}`}
               </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isSuperAdmin
                   ? 'MinIO quarantine → Security scan → Nexus pub-hosted. Super App build reads the package from Nexus.'
                   : 'Package Ingestion → Security Clearance → SuperApp Distribution.'}
@@ -376,12 +376,12 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                         {i + 1}. {step.title}
                       </span>
-                      <span className={`text-[10px] font-semibold ${style.text}`}>{style.label}</span>
+                      <span className={`text-xs font-semibold ${style.text}`}>{style.label}</span>
                     </div>
                     {step.lines.map((line, j) => (
                       <p
                         key={j}
-                        className={`text-[11px] mt-0.5 break-words ${
+                        className={`text-xs mt-0.5 break-words ${
                           step.state === 'failed' && j === 0
                             ? 'text-rose-600 dark:text-rose-400 font-medium'
                             : 'text-slate-500 dark:text-slate-400'

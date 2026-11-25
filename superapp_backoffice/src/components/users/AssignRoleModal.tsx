@@ -250,7 +250,7 @@ export function AssignRoleModal({
                   <div className="space-y-2 w-full">
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${theme.badge}`}
+                        className={`px-2 py-0.5 rounded text-xs font-semibold border ${theme.badge}`}
                       >
                         {opt.badge}
                       </span>
@@ -263,7 +263,7 @@ export function AssignRoleModal({
                     <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
                       {opt.label}
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-3">
                       {opt.desc}
                     </p>
                   </div>

@@ -413,7 +413,7 @@ export function DataTable<T>({
         <div className={`${renderMobileCard ? 'hidden sm:block ' : ''}overflow-x-auto min-h-[320px]`}>
           <table className={`w-full text-left border-collapse ${tableClassName}`}>
             {/* Header */}
-            <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               <tr>
                 {columns.map((col) => {
                   const isSortable =

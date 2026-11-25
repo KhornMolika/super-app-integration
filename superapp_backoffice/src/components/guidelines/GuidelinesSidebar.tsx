@@ -55,7 +55,7 @@ export function GuidelinesSidebar({
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
             <span>1. Start Here</span>
-            <span className="text-[10px] font-mono text-slate-400/70">01-02</span>
+            <span className="text-xs font-mono text-slate-400/70">01-02</span>
           </div>
           <nav className="space-y-1">
             {[
@@ -92,7 +92,7 @@ export function GuidelinesSidebar({
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
             <span>2. Stack &amp; SDK Setup</span>
-            <span className="text-[10px] font-mono text-slate-400/70">03-04</span>
+            <span className="text-xs font-mono text-slate-400/70">03-04</span>
           </div>
           <nav className="space-y-1">
             {/* 03 Methods */}
@@ -117,7 +117,7 @@ export function GuidelinesSidebar({
                 </span>
                 <span className="truncate">Tech Stack &amp; Delivery</span>
               </div>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
+              <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
                 {activeMethodTab === "webview" ? "Web" : activeMethodTab === "flutter" ? "Flutter" : activeMethodTab === "native" ? "Native" : "Deep Link"}
               </span>
             </a>
@@ -150,7 +150,7 @@ export function GuidelinesSidebar({
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
             <span>3. Build &amp; Integrate</span>
-            <span className="text-[10px] font-mono text-slate-400/70">05-06</span>
+            <span className="text-xs font-mono text-slate-400/70">05-06</span>
           </div>
           <nav className="space-y-1">
             {/* 05 Features & APIs */}
@@ -203,7 +203,7 @@ export function GuidelinesSidebar({
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
             <span>4. Launch &amp; Support</span>
-            <span className="text-[10px] font-mono text-slate-400/70">07-09</span>
+            <span className="text-xs font-mono text-slate-400/70">07-09</span>
           </div>
           <nav className="space-y-1">
             {[

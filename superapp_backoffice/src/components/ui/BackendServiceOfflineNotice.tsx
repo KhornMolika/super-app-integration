@@ -138,7 +138,7 @@ export function BackendServiceOfflineNotice({
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full font-bold bg-amber-200/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                   HTTP {statusCode}
                 </span>
               </div>
@@ -148,7 +148,7 @@ export function BackendServiceOfflineNotice({
 
           <div className="flex items-center gap-2 shrink-0">
             {autoRetryActive && (
-              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <ClockIcon className="w-3.5 h-3.5 text-amber-500" />
                 <span>Retrying in {countdown}s</span>
               </span>
@@ -213,10 +213,10 @@ export function BackendServiceOfflineNotice({
                   {title}
                 </h3>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                     HTTP {statusCode}
                   </span>
-                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {code}
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export function BackendServiceOfflineNotice({
                 <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
                 <span>
                   The web application is active, but the core API service (
-                  <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                  <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-xs text-slate-800 dark:text-slate-200">
                     http://localhost:3000
                   </code>
                   ) is currently not responding to requests.
@@ -254,7 +254,7 @@ export function BackendServiceOfflineNotice({
               <button
                 type="button"
                 onClick={() => setAutoRetryActive(!autoRetryActive)}
-                className="text-[11px] text-amber-700 dark:text-amber-300 hover:underline font-semibold cursor-pointer"
+                className="text-xs text-amber-700 dark:text-amber-300 hover:underline font-semibold cursor-pointer"
               >
                 {autoRetryActive ? 'Pause Auto-Retry' : 'Resume Auto-Retry'}
               </button>
@@ -295,7 +295,7 @@ export function BackendServiceOfflineNotice({
                 </span>
               </div>
               {diagnosticResult.online && (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                   Ready
                 </span>
               )}
@@ -356,7 +356,7 @@ export function BackendServiceOfflineNotice({
                   </svg>
                   <span>Troubleshooting & Technical Details</span>
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-slate-400">
                   {showTroubleshootDetails ? 'Hide' : 'Show Details'}
                 </span>
               </button>
@@ -370,18 +370,18 @@ export function BackendServiceOfflineNotice({
                     <ul className="space-y-1.5 text-slate-600 dark:text-slate-400 list-disc list-inside">
                       <li>
                         <strong>Dev Server Starting / Compiling:</strong> The NestJS backend (
-                        <code className="font-mono text-[11px]">pnpm run start:dev</code>) is compiling TypeScript or restarting after a code edit.
+                        <code className="font-mono text-xs">pnpm run start:dev</code>) is compiling TypeScript or restarting after a code edit.
                       </li>
                       <li>
                         <strong>Database Initialization:</strong> PostgreSQL container or TypeORM sync is connecting on port 5432.
                       </li>
                       <li>
-                        <strong>Network / Port Conflict:</strong> Port 3000 is occupied or not bound to <code className="font-mono text-[11px]">0.0.0.0</code>.
+                        <strong>Network / Port Conflict:</strong> Port 3000 is occupied or not bound to <code className="font-mono text-xs">0.0.0.0</code>.
                       </li>
                     </ul>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] space-y-1.5 overflow-x-auto">
+                  <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs space-y-1.5 overflow-x-auto">
                     <div className="text-slate-400">// Quick terminal checks:</div>
                     <div className="text-emerald-400"># Verify backend dev server is active:</div>
                     <div className="text-slate-100">cd d:\Projects\fintect\superapp-poc\superapp_backend && pnpm run start:dev</div>

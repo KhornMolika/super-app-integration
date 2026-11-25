@@ -264,7 +264,7 @@ export function AvatarUpload({
           ) : (
             <>
               <Camera className="w-5 h-5 mb-0.5 text-white/90" />
-              <span className="text-[10px] font-semibold text-white/90">
+              <span className="text-xs font-semibold text-white/90">
                 {hasAvatar ? 'Change' : 'Upload'}
               </span>
             </>
@@ -326,20 +326,20 @@ export function AvatarUpload({
 
           {/* Pending State Badges */}
           {stagedFile && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
               Pending save
             </span>
           )}
           {isPendingRemoval && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
               Marked for removal
             </span>
           )}
         </div>
 
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
           Drag &amp; drop or click to upload. JPG, PNG, or WebP up to <strong>2 MB</strong>.
         </p>
       </div>

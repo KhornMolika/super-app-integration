@@ -175,7 +175,7 @@ export default function FlutterArchiveUploader({
           <div className="flex-1 space-y-1 min-w-0">
             <div className="font-bold text-amber-950 dark:text-amber-100 flex items-center gap-1.5 flex-wrap">
               <span>Dart SDK Runtime Compatibility Notice</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-200/70 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+              <span className="text-xs px-1.5 py-0.5 rounded font-mono font-bold bg-amber-200/70 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
                 SuperApp Platform: Dart 3.12.0
               </span>
             </div>

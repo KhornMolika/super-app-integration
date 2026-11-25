@@ -266,14 +266,14 @@ export default function DownloadApkModal({
                 </h3>
 
                 {/* Version badge with live dot */}
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   <span>{activeVersion}</span>
                 </span>
 
                 {/* Build Mode badge */}
                 <span
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                  className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${
                     isRelease
                       ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border-brand-200 dark:border-brand-800'
                       : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -337,7 +337,7 @@ export default function DownloadApkModal({
                 {/* Host LAN IP Selector (Only visible if Local LAN is active) */}
                 {!isCloud && (
                   <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                       Host IP:
                     </span>
                     <div className="relative min-w-[200px]">
@@ -399,7 +399,7 @@ export default function DownloadApkModal({
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                   Scan this QR code with any Android camera or browser to download and install{' '}
-                  <strong className="text-slate-800 dark:text-slate-200 font-mono text-[11px]">
+                  <strong className="text-slate-800 dark:text-slate-200 font-mono text-xs">
                     {activeFilename}
                   </strong>{' '}
                   directly onto your device.
@@ -445,7 +445,7 @@ export default function DownloadApkModal({
                 <button
                   type="button"
                   onClick={() => handleCopy(effectiveDownloadUrl)}
-                  className="w-full text-left font-mono text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 truncate block transition-colors cursor-pointer"
+                  className="w-full text-left font-mono text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 truncate block transition-colors cursor-pointer"
                   title="Click to copy full download URL"
                 >
                   URL: {effectiveDownloadUrl}
@@ -463,36 +463,36 @@ export default function DownloadApkModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
-                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[10px] flex items-center justify-center font-bold">
+                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs flex items-center justify-center font-bold">
                     1
                   </span>
                   <span>Install APK</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Open the downloaded file and allow &ldquo;Install unknown apps&rdquo; if prompted.
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
-                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[10px] flex items-center justify-center font-bold">
+                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs flex items-center justify-center font-bold">
                     2
                   </span>
                   <span>Sign In</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed truncate">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed truncate">
                   Log in with your portal credentials ({user?.email || 'admin@fsa.gov'}).
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
-                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[10px] flex items-center justify-center font-bold">
+                  <span className="w-5 h-5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs flex items-center justify-center font-bold">
                     3
                   </span>
                   <span>Launch MiniApps</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Open your registered MiniApp from the host shell grid to test capabilities.
                 </p>
               </div>
@@ -510,7 +510,7 @@ export default function DownloadApkModal({
                       <Layers className="w-3.5 h-3.5 text-brand-500" />
                       <span>Target APK Release Version</span>
                     </span>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Select published SuperApp build version from artifact repository.
                     </p>
                   </div>
@@ -540,11 +540,11 @@ export default function DownloadApkModal({
                       <span className="font-bold text-emerald-800 dark:text-emerald-300">
                         Size-Optimized Release Build ({activeSize})
                       </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                         ARM64 AOT
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                       Compiled with Flutter ahead-of-time (AOT) machine code, symbol stripping, and bytecode tree-shaking for minimal network footprint.
                     </p>
                   </div>
@@ -556,7 +556,7 @@ export default function DownloadApkModal({
                     <span className="font-bold text-amber-800 dark:text-amber-300">
                       Debug Test Build Active ({activeSize})
                     </span>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                       Debug APK includes debugging symbols and hot-reload hooks for local developer testing.
                     </p>
                   </div>
@@ -568,7 +568,7 @@ export default function DownloadApkModal({
 
         {/* Modal Footer */}
         <div className="px-5 sm:px-6 py-3 bg-slate-50/80 dark:bg-slate-900/90 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <Zap className="w-3.5 h-3.5 text-amber-500" />
             <span>Fast Native Streaming (HTTP 206 byte-range supported)</span>
           </div>

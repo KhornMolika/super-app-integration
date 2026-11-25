@@ -240,9 +240,9 @@ export function BannerPreviewModal({
                 {/* Simulated In-App Screen */}
                 <div className="bg-slate-50 dark:bg-slate-950 rounded-[30px] overflow-hidden flex flex-col pt-7 pb-4 px-3.5 space-y-3.5 min-h-[460px]">
                   {/* Status Bar */}
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 px-1 pt-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 px-1 pt-1">
                     <span>9:41</span>
-                    <div className="flex items-center gap-1.5 text-[10px]">
+                    <div className="flex items-center gap-1.5 text-xs">
                       <span>5G</span>
                       <div className="w-4 h-2 rounded-xs border border-slate-700 dark:border-slate-300 flex items-center p-0.5">
                         <div className="w-2 h-1 bg-slate-700 dark:bg-slate-300 rounded-2xs" />
@@ -261,10 +261,10 @@ export function BannerPreviewModal({
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-600 dark:text-slate-300">
+                      <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs text-slate-600 dark:text-slate-300">
                         🔔
                       </div>
-                      <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 flex items-center justify-center text-[10px] font-bold">
+                      <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 flex items-center justify-center text-xs font-bold">
                         JD
                       </div>
                     </div>
@@ -275,7 +275,7 @@ export function BannerPreviewModal({
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <span className="text-[11px]">Search mini-apps, services...</span>
+                    <span className="text-xs">Search mini-apps, services...</span>
                   </div>
 
                   {/* HERO BANNER CAROUSEL ITEM (The Core Preview) */}
@@ -298,18 +298,18 @@ export function BannerPreviewModal({
                       )}
 
                       {/* Display Order badge */}
-                      <div className="absolute top-2 left-2 bg-slate-900/75 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      <div className="absolute top-2 left-2 bg-slate-900/75 backdrop-blur-md text-white text-xs font-bold px-2 py-0.5 rounded-md">
                         #{banner.displayOrder + 1}
                       </div>
 
                       {/* Audience badge */}
                       <div className="absolute top-2 right-2">
                         {banner.targetAudience === 'ALL_FSA_STAFF' ? (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-600 text-white shadow-xs">
+                          <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-600 text-white shadow-xs">
                             FSA Staff
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 text-white shadow-xs">
+                          <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-600 text-white shadow-xs">
                             Public
                           </span>
                         )}
@@ -337,13 +337,13 @@ export function BannerPreviewModal({
                           {banner.title}
                         </span>
                         {banner.actionType !== 'NONE' && (
-                          <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-0.5 shrink-0">
+                          <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-0.5 shrink-0">
                             Launch <ArrowRight className="w-3 h-3" />
                           </span>
                         )}
                       </div>
                       {banner.description && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                           {banner.description}
                         </p>
                       )}
@@ -352,7 +352,7 @@ export function BannerPreviewModal({
 
                   {/* Simulated App Shortcuts Below */}
                   <div className="pt-1 space-y-2">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 px-0.5">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 px-0.5">
                       Ecosystem Services
                     </span>
                     <div className="grid grid-cols-4 gap-2 text-center">
@@ -361,7 +361,7 @@ export function BannerPreviewModal({
                           <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 flex items-center justify-center text-xs shadow-2xs">
                             {['📑', '🛡️', '✍️', '👥'][i]}
                           </div>
-                          <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[60px]">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[60px]">
                             {name}
                           </span>
                         </div>
@@ -441,7 +441,7 @@ export function BannerPreviewModal({
           {/* Right Details Sidebar */}
           <div className="lg:col-span-4 p-5 sm:p-6 space-y-4 bg-white dark:bg-slate-900 overflow-y-auto">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Banner Information
               </span>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">
@@ -498,7 +498,7 @@ export function BannerPreviewModal({
 
             {/* Action Details */}
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Action & Route
               </span>
               <div className="flex items-center gap-2">
@@ -519,7 +519,7 @@ export function BannerPreviewModal({
                 </span>
               </div>
               {banner.actionValue && banner.actionType !== 'NONE' && (
-                <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 break-all select-all">
+                <div className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 break-all select-all">
                   {banner.actionValue}
                 </div>
               )}
@@ -527,7 +527,7 @@ export function BannerPreviewModal({
 
             {/* Campaign Schedule */}
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Campaign Schedule
               </span>
               <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
@@ -554,7 +554,7 @@ export function BannerPreviewModal({
               </div>
               <div className="flex items-center justify-between">
                 <span>Banner ID:</span>
-                <span className="font-mono text-[10px] text-slate-400 truncate max-w-[150px]">
+                <span className="font-mono text-xs text-slate-400 truncate max-w-[150px]">
                   {banner.id}
                 </span>
               </div>
@@ -627,7 +627,7 @@ export function BannerPreviewModal({
             </button>
 
             <span className="font-medium text-slate-600 dark:text-slate-300">
-              Use <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">←</kbd> and <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">→</kbd> keys to browse
+              Use <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-xs">←</kbd> and <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-xs">→</kbd> keys to browse
             </span>
 
             <button
