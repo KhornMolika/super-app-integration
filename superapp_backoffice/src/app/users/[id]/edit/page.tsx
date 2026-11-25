@@ -387,7 +387,7 @@ function EditUserContent() {
       }
 
       const updated = await usersApi.update(id, payload);
-      setUser({ ...updated, avatarUrl: latestAvatarUrl });
+      setUser({ ...unwrapItem<User>(updated), avatarUrl: latestAvatarUrl });
 
       if (currentUser?.id === id) {
         updateUserAvatar(latestAvatarUrl || null);
@@ -683,6 +683,17 @@ function EditUserContent() {
 
 
             {/* Card 2: Role Authority & Access Scope */}
+            {user?.accountType === 'CONSUMER' ? (
+              <div className="rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 p-6 space-y-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ShieldCheckIcon className="w-4 h-4 text-slate-400" />
+                  <span>Mobile App Consumer Account</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Mobile app consumer accounts do not have back-office RBAC roles or an assigned organization.
+                </p>
+              </div>
+            ) : (
             <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -750,12 +761,14 @@ function EditUserContent() {
                 })}
               </div>
             </div>
+            )}
           </div>
 
 
           {/* Right Column (4 of 12): Organization & Notification Channels */}
           <div className="lg:col-span-4 space-y-6">
             {/* Card 3: Assigned Organization Tenancy */}
+            {user?.accountType !== 'CONSUMER' && (
             <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -818,6 +831,7 @@ function EditUserContent() {
                 )}
               </div>
             </div>
+            )}
 
 
             {/* Account Governance & Tenancy Profile */}

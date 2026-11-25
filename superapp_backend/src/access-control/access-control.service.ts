@@ -174,7 +174,9 @@ export class AccessControlService {
         await this.staffProfileRepository.save(staffProfile);
       } else {
         let spChanged = false;
-        if (!staffProfile.role || staffProfile.role.name !== targetRoleName) {
+        // Only initialize the seed role when the profile has no role yet,
+        // so an administrator's explicit role reassignment is preserved.
+        if (!staffProfile.role) {
           staffProfile.role = role;
           staffProfile.roleId = role.id;
           spChanged = true;
@@ -841,6 +843,7 @@ export class AccessControlService {
       dto.staffId !== undefined ||
       dto.phoneNumber !== undefined ||
       dto.organizationId !== undefined ||
+      dto.roleId !== undefined ||
       dto.roleIds !== undefined ||
       dto.roleNames !== undefined;
 
@@ -903,12 +906,23 @@ export class AccessControlService {
       }
     }
 
-    if (dto.roleIds !== undefined || dto.roleNames !== undefined) {
+    if (
+      dto.roleId !== undefined ||
+      dto.roleIds !== undefined ||
+      dto.roleNames !== undefined
+    ) {
       if (isSelf && !isSuperAdmin) {
         throw new ForbiddenException('Users cannot change their own roles');
       }
       let newRoles: Role[] = [];
-      if (dto.roleIds !== undefined) {
+      if (dto.roleId !== undefined) {
+        if (dto.roleId.trim()) {
+          const singleRole = await this.roleRepository.findOne({
+            where: { id: dto.roleId.trim() },
+          });
+          if (singleRole) newRoles = [singleRole];
+        }
+      } else if (dto.roleIds !== undefined) {
         newRoles =
           dto.roleIds.length > 0
             ? await this.roleRepository.findBy({ id: In(dto.roleIds) })
@@ -920,6 +934,14 @@ export class AccessControlService {
             : [];
       }
 
+      if (
+        isTargetSuperAdmin &&
+        !newRoles.some((r) => r.name === 'SUPER_ADMIN')
+      ) {
+        throw new ForbiddenException(
+          'Protected Role Guard: Super Admin role authority cannot be revoked or demoted.',
+        );
+      }
       if (!isSuperAdmin && newRoles.some((r) => r.name === 'SUPER_ADMIN')) {
         throw new ForbiddenException(
           'Only Super Administrators can assign the Super Admin role',

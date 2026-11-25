@@ -192,6 +192,38 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should update user role when roleNames is provided', async () => {
+      const orgAdminRole = { id: 'role-org-admin-id', name: 'ORG_ADMIN', permissions: [] };
+      mockRoleRepo.findBy.mockResolvedValueOnce([orgAdminRole]);
+
+      await service.updateUser('user-uuid-1', {
+        roleNames: ['ORG_ADMIN'],
+      });
+
+      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          roleId: 'role-org-admin-id',
+          role: orgAdminRole,
+        }),
+      );
+    });
+
+    it('should update user role when roleId is provided', async () => {
+      const reviewerRole = { id: 'role-reviewer-id', name: 'APP_REVIEWER', permissions: [] };
+      mockRoleRepo.findOne.mockResolvedValueOnce(reviewerRole);
+
+      await service.updateUser('user-uuid-1', {
+        roleId: 'role-reviewer-id',
+      });
+
+      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          roleId: 'role-reviewer-id',
+          role: reviewerRole,
+        }),
+      );
+    });
   });
 
   describe('createUser', () => {
