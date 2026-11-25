@@ -107,11 +107,10 @@ export function AppShell({ children }: AppShellProps) {
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col h-full overflow-y-auto relative bg-slate-50 dark:bg-slate-900 transition-all duration-300 min-w-0">
           <header
-            className={`h-16 flex items-center px-4 sm:px-6 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/60 shadow-xs transition-all ${
-              isWorkspaceRoute
+            className={`min-h-[4.5rem] py-3 flex items-center px-4 sm:px-6 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/60 shadow-xs transition-all ${isWorkspaceRoute
                 ? 'fixed top-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md'
                 : 'sticky top-0 z-10 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md'
-            }`}
+              }`}
           >
             <div className="flex items-center min-w-0 pr-4">
               {isWorkspaceRoute ? (
@@ -132,7 +131,7 @@ export function AppShell({ children }: AppShellProps) {
               ) : (
                 <h2 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 tracking-tight whitespace-nowrap truncate">
                   <span className="hidden xl:inline">
-                    FinTech of Center General Secretariat of FSA
+                    FinTech Center of General Secretariat of FSA
                   </span>
                   <span className="xl:hidden">FinTech Center FSA</span>
                 </h2>
