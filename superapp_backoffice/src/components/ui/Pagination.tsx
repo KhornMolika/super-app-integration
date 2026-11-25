@@ -6,8 +6,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ChevronDown,
 } from 'lucide-react';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 
 export interface PaginationProps {
   /** The current active page (1-indexed) */
@@ -158,22 +158,17 @@ export function Pagination({
         {/* Page Size Selector */}
         {showPageSizeSelector && onPageSizeChange && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 dark:text-slate-500">Rows:</span>
-            <div className="relative inline-flex items-center">
-              <select
-                value={pageSize}
-                disabled={disabled}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="appearance-none bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/70 rounded-lg pl-2.5 pr-7 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {pageSizeOptions.map((opt) => (
-                  <option key={opt} value={opt} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute right-2 pointer-events-none" />
-            </div>
+            <CleanDropdown
+              label="Rows:"
+              value={String(pageSize)}
+              onChange={(val) => onPageSizeChange(Number(val))}
+              options={pageSizeOptions.map((opt) => ({
+                value: String(opt),
+                label: String(opt),
+              }))}
+              buttonClassName="h-8 px-2.5 py-1 rounded-lg"
+              dropdownWidth="w-28"
+            />
           </div>
         )}
       </div>

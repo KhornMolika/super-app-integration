@@ -23,6 +23,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pagination } from '@/components/ui/Pagination';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
@@ -220,18 +221,21 @@ function RolesPageContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <select
+          <CleanDropdown
+            label="Type"
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value as any);
+            onChange={(val) => {
+              setTypeFilter(val as any);
               setCurrentPage(1);
             }}
-            className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="ALL">All Role Types</option>
-            <option value="SYSTEM">System Roles Only</option>
-            <option value="CUSTOM">Custom Roles Only</option>
-          </select>
+            options={[
+              { value: 'ALL', label: 'All Role Types' },
+              { value: 'SYSTEM', label: 'System Roles Only' },
+              { value: 'CUSTOM', label: 'Custom Roles Only' },
+            ]}
+            dropdownWidth="w-52"
+            align="right"
+          />
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button, Input, Label } from '@/components/ui/inputs';
+import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import { authApi, AccessTokenItem } from '@/api/auth.api';
 import { toast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
@@ -349,10 +349,10 @@ export function AccessTokensCard() {
                     Zero-Trust Default: 7 Days
                   </span>
                 </div>
-                <select
+                <Select
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white"
+                  className="text-xs py-2"
                 >
                   <option value="1">1 day (24 hours - Quick Setup)</option>
                   <option value="7">7 days (Recommended for SDK Download)</option>
@@ -362,7 +362,7 @@ export function AccessTokensCard() {
                   <option value="90">90 days (Quarterly CI/CD)</option>
                   <option value="180">180 days (Semi-Annual)</option>
                   <option value="365">1 year</option>
-                </select>
+                </Select>
                 <p className="text-xs text-slate-500 mt-1">
                   Keep expiration brief for local development. Tokens can be revoked or re-issued anytime.
                 </p>

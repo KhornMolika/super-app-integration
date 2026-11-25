@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import { QrCodeSvg } from '@/components/ui/QrCodeSvg';
+import { Select } from '@/components/ui/inputs';
 import {
   Smartphone,
   Download,
@@ -340,11 +341,11 @@ export default function DownloadApkModal({
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                       Host IP:
                     </span>
-                    <div className="relative min-w-[200px]">
-                      <select
+                    <div className="min-w-[200px]">
+                      <Select
                         value={selectedIp}
                         onChange={(e) => setSelectedIp(e.target.value)}
-                        className="w-full h-8 text-xs font-mono font-bold pl-2.5 pr-7 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer appearance-none"
+                        className="h-8 text-xs font-mono font-bold py-1"
                       >
                         {Array.from(
                           new Map(
@@ -355,8 +356,7 @@ export default function DownloadApkModal({
                             {iface.address} ({iface.name}) {iface.isPrimary ? '★' : ''}
                           </option>
                         ))}
-                      </select>
-                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </Select>
                     </div>
 
                     {/* Backend Health Dot */}
@@ -514,19 +514,18 @@ export default function DownloadApkModal({
                       Select published SuperApp build version from artifact repository.
                     </p>
                   </div>
-                  <div className="relative">
-                    <select
+                  <div>
+                    <Select
                       value={activeVersion}
                       onChange={(e) => setSelectedVersion(e.target.value)}
-                      className="text-xs font-mono font-semibold pl-2.5 pr-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 cursor-pointer outline-none focus:ring-1 focus:ring-brand-500 appearance-none"
+                      className="text-xs font-mono font-semibold py-1.5"
                     >
                       {allVersions.map((v) => (
                         <option key={v.version} value={v.version}>
                           {v.version} — {v.size} ({v.buildMode === 'release' ? 'Release' : 'Debug'})
                         </option>
                       ))}
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </Select>
                   </div>
                 </div>
               )}

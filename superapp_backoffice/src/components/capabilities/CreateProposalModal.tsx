@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '@/components/ui/inputs';
+import { Button, Select } from '@/components/ui/inputs';
 import {
   Sparkles,
   X,
@@ -345,20 +345,17 @@ export function CreateProposalModal({
                     No registered MiniApps found. Switch to <strong>New / External App</strong> to specify an upcoming MiniApp.
                   </div>
                 ) : (
-                  <div className="relative">
-                    <select
-                      value={selectedMiniAppId}
-                      onChange={(e) => setSelectedMiniAppId(e.target.value)}
-                      className="w-full h-10 text-xs pl-3 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 cursor-pointer appearance-none"
-                    >
-                      {miniapps.map((app) => (
-                        <option key={app.id} value={app.id}>
-                          {app.name} ({app.appId || app.organization || 'MiniApp'})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
+                  <Select
+                    value={selectedMiniAppId}
+                    onChange={(e) => setSelectedMiniAppId(e.target.value)}
+                    className="h-10 text-xs py-2"
+                  >
+                    {miniapps.map((app) => (
+                      <option key={app.id} value={app.id}>
+                        {app.name} ({app.appId || app.organization || 'MiniApp'})
+                      </option>
+                    ))}
+                  </Select>
                 )}
               </div>
             )}

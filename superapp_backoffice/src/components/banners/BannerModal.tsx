@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { bannersApi, miniappsApi, MiniApp, unwrapData } from '@/api';
+import { Select } from '@/components/ui/inputs';
 import type {
   SuperAppBanner,
   BannerActionType,
@@ -383,10 +384,10 @@ export function BannerModal({
                     <span>Loading mini apps...</span>
                   </div>
                 ) : (
-                  <select
+                  <Select
                     value={actionValue}
                     onChange={(e) => setActionValue(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="text-sm py-2"
                   >
                     <option value="">-- Select MiniApp --</option>
                     {miniApps.map((app) => (
@@ -394,7 +395,7 @@ export function BannerModal({
                         {app.name} ({app.appId})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
               </div>
             )}
@@ -420,10 +421,10 @@ export function BannerModal({
                   In-App Route Path
                 </label>
                 <div className="flex gap-2">
-                  <select
+                  <Select
                     value={actionValue}
                     onChange={(e) => setActionValue(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="text-sm py-2"
                   >
                     <option value="">-- Choose Route --</option>
                     <option value="/cards">Cards & Wallets (/cards)</option>
@@ -433,7 +434,7 @@ export function BannerModal({
                     <option value="/account">Account Profile (/account)</option>
                     <option value="/settings">Settings (/settings)</option>
                     <option value="/scan">QR Scanner (/scan)</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
             )}
@@ -445,16 +446,16 @@ export function BannerModal({
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Target Audience
               </label>
-              <select
+              <Select
                 value={targetAudience}
                 onChange={(e) =>
                   setTargetAudience(e.target.value as BannerAudience)
                 }
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="text-sm py-2"
               >
                 <option value="PUBLIC">Public (All Users)</option>
                 <option value="ALL_FSA_STAFF">FSA Staff Only</option>
-              </select>
+              </Select>
             </div>
 
             <div>

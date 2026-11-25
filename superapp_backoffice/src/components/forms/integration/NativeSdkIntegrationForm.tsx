@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Input, Label } from '@/components/ui/inputs';
+import { Input, Label, Select } from '@/components/ui/inputs';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
 import { sdkArtifactsApi, SdkArtifactUploadResponse } from '@/api';
 import { deriveNativeSdkDefaults } from '@/lib/integration-utils';
@@ -56,17 +56,17 @@ function EntryClassHint({
         <span className="text-xs text-slate-600 dark:text-slate-400">
           {scan.candidates.length} classes implement {contract}. Pick one:
         </span>
-        <select
+        <Select
           value={scan.candidates.includes(current) ? current : ''}
           onChange={(e) => e.target.value && onPick(e.target.value)}
           disabled={disabled}
-          className="w-full font-mono text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5"
+          className="font-mono text-xs py-1.5"
         >
           <option value="">Choose...</option>
           {scan.candidates.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
-        </select>
+        </Select>
       </div>
     );
   }

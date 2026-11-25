@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Button, Input, Label } from '@/components/ui/inputs';
+import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import {
   ZapIcon,
   ClockIcon,
@@ -263,7 +263,7 @@ export function PipelineTimingCard({
               <DevicePhoneIcon className="w-3.5 h-3.5 text-slate-500" />
               <span>Telegram Notification Style</span>
             </Label>
-            <select
+            <Select
               value={pipelineTiming.telegramStyle}
               onChange={(e) =>
                 setPipelineTiming({
@@ -271,11 +271,11 @@ export function PipelineTimingCard({
                   telegramStyle: e.target.value as 'rich_cards' | 'compact',
                 })
               }
-              className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-2 shadow-xs"
+              className="text-xs sm:text-sm py-2"
             >
               <option value="rich_cards">Rich Cards with Formatted Badges (Recommended)</option>
               <option value="compact">Compact Plain Summary</option>
-            </select>
+            </Select>
             <p className="text-xs text-slate-500">
               Controls visual layout, status banners, and quote formatting in Telegram.
             </p>

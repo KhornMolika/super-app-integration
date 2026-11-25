@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '@/components/ui/inputs';
+import { Button, Select } from '@/components/ui/inputs';
 import {
   Smartphone,
   User,
@@ -650,18 +650,20 @@ export function ProposalReviewModal({
                       <label htmlFor="target-branch" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                         Code version to update (git branch)
                       </label>
-                      <select
-                        id="target-branch"
-                        value={targetBranch}
-                        onChange={(e) => setTargetBranch(e.target.value)}
-                        className="w-full sm:w-64 h-9 text-xs px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-mono"
-                      >
-                        {(branches.length ? branches : [targetBranch]).map((b) => (
-                          <option key={b} value={b}>
-                            {b}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="w-full sm:w-64">
+                        <Select
+                          id="target-branch"
+                          value={targetBranch}
+                          onChange={(e) => setTargetBranch(e.target.value)}
+                          className="h-9 text-xs py-1.5 font-mono"
+                        >
+                          {(branches.length ? branches : [targetBranch]).map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                       {branchesFromFallback && (
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           Couldn&apos;t load branches from the code repository; showing defaults.

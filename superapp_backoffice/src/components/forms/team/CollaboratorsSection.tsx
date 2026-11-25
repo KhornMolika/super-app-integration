@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import {
   UserGroupIcon,
   PlusCircleIcon,
@@ -232,21 +233,20 @@ export function CollaboratorsSection({
 
                 <div className="flex items-center gap-2 sm:shrink-0">
                   {canEditRow ? (
-                    <label className="flex-1 sm:flex-none">
-                      <span className="sr-only">Role of {displayName}</span>
-                      <select
+                    <div className="flex-1 sm:flex-none">
+                      <CleanDropdown
+                        label=""
                         value={role}
-                        disabled={isChanging || isRemoving}
-                        onChange={(e) => onChangeRole(collab, e.target.value as CollaboratorRole)}
-                        className="w-full sm:w-auto h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-2.5 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-60 cursor-pointer"
-                      >
-                        {COLLABORATOR_ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={(val) => onChangeRole(collab, val as CollaboratorRole)}
+                        options={COLLABORATOR_ROLES.map((r) => ({
+                          value: r.value,
+                          label: r.label,
+                        }))}
+                        buttonClassName="h-8 px-2.5 py-1 rounded-lg"
+                        dropdownWidth="w-40"
+                        align="right"
+                      />
+                    </div>
                   ) : (
                     <RoleChip role={role} />
                   )}

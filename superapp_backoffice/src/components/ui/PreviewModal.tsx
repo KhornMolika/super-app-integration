@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { Button } from './inputs';
+import { CleanDropdown } from './CleanDropdown';
 import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from './DownloadApkModal';
@@ -324,17 +325,20 @@ export default function PreviewModal({
         <div className="flex items-center gap-2">
           {/* Compact Device Dropdown Switcher */}
           <div className="flex items-center bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 shadow-xs">
-            <select
+            <CleanDropdown
+              label=""
               value={device}
-              onChange={(e) => setDevice(e.target.value as DeviceType)}
-              className="bg-transparent text-xs font-semibold text-slate-200 pl-2.5 pr-2 py-1.5 focus:outline-none cursor-pointer rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <option value="iPhone 16 Pro" className="bg-slate-900 text-slate-200">iPhone 16 Pro (393×852)</option>
-              <option value="Galaxy S25 Ultra" className="bg-slate-900 text-slate-200">Galaxy S25 Ultra (412×915)</option>
-              <option value="iPad Pro 11&quot;" className="bg-slate-900 text-slate-200">iPad Pro 11&quot; (834×1194)</option>
-              <option value="Laptop 14&quot;" className="bg-slate-900 text-slate-200">Laptop 14&quot; (1440×900)</option>
-              <option value="Responsive" className="bg-slate-900 text-slate-200">Responsive (Fluid)</option>
-            </select>
+              onChange={(val) => setDevice(val as DeviceType)}
+              options={[
+                { value: 'iPhone 16 Pro', label: 'iPhone 16 Pro (393×852)' },
+                { value: 'Galaxy S25 Ultra', label: 'Galaxy S25 Ultra (412×915)' },
+                { value: 'iPad Pro 11"', label: 'iPad Pro 11" (834×1194)' },
+                { value: 'Laptop 14"', label: 'Laptop 14" (1440×900)' },
+                { value: 'Responsive', label: 'Responsive (Fluid)' },
+              ]}
+              buttonClassName="h-8 px-2.5 py-1 rounded-lg border-0 bg-transparent text-slate-200 hover:bg-slate-700/50"
+              dropdownWidth="w-56"
+            />
 
             {/* Orientation Toggle Button */}
             {activeDeviceType === 'Phone' && (

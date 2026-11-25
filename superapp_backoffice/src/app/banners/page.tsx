@@ -22,6 +22,7 @@ import { BannerTable } from '@/components/banners/BannerTable';
 import { BannerModal } from '@/components/banners/BannerModal';
 import { BannerPreviewModal } from '@/components/banners/BannerPreviewModal';
 import { Pagination } from '@/components/ui/Pagination';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function BannersPage() {
@@ -252,31 +253,31 @@ export default function BannersPage() {
           </div>
 
           {/* Audience Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <select
-              value={audienceFilter}
-              onChange={(e) => setAudienceFilter(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="ALL">All Audiences</option>
-              <option value="PUBLIC">Public</option>
-              <option value="ALL_FSA_STAFF">FSA Staff Only</option>
-            </select>
-          </div>
+          <CleanDropdown
+            label="Audience"
+            icon={<Filter className="w-3.5 h-3.5" />}
+            value={audienceFilter}
+            onChange={(val) => setAudienceFilter(val)}
+            options={[
+              { value: 'ALL', label: 'All Audiences' },
+              { value: 'PUBLIC', label: 'Public' },
+              { value: 'ALL_FSA_STAFF', label: 'FSA Staff Only' },
+            ]}
+            dropdownWidth="w-52"
+          />
 
           {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active Only</option>
-              <option value="INACTIVE">Inactive Only</option>
-            </select>
-          </div>
+          <CleanDropdown
+            label="Status"
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'ALL', label: 'All Status' },
+              { value: 'ACTIVE', label: 'Active Only' },
+              { value: 'INACTIVE', label: 'Inactive Only' },
+            ]}
+            dropdownWidth="w-48"
+          />
 
           {/* View Mode Toggle: Grid vs Table */}
           <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shrink-0">

@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
+import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ActionMenu } from '@/components/ui/ActionMenu';
 import { MoreHorizontal, PlayCircle, ArrowLeft, Layers, Table, Check, CheckCircle2, ShieldAlert, Activity } from 'lucide-react';
@@ -2882,19 +2883,20 @@ export default function ValidationReportTab({
               />
             </div>
             {activeStages.length > 0 && (
-              <select
+              <CleanDropdown
+                label="Engine"
                 value={selectedEngineFilter}
-                onChange={(e) => setSelectedEngineFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                aria-label="Filter findings by engine"
-              >
-                <option value="ALL">All Engines ({allFindings.length} findings)</option>
-                {activeStages.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.title} ({st.findings.length})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedEngineFilter(val)}
+                options={[
+                  { value: 'ALL', label: `All Engines (${allFindings.length} findings)` },
+                  ...activeStages.map((st) => ({
+                    value: st.id,
+                    label: `${st.title} (${st.findings.length})`,
+                  })),
+                ]}
+                dropdownWidth="w-64"
+                align="right"
+              />
             )}
           </div>
         )}
@@ -3191,18 +3193,21 @@ export default function ValidationReportTab({
                             className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                           />
                         </div>
-                        <select
+                        <CleanDropdown
+                          label="Severity"
                           value={reportSeverityFilter}
-                          onChange={(e) => setReportSeverityFilter(e.target.value)}
-                          className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                          aria-label="Filter report findings by severity"
-                        >
-                          <option value="ALL">All Severities ({allFindings.length})</option>
-                          <option value="CRITICAL">Critical ({allFindings.filter((f) => f.severity === 'CRITICAL').length})</option>
-                          <option value="HIGH">High ({allFindings.filter((f) => f.severity === 'HIGH').length})</option>
-                          <option value="MEDIUM">Medium ({allFindings.filter((f) => f.severity === 'MEDIUM').length})</option>
-                          <option value="LOW">Low ({allFindings.filter((f) => f.severity === 'LOW').length})</option>
-                        </select>
+                          onChange={(val) => setReportSeverityFilter(val)}
+                          options={[
+                            { value: 'ALL', label: `All Severities (${allFindings.length})` },
+                            { value: 'CRITICAL', label: `Critical (${allFindings.filter((f) => f.severity === 'CRITICAL').length})` },
+                            { value: 'HIGH', label: `High (${allFindings.filter((f) => f.severity === 'HIGH').length})` },
+                            { value: 'MEDIUM', label: `Medium (${allFindings.filter((f) => f.severity === 'MEDIUM').length})` },
+                            { value: 'LOW', label: `Low (${allFindings.filter((f) => f.severity === 'LOW').length})` },
+                          ]}
+                          buttonClassName="h-8 px-2.5 py-1 rounded-xl"
+                          dropdownWidth="w-56"
+                          align="right"
+                        />
                       </div>
                     </div>
 
@@ -3486,17 +3491,20 @@ export default function ValidationReportTab({
                       />
                     </div>
                     {sbomUniqueLicenses.length > 0 && (
-                      <select
+                      <CleanDropdown
+                        label="License"
                         value={sbomLicenseFilter}
-                        onChange={(e) => setSbomLicenseFilter(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                        aria-label="Filter SBOM by license"
-                      >
-                        <option value="ALL">All Licenses ({sbomComponents.length})</option>
-                        {sbomUniqueLicenses.map((lic) => (
-                          <option key={lic} value={lic}>{lic}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSbomLicenseFilter(val)}
+                        options={[
+                          { value: 'ALL', label: `All Licenses (${sbomComponents.length})` },
+                          ...sbomUniqueLicenses.map((lic) => ({
+                            value: lic,
+                            label: lic,
+                          })),
+                        ]}
+                        dropdownWidth="w-56"
+                        align="right"
+                      />
                     )}
                   </div>
 
