@@ -21,6 +21,7 @@ import { useAuth } from '@/lib/auth';
 import { rolesApi, Role } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   TOTAL_PERMISSIONS_COUNT,
   getRoleTheme,
@@ -115,52 +116,42 @@ function RolesPageContent() {
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-            <Shield className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Roles Directory
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Define administrative authorization tiers, assign security boundaries, and govern custom roles
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-            title="Refresh Roles"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <Link
-            href="/permissions"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span>Permissions Matrix</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-          </Link>
-
-          {canManageRoles && (
-            <Link
-              href="/roles/create"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+      <PageHeader
+        title="Roles Directory"
+        description="Define administrative authorization tiers, assign security boundaries, and govern custom roles"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              title="Refresh Roles"
             >
-              <Plus className="w-4 h-4" />
-              <span>Create Custom Role</span>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+
+            <Link
+              href="/permissions"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              <span>Permissions Matrix</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </Link>
-          )}
-        </div>
-      </div>
+
+            {canManageRoles && (
+              <Link
+                href="/roles/create"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Custom Role</span>
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -25,6 +25,7 @@ import { ActionMenu } from '@/components/ui/ActionMenu';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   getRoleTheme,
   getUserRoles,
@@ -806,38 +807,28 @@ function UsersContent() {
     <ProtectedRoute requiredPermission="user:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         {/* Page Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Users
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {isPlatformAdmin
-                  ? 'Manage operator accounts, status approvals, and platform user directory.'
-                  : 'Members of your organization. You can add, edit and deactivate them.'}
-              </p>
-            </div>
-          </div>
-          {/* Header Action Button */}
-          {canManageUsers && (
-            <Button
-              type="button"
-              onClick={handleOpenCreateUser}
-              className="w-full sm:w-auto gap-2 shadow-sm font-semibold justify-center"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              <span>Create New User</span>
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Users"
+          description={
+            isPlatformAdmin
+              ? 'Manage operator accounts, status approvals, and platform user directory.'
+              : 'Members of your organization. You can add, edit and deactivate them.'
+          }
+          actions={
+            canManageUsers ? (
+              <Button
+                type="button"
+                onClick={handleOpenCreateUser}
+                className="w-full sm:w-auto gap-2 shadow-sm font-semibold justify-center"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>Create New User</span>
+              </Button>
+            ) : undefined
+          }
+        />
         {/* KPI Quick Status Filters Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <button

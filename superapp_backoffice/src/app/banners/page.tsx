@@ -22,6 +22,7 @@ import { BannerTable } from '@/components/banners/BannerTable';
 import { BannerModal } from '@/components/banners/BannerModal';
 import { BannerPreviewModal } from '@/components/banners/BannerPreviewModal';
 import { Pagination } from '@/components/ui/Pagination';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function BannersPage() {
   const { toast } = useToast();
@@ -208,43 +209,33 @@ export default function BannersPage() {
     <ProtectedRoute permission="miniapp:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-300">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl border border-brand-100 dark:border-brand-500/20 shadow-xs">
-              <ImageIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                SuperApp Banners
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Manage promotional hero banners, campaign announcements, and interactive launch shortcuts
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-              title="Refresh Banners"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Banner</span>
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="SuperApp Banners"
+          description="Manage promotional hero banners, campaign announcements, and interactive launch shortcuts"
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                title="Refresh Banners"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenCreate}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Banner</span>
+              </button>
+            </>
+          }
+        />
 
         {/* Filter Bar & View Toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
