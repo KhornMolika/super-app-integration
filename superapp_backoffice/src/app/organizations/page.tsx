@@ -637,7 +637,7 @@ function OrganizationsContent() {
   };
 
   // If MA Developer is redirecting to their own organization detail page
-  if (isAuthLoading || (!isSuperOrAdmin && user?.organizationId)) {
+  if (!isAuthLoading && !isSuperOrAdmin && user?.organizationId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
         <svg className="animate-spin h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24">
@@ -650,7 +650,7 @@ function OrganizationsContent() {
   }
 
   // If MA Developer has no organization assigned
-  if (!isSuperOrAdmin && !user?.organizationId) {
+  if (!isAuthLoading && !isSuperOrAdmin && !user?.organizationId) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-4">
         <div className="p-4 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 w-14 h-14 mx-auto flex items-center justify-center">
@@ -704,13 +704,13 @@ function OrganizationsContent() {
         activeCount={globalCounts.isLoaded ? globalCounts.active : (statusFilter === 'ACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.active)}
         inactiveCount={globalCounts.isLoaded ? globalCounts.inactive : (statusFilter === 'INACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.inactive)}
         onAddClick={handleOpenCreate}
-        isSearching={isFetching || searchQuery !== debouncedSearch}
+        isSearching={(!loading && isFetching) || searchQuery !== debouncedSearch}
       />
 
       {/* Organizations Table with Server-Driven Pagination */}
       <OrganizationsTable
         organizations={organizations}
-        loading={loading && organizations.length === 0}
+        loading={(isAuthLoading || loading) && organizations.length === 0}
         onView={handleOpenView}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
