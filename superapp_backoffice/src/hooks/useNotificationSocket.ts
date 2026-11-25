@@ -1,13 +1,25 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-export function useNotificationSocket(onNotification: (notification: any) => void) {
+export function useNotificationSocket(
+  onNotification: (notification: any) => void,
+  userId?: string | null,
+) {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(onNotification);
+  const socketRef = useRef<Socket | null>(null);
+  const userIdRef = useRef<string | null | undefined>(userId);
 
   useEffect(() => {
     callbackRef.current = onNotification;
   }, [onNotification]);
+
+  useEffect(() => {
+    userIdRef.current = userId;
+    if (userId && socketRef.current?.connected) {
+      socketRef.current.emit('join', { userId });
+    }
+  }, [userId]);
 
   useEffect(() => {
     let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -26,10 +38,15 @@ export function useNotificationSocket(onNotification: (notification: any) => voi
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
+      auth: userIdRef.current ? { userId: userIdRef.current } : undefined,
     });
+    socketRef.current = socket;
 
     socket.on('connect', () => {
       setIsConnected(true);
+      if (userIdRef.current) {
+        socket.emit('join', { userId: userIdRef.current });
+      }
       console.log('Notification WebSocket connected');
     });
 
@@ -45,6 +62,7 @@ export function useNotificationSocket(onNotification: (notification: any) => voi
     });
 
     return () => {
+      socketRef.current = null;
       socket.disconnect();
     };
   }, []);
