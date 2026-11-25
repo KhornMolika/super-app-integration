@@ -160,7 +160,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
+  const [role, setRoleState] = useState<Role>('STAFF');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -275,9 +275,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // 3. Cross-tab auth state sync (immediate logout/login propagation)
+    let authChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      authChannel = new BroadcastChannel('fsa_backoffice_auth');
+      authChannel.onmessage = (event) => {
+        if (event?.data?.type === 'LOGOUT') {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+          setRoleState('STAFF');
+          if (!window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login';
+          }
+        } else if (event?.data?.type === 'LOGIN') {
+          fetchSession();
+        }
+      };
+    }
+
     return () => {
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      authChannel?.close();
     };
   }, []);
 
@@ -302,6 +321,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           organization: res.user.organization || null,
         });
         setIsAuthenticated(true);
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('fsa_backoffice_auth');
+          ch.postMessage({ type: 'LOGIN' });
+          ch.close();
+        }
         // A password someone else chose: the login page sends the user to /change-password
         return { success: true, mustChangePassword: (res as any).must_change_password === true };
       }
@@ -326,7 +350,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (_) {}
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setRoleState('STAFF');
     if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('fsa_backoffice_auth');
+        ch.postMessage({ type: 'LOGOUT' });
+        ch.close();
+      }
       window.location.href = '/login';
     }
   };

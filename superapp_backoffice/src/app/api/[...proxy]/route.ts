@@ -1,7 +1,44 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { verifySameOrigin } from '@/lib/csrf';
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+// Deduplicate concurrent silent refreshes per refresh_token within the BFF process
+const inFlightRefreshes = new Map<
+  string,
+  Promise<{ status: number; accessToken?: string; refreshToken?: string }>
+>();
+
+async function refreshSessionOnce(refreshToken: string) {
+  const existing = inFlightRefreshes.get(refreshToken);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const refreshRes = await fetch(`${BACKEND_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `refresh_token=${refreshToken}`,
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!refreshRes.ok) {
+      return { status: refreshRes.status };
+    }
+    const refreshData = await refreshRes.json().catch(() => null);
+    return {
+      status: refreshRes.status,
+      accessToken: refreshData?.access_token as string | undefined,
+      refreshToken: refreshData?.refresh_token as string | undefined,
+    };
+  })().finally(() => {
+    inFlightRefreshes.delete(refreshToken);
+  });
+
+  inFlightRefreshes.set(refreshToken, promise);
+  return promise;
+}
 
 
 // Allowlist of base routes allowed through the proxy
@@ -41,6 +78,9 @@ const ALLOWED_ROUTES = [
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {
+  const originError = verifySameOrigin(request);
+  if (originError) return originError;
+
   try {
     const proxyParams = await params;
     let pathParts = proxyParams.proxy || [];
@@ -86,34 +126,22 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       isStale = true;
     }
 
-    // If token is stale/missing and refresh token exists, attempt silent refresh with backend first
+    // If token is stale/missing and refresh token exists, attempt single-flight silent refresh with backend first
     if (isStale && refreshToken && !clientAuth) {
       try {
-        const refreshRes = await fetch(`${BACKEND_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Cookie: `refresh_token=${refreshToken}`,
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          if (refreshData?.access_token) {
-            token = refreshData.access_token;
-            newRefreshedToken = refreshData.access_token;
-            if (refreshData?.refresh_token) {
-              newRefreshToken = refreshData.refresh_token;
-            }
-            isStale = false;
+        const refreshed = await refreshSessionOnce(refreshToken);
+        if (refreshed.accessToken) {
+          token = refreshed.accessToken;
+          newRefreshedToken = refreshed.accessToken;
+          if (refreshed.refreshToken) {
+            newRefreshToken = refreshed.refreshToken;
           }
-        } else if (refreshRes.status === 401) {
-          if (path === 'users/me') {
-            const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
-            unauth.cookies.delete('auth_token');
-            unauth.cookies.delete('refresh_token');
-            return unauth;
-          }
+          isStale = false;
+        } else if (refreshed.status === 401) {
+          const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+          unauth.cookies.delete('auth_token');
+          unauth.cookies.delete('refresh_token');
+          return unauth;
         }
       } catch (_) {}
     }
@@ -126,15 +154,12 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       return unauth;
     }
 
-
-    // Prepare headers
+    // Prepare headers (never fall back to internal secrets for client proxy calls)
     const headers = new Headers();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     } else if (clientAuth) {
       headers.set('Authorization', clientAuth);
-    } else if (process.env.BACKEND_INTERNAL_SECRET) {
-      headers.set('Authorization', `Bearer ${process.env.BACKEND_INTERNAL_SECRET}`);
     }
     
     // Forward Content-Type if present

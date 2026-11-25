@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { syncPasswordChangeCookie } from '@/lib/password-change';
+import { verifySameOrigin } from '@/lib/csrf';
 
 const BACKEND_URL =
   process.env.BACKEND_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:3000';
 
-export async function POST() {
+export async function POST(request: Request) {
+  const originError = verifySameOrigin(request);
+  if (originError) return originError;
   // End the session on the server too: its refresh token stops working
   const refreshToken = (await cookies()).get('refresh_token')?.value;
   if (refreshToken) {

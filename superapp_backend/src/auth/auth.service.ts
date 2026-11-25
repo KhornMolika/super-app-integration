@@ -67,6 +67,10 @@ export const BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS =
 export const BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS =
   Number(process.env.BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS) || 7 * 24 * 60 * 60; // 7 days
 
+/** Absolute maximum session lifetime across sliding rotations (default 30 days) */
+export const BACK_OFFICE_MAX_SESSION_TTL_SECONDS =
+  Number(process.env.BACK_OFFICE_MAX_SESSION_TTL_SECONDS) || 30 * 24 * 60 * 60; // 30 days
+
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
@@ -695,9 +699,25 @@ export class AuthService implements OnModuleInit {
         [rec.id],
       );
     }
+    const startedAt = new Date(rec.familyStartedAt ?? rec.createdAt);
+    if (
+      Date.now() - startedAt.getTime() >
+      BACK_OFFICE_MAX_SESSION_TTL_SECONDS * 1000
+    ) {
+      await this.revokeSession(rec.familyId);
+      throw new UnauthorizedException(
+        'Session maximum lifetime reached. Please sign in again.',
+      );
+    }
+
+    // Opportunistically prune expired or stale-revoked refresh tokens
+    db.query(
+      `DELETE FROM "refresh_tokens" WHERE "expiresAt" < now() OR ("revokedAt" IS NOT NULL AND "revokedAt" < now() - interval '7 days')`,
+    ).catch(() => undefined);
+
     return {
       familyId: rec.familyId,
-      startedAt: new Date(rec.familyStartedAt ?? rec.createdAt),
+      startedAt,
     };
   }
 
