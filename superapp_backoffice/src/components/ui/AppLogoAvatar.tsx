@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 
 export interface AppLogoAvatarProps {
@@ -20,6 +20,10 @@ export function AppLogoAvatar({
 }: AppLogoAvatarProps) {
   const [hasError, setHasError] = useState(false);
   const normalizedLogo = normalizeAssetUrl(logo);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [normalizedLogo]);
 
   const initial = (name?.trim()?.charAt(0) || 'A').toUpperCase();
 

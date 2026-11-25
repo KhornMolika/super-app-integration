@@ -40,10 +40,25 @@ export class PresignedUrlHelper {
         }
       }
 
-      // If publicUrl is HTTP, raw IP (e.g. 10.200.8.6), or localhost, route through backend HTTPS proxy to prevent Mixed Content
+      // If publicUrl is HTTP, raw IP (e.g. 10.200.8.6), or localhost, route through backend HTTPS proxy to prevent Mixed Content.
+      // Never bake ephemeral dev tunnel URLs (trycloudflare, ngrok, loca.lt) into persisted URLs.
       const base = (apiBaseUrl || '').replace(/\/+$/, '');
       const encodedKey = encodeURIComponent(objectKey);
+      let isEphemeralOrLocal = false;
       if (base) {
+        try {
+          const parsedBase = new URL(base);
+          isEphemeralOrLocal =
+            /\.(?:trycloudflare\.com|ngrok(?:-free)?\.app|ngrok\.io|loca\.lt)$/i.test(
+              parsedBase.hostname,
+            ) ||
+            parsedBase.hostname === 'localhost' ||
+            parsedBase.hostname === '127.0.0.1';
+        } catch {
+          isEphemeralOrLocal = false;
+        }
+      }
+      if (base && !isEphemeralOrLocal) {
         return `${base}/storage/asset?key=${encodedKey}&bucket=${encodeURIComponent(bucket)}`;
       }
       return `/api/storage/asset?key=${encodedKey}&bucket=${encodeURIComponent(bucket)}`;

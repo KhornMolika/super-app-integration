@@ -99,10 +99,15 @@ export function assetProxyTarget(value: string): { key: string; bucket: string |
   }
 }
 
+const EPHEMERAL_TUNNEL_HOST_RE =
+  /\.(?:trycloudflare\.com|ngrok(?:-free)?\.app|ngrok\.io|loca\.lt)$/i;
+
 /**
  * Sets a fresh `exp` and `sig` on an asset-proxy link. A link that already has
  * them is re-signed too: a client may save a signed link back into the DB, and
  * it must not expire there. Links without a `key` come back unchanged.
+ * Ephemeral tunnel / localhost origins are stripped to a relative `/api/storage/asset`
+ * path so expired dev tunnels never break stored logos.
  */
 export function signAssetLink(link: string, nowMs = Date.now()): string {
   if (!isAssetProxyLink(link)) return link;
@@ -119,6 +124,17 @@ export function signAssetLink(link: string, nowMs = Date.now()): string {
   const exp = assetLinkExpiry(nowMs);
   url.searchParams.set('exp', String(exp));
   url.searchParams.set('sig', computeAssetSignature(key, bucket, exp));
+  const stripOrigin =
+    absolute &&
+    (EPHEMERAL_TUNNEL_HOST_RE.test(url.hostname) ||
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1');
+  if (stripOrigin) {
+    const pathname = url.pathname.startsWith('/api/')
+      ? url.pathname
+      : `/api${url.pathname}`;
+    return `${pathname}${url.search}`;
+  }
   return absolute ? url.toString() : `${url.pathname}${url.search}`;
 }
 

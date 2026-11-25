@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon, LockIcon, GlobeIcon, AndroidIcon, AppleIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { CreateMiniAppDto, HOME_WIDGET_FIELD, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
@@ -116,22 +117,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             {/* Logo Display */}
-            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-md flex items-center justify-center shrink-0">
-              {formData.logo ? (
-                <img
-                  src={formData.logo}
-                  alt={formData.name || 'Logo'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-brand-800 flex items-center justify-center text-white font-bold text-2xl">
-                  {formData.name ? formData.name.charAt(0).toUpperCase() : 'M'}
-                </div>
-              )}
-            </div>
+            <AppLogoAvatar logo={formData.logo} name={formData.name || 'M'} size="xl" />
 
             {/* Title & Identifiers */}
             <div>

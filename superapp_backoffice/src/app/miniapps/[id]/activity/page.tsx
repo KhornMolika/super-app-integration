@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { miniappsApi } from '@/api';
 import ActivityTab from '@/components/ui/ActivityTab';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import {
   ArrowLeft,
   Activity,
@@ -103,17 +104,12 @@ function MiniAppActivityPageContent() {
       {/* MiniApp Profile Header Card */}
       <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-center shadow-sm">
-            {miniApp.logo || miniApp.iconUrl ? (
-              <img
-                src={miniApp.logo || miniApp.iconUrl}
-                alt={miniApp.name || 'MiniApp logo'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Activity className="w-7 h-7 text-brand-500" />
-            )}
-          </div>
+          <AppLogoAvatar
+            logo={miniApp.logo || miniApp.iconUrl}
+            name={miniApp.name || miniApp.appId}
+            size="lg"
+            className="w-14 h-14 rounded-2xl"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">
