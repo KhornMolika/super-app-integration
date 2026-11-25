@@ -482,7 +482,10 @@ export default function VersionHistoryTab({
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
-            {activeTestRecord?.changelog || 'Candidate branch/tag compiled for SuperApp sandbox integration validation.'}
+            {activeTestRecord?.changelog ||
+              (['WEBVIEW', 'DEEP_LINK'].includes(String(integrationMethod || '').toUpperCase())
+                ? 'Active dynamic endpoint staged for SuperApp sandbox validation (no native build required).'
+                : 'Candidate branch/tag compiled for SuperApp sandbox integration validation.')}
           </p>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-900/40 flex items-center justify-between gap-2">

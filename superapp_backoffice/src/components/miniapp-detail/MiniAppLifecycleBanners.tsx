@@ -42,6 +42,7 @@ export interface MiniAppLifecycleBannersProps {
   currentReleaseVersion?: string;
   draftVersion?: string;
   hasActiveProduction?: boolean;
+  integrationMethod?: string;
 }
 
 export default function MiniAppLifecycleBanners({
@@ -63,7 +64,15 @@ export default function MiniAppLifecycleBanners({
   currentReleaseVersion,
   draftVersion,
   hasActiveProduction,
+  integrationMethod,
 }: MiniAppLifecycleBannersProps) {
+  const isDynamicMethod = ['WEBVIEW', 'DEEP_LINK'].includes(
+    String(integrationMethod || '').toUpperCase(),
+  );
+  const dynamicLabel =
+    String(integrationMethod || '').toUpperCase() === 'DEEP_LINK'
+      ? 'Deep Link'
+      : 'WebView';
   const stageDefs = [
     { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-accent-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
     { id: 'compile', name: '2. Compile APK', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter SuperApp container and compiling APK.' },
@@ -411,11 +420,14 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-teal-900 dark:text-teal-200">
-                MiniApp Approved — Build & Assembly Required
+                {isDynamicMethod
+                  ? 'MiniApp Approved — Ready for Sandbox Testing'
+                  : 'MiniApp Approved — Build & Assembly Required'}
               </h4>
               <p className="text-sm text-teal-800 dark:text-teal-200 mt-1 leading-relaxed">
-                Integration review approved by SA Admin. Build and validate the SuperApp test container before moving
-                to the TESTING phase for APK download.
+                {isDynamicMethod
+                  ? `Integration review approved. No native build is required for ${dynamicLabel} — move directly to Sandbox Testing.`
+                  : 'Integration review approved by SA Admin. Build and validate the SuperApp test container before moving to the TESTING phase for APK download.'}
               </p>
             </div>
           </div>
@@ -431,10 +443,14 @@ export default function MiniAppLifecycleBanners({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                  d={
+                    isDynamicMethod
+                      ? 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z'
+                      : 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z'
+                  }
                 />
               </svg>
-              <span>Build & Move to Testing</span>
+              <span>{isDynamicMethod ? 'Move to Testing' : 'Build & Move to Testing'}</span>
             </Button>
           </div>
         </div>
@@ -649,12 +665,18 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-accent-900 dark:text-accent-200">
-                Manual Sandbox Testing Phase
+                {isDynamicMethod ? `${dynamicLabel} Sandbox Testing` : 'Manual Sandbox Testing Phase'}
               </h4>
               <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
-                The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or
-                the test APK on an Android phone. When everything works, a reviewer marks testing as passed; found a
-                defect? Request changes.
+                {isDynamicMethod ? (
+                  <>
+                    Ready for verification. Test the MiniApp with <strong>Sandbox Preview</strong> in the header or inside the SuperApp. When everything works, mark testing as passed; found a defect? Request changes.
+                  </>
+                ) : (
+                  <>
+                    The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or the test APK on an Android phone. When everything works, a reviewer marks testing as passed; found a defect? Request changes.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -688,8 +710,9 @@ export default function MiniAppLifecycleBanners({
             <div>
               <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-200">Testing Passed</h4>
               <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1 leading-relaxed">
-                The test build was verified. Activating starts the production release build and puts the MiniApp in
-                the SuperApp catalog.
+                {isDynamicMethod
+                  ? `${dynamicLabel} sandbox testing was verified. Activating publishes the MiniApp directly to the SuperApp catalog.`
+                  : 'The test build was verified. Activating starts the production release build and puts the MiniApp in the SuperApp catalog.'}
               </p>
             </div>
           </div>
