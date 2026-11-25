@@ -55,7 +55,7 @@ export function CapabilitiesTab({
   const initialMethod = (searchParams?.get('method') as IntegrationMethodOption) || 'ALL';
   const initialAllowlist = (searchParams?.get('allowlist') as 'ALL' | 'ALLOWED' | 'DISALLOWED') || 'ALL';
   const initialPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
-  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '10', 10));
+  const initialLimit = Math.max(5, parseInt(searchParams?.get('limit') || '5', 10));
   const initialView = searchParams?.get('view') === 'grid' ? 'grid' : 'table';
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -101,7 +101,7 @@ export function CapabilitiesTab({
     if (currentPage > 1) params.set('page', String(currentPage));
     else params.delete('page');
 
-    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (pageSize !== 5) params.set('limit', String(pageSize));
     else params.delete('limit');
 
     if (viewMode !== 'table') params.set('view', viewMode);
@@ -505,12 +505,11 @@ export function CapabilitiesTab({
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4 sm:px-5">Capability</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Integration Method Call</th>
-                  <th className="py-3 px-4">Provider Package</th>
-                  <th className="py-3 px-4">Catalog Status</th>
-                  <th className="py-3 px-4">Host Allowlist</th>
+                  <th className="py-3 px-4">Capability</th>
+                  <th className="py-3 px-3">Category</th>
+                  <th className="py-3 px-3">Integration Method Call</th>
+                  <th className="py-3 px-3">Catalog Status</th>
+                  <th className="py-3 px-3">Host Allowlist</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -534,8 +533,8 @@ export function CapabilitiesTab({
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group"
                     >
                       {/* Capability Name & Key (no description underneath) */}
-                      <td className="py-3.5 px-4 sm:px-5">
-                        <div className="flex items-center gap-3">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className={`w-9 h-9 rounded-xl ${visual.bgColor} ${visual.borderColor} border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}
                           >
@@ -566,7 +565,7 @@ export function CapabilitiesTab({
                       </td>
 
                       {/* Category */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
                         >
@@ -575,7 +574,7 @@ export function CapabilitiesTab({
                       </td>
 
                       {/* Method Call */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3">
                         <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/40 transition-colors">
                           <span
                             className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${methodSyntax.badgeColor.bg} ${methodSyntax.badgeColor.text} ${methodSyntax.badgeColor.border}`}
@@ -583,7 +582,7 @@ export function CapabilitiesTab({
                             {methodSyntax.badgeLabel}
                           </span>
                           <code
-                            className="font-mono text-xs font-bold text-accent-600 dark:text-accent-400 truncate max-w-[140px] sm:max-w-[200px]"
+                            className="font-mono text-xs font-bold text-accent-600 dark:text-accent-400 truncate max-w-[140px]"
                             title={methodSyntax.full}
                           >
                             {methodSyntax.concise}
@@ -603,20 +602,8 @@ export function CapabilitiesTab({
                         </div>
                       </td>
 
-                      {/* Provider Package */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {cap.providerPackage ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs border border-slate-200/60 dark:border-slate-700/60">
-                            <Package className="w-3 h-3 text-slate-400" />
-                            <span className="truncate max-w-[150px]">{cap.providerPackage}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-mono text-xs">—</span>
-                        )}
-                      </td>
-
                       {/* Status & Platform */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="space-y-0.5">
                           <span
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${
