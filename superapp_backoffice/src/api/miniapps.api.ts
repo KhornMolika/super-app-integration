@@ -130,15 +130,21 @@ export const miniappsApi = {
     permissions?: any[];
   }) => {
     if (data.id) {
-      return apiClient<{ verified: boolean; error?: string }>(`/api/mini-apps/${data.id}/verify-domain`, {
+      return apiClient<{ verified: boolean; error?: string; message?: string; allowedDomains?: string[]; permissions?: any[] }>(
+        `/api/mini-apps/${data.id}/verify-domain`,
+        {
+          method: 'POST',
+          body: data,
+        },
+      ).then(unwrapItem);
+    }
+    return apiClient<{ verified: boolean; error?: string; message?: string; allowedDomains?: string[]; permissions?: any[] }>(
+      '/api/mini-apps/verify-domain',
+      {
         method: 'POST',
         body: data,
-      });
-    }
-    return apiClient<{ verified: boolean; error?: string }>('/api/mini-apps/verify-domain', {
-      method: 'POST',
-      body: data,
-    });
+      },
+    ).then(unwrapItem);
   },
 
   triggerAction: (

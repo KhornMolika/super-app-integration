@@ -521,11 +521,16 @@ export default function WebViewIntegrationForm({
   };
 
   const urlTone =
-    prodUrlValidation.status === 'invalid'
+    prodUrlValidation.status === 'invalid' ||
+    (prodUrlValidation.status === 'idle' && Boolean(allErrors['integrationConfigWebView.productionUrl']))
       ? 'text-rose-600 dark:text-rose-400'
       : prodUrlValidation.status === 'unreachable'
         ? 'text-amber-600 dark:text-amber-400'
-        : 'text-slate-500 dark:text-slate-400';
+        : prodUrlValidation.status === 'valid'
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : prodUrlValidation.status === 'checking'
+            ? 'text-sky-600 dark:text-sky-400'
+            : 'text-slate-500 dark:text-slate-400';
   const urlMessage =
     prodUrlValidation.status === 'valid'
       ? 'Server is online.'
@@ -894,8 +899,13 @@ export default function WebViewIntegrationForm({
                 {verifyError}
               </p>
             )}
+            {isVerified && domainVerificationMsgType === 'success' && domainVerificationMsg && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium w-full mt-1">
+                {domainVerificationMsg}
+              </p>
+            )}
             {!isVerified && domainVerificationMsgType === 'info' && domainVerificationMsg && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 w-full mt-1">
+              <p className="text-xs text-sky-600 dark:text-sky-400 font-medium w-full mt-1">
                 {domainVerificationMsg}
               </p>
             )}
