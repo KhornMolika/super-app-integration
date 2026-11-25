@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CapabilityDefinition } from './entities/capability-definition.entity';
 import { SuperAppCapability } from '../super-app/entities/super-app-capability.entity';
+import { resolveCapabilityAliases } from './capability-aliases';
 
 /**
  * ADR-004 Section 5 — "disable, don't fail".
@@ -200,8 +201,25 @@ export class CapabilityGateService {
       this.definitions.find(),
       this.releases.find({ order: { createdAt: 'DESC' }, take: 1 }),
     ]);
+    const byKey = new Map<string, CapabilityDefinition>();
+    // Register exact keys first, then canonical aliases so exact matches always win
+    for (const d of defs) {
+      byKey.set(d.key.toLowerCase(), d);
+    }
+    for (const d of defs) {
+      if (d.name) {
+        const lowerName = d.name.toLowerCase();
+        if (!byKey.has(lowerName)) byKey.set(lowerName, d);
+      }
+      for (const alias of resolveCapabilityAliases(d.key)) {
+        const existing = byKey.get(alias);
+        if (!existing || (!existing.isActive && d.isActive) || (existing.isAllowed === false && d.isAllowed !== false)) {
+          byKey.set(alias, d);
+        }
+      }
+    }
     return {
-      byKey: new Map(defs.map((d) => [d.key.toLowerCase(), d])),
+      byKey,
       hostVersion: latest[0]?.superAppVersion ?? null,
     };
   }

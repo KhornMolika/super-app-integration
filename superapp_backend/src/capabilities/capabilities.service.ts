@@ -16,6 +16,7 @@ import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { createPaginatedResponse } from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
+import { resolveCapabilityAliases } from './capability-aliases';
 
 @Injectable()
 export class CapabilitiesService implements OnApplicationBootstrap {
@@ -109,10 +110,11 @@ export class CapabilitiesService implements OnApplicationBootstrap {
 
   async findByKey(key: string): Promise<CapabilityDefinition | null> {
     if (!key) return null;
+    const candidates = resolveCapabilityAliases(key);
     return this.capabilityDefinitionRepository
       .createQueryBuilder('perm')
-      .where('LOWER(perm.key) = LOWER(:key)', { key })
-      .orWhere('LOWER(perm.name) = LOWER(:key)', { key })
+      .where('LOWER(perm.key) IN (:...candidates)', { candidates })
+      .orWhere('LOWER(perm.name) IN (:...candidates)', { candidates })
       .getOne();
   }
 
