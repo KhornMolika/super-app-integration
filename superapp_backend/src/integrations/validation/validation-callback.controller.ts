@@ -278,6 +278,22 @@ export class ValidationCallbackController {
       type: 'SECURITY_CHECK',
     });
 
+    if (dto.checks?.capability_gate?.passed === true) {
+      await this.issueRepository
+        .createQueryBuilder()
+        .delete()
+        .from(MiniAppIssue)
+        .where('"miniAppId" = :appId', { appId: app.id })
+        .andWhere(
+          '(LOWER(description) LIKE :capNotRec OR LOWER(description) LIKE :capNotSup)',
+          {
+            capNotRec: '%capability%not recognized%',
+            capNotSup: '%capability%not supported%',
+          },
+        )
+        .execute();
+    }
+
     // The commit the scan checked out: the build uses the same one (gitRefOf).
     // Only a full SHA, on the config that was scanned (the new version's, if any).
     if (dto.commitSha && /^[0-9a-f]{40}$/i.test(dto.commitSha)) {

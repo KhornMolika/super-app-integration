@@ -716,8 +716,21 @@ export default function ValidationReportTab({
     });
 
     // Fallback: If validationErrors exists on the app/version and wasn't already in issues
-    if (effectiveData.validationErrors && typeof effectiveData.validationErrors === 'object') {
+    const scanValStatus = String(
+      effectiveData.validationStatus || miniApp.validationStatus || '',
+    ).toUpperCase();
+    const capGateCompletedClean =
+      stages?.capability_gate?.status === 'COMPLETED' &&
+      !stages?.capability_gate?.findings;
+    if (
+      scanValStatus !== 'PASSED' &&
+      effectiveData.validationErrors &&
+      typeof effectiveData.validationErrors === 'object'
+    ) {
       Object.entries(effectiveData.validationErrors).forEach(([field, msg]) => {
+        if (capGateCompletedClean && field.toLowerCase().includes('perm')) {
+          return;
+        }
         const desc = typeof msg === 'string' ? msg : JSON.stringify(msg);
         if (!list.some((f) => f.description === desc)) {
           list.push({
