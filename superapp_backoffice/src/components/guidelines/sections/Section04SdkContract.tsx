@@ -131,45 +131,39 @@ export function Section04SdkContract({
       </div>
 
       {/* PILLAR 0: Prerequisites, SDK Download & Token Setup (Auto-Filtered by Active Stack) */}
-      <div id="contract-prerequisites" className="rounded-2xl border border-brand-200 dark:border-brand-900/60 bg-gradient-to-br from-brand-50/50 via-white to-slate-50/50 dark:from-brand-950/20 dark:via-slate-900 dark:to-slate-950 p-6 space-y-6 shadow-xs scroll-mt-24">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-              <Download className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-                  Prerequisites &amp; Setup
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  SDK Download, Developer Tokens &amp; App Setup for {currentMeta.name}
-                </h4>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Download the private SDK, authenticate your developer environment, and configure package identifiers without registration bottlenecks.
-              </p>
-            </div>
+      <section id="contract-prerequisites" className="space-y-6 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+              Prerequisites &amp; Setup • {currentMeta.name}
+            </span>
+            <h4 className="font-bold text-slate-900 dark:text-white text-lg mt-0.5">
+              SDK Download, Developer Tokens &amp; App Setup
+            </h4>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Download the private SDK, authenticate your developer environment, and configure package identifiers without registration bottlenecks.
+            </p>
           </div>
-          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-brand-100/70 dark:bg-brand-950 text-brand-800 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-semibold flex items-center gap-1.5">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-md bg-brand-500/10 text-brand-700 dark:text-brand-300 font-medium flex items-center gap-1.5 shrink-0">
             <Key className="w-3.5 h-3.5 text-brand-500" />
             No App Registration Required to Start
           </span>
         </div>
 
-        {/* 4-Step Action Grid (Dynamically Auto-Filtered) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        {/* 4-Step Editorial Grid (Dynamically Auto-Filtered) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-7 text-sm">
           {/* STEP 1: Developer Access Token (Account Level) */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">1</span>
-              Get Developer SDK Token (Account-Level)
-            </strong>
-            <p className="text-slate-600 dark:text-slate-400">
-              You do <strong>not</strong> need to register an app first to begin coding. Access tokens are tied to your Developer Account:
+          <div className="space-y-2.5 border-l-2 border-brand-500/50 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">01</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Get Developer SDK Token (Account-Level)
+              </h5>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              You do <strong className="text-slate-900 dark:text-slate-200">not</strong> need to register an app first to begin coding. Access tokens are tied to your Developer Account:
             </p>
-            <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
+            <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
               <p className="text-slate-400"># 1. Log into FSA BackOffice</p>
               <p className="text-brand-300"># 2. Go to: Settings &gt; Developer Tokens (PAT)</p>
               <p className="text-emerald-400"># 3. Copy your Developer Token: fsa_pat_****************</p>
@@ -177,100 +171,106 @@ export function Section04SdkContract({
           </div>
 
           {/* STEP 2: Stack-Specific Download & Installation */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">2</span>
-              Install {currentMeta.pkg}
-            </strong>
+          <div className="space-y-2.5 border-l-2 border-brand-500/50 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">02</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white truncate">
+                Install {currentMeta.pkg}
+              </h5>
+            </div>
             {activeMethodTab === "webview" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Configure <code className="font-mono text-brand-600">.npmrc</code> in your project root with your Developer Token, then install:
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Configure <code className="font-mono text-brand-600 dark:text-brand-400">.npmrc</code> in your project root with your Developer Token, then install:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-brand-300">@fsasuperapp:registry=https://app.fintechcenterfsa.com/api/sdk/</p>
-                  <p className="text-sky-300">pnpm add @fsasuperapp/miniapp-web-sdk</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-brand-300 whitespace-nowrap">@fsasuperapp:registry=https://app.fintechcenterfsa.com/api/sdk/</p>
+                  <p className="text-sky-300 whitespace-nowrap">pnpm add @fsasuperapp/miniapp-web-sdk</p>
                 </div>
               </>
             ) : activeMethodTab === "flutter" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Authenticate the hosted pub repository via terminal, then declare in <code className="font-mono text-indigo-500">pubspec.yaml</code>:
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Authenticate the hosted pub repository via terminal, then declare in <code className="font-mono text-indigo-500 dark:text-indigo-400">pubspec.yaml</code>:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-brand-300">dart pub token add https://app.fintechcenterfsa.com/pub</p>
-                  <p className="text-indigo-300"># In pubspec.yaml: fsa_superapp_miniapp_flutter_sdk: ^1.0.0</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-brand-300 whitespace-nowrap">dart pub token add https://app.fintechcenterfsa.com/pub</p>
+                  <p className="text-indigo-300 whitespace-nowrap"># In pubspec.yaml: fsa_superapp_miniapp_flutter_sdk: ^1.0.0</p>
                 </div>
               </>
             ) : activeMethodTab === "native" ? (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Download compiled binaries directly from BackOffice Artifact Hub (`/api/sdk-artifacts`):
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Download compiled binaries directly from BackOffice Artifact Hub (<code className="font-mono">/api/sdk-artifacts</code>):
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-emerald-300">Android: libs/fsasuperapp-native-sdk.aar</p>
-                  <p className="text-indigo-300">iOS: Frameworks/FSASuperAppNativeSDK.xcframework</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-emerald-300 whitespace-nowrap">Android: libs/fsasuperapp-native-sdk.aar</p>
+                  <p className="text-indigo-300 whitespace-nowrap">iOS: Frameworks/FSASuperAppNativeSDK.xcframework</p>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-slate-600 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   Install protocol helper and register custom URI scheme in OS manifests:
                 </p>
-                <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-amber-300">pnpm add @fsasuperapp/miniapp-deeplink-sdk</p>
-                  <p className="text-slate-400"># URI Scheme: fsahr://attendance/open</p>
+                <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+                  <p className="text-amber-300 whitespace-nowrap">pnpm add @fsasuperapp/miniapp-deeplink-sdk</p>
+                  <p className="text-slate-400 whitespace-nowrap"># URI Scheme: fsahr://attendance/open</p>
                 </div>
               </>
             )}
           </div>
 
           {/* STEP 3: Slug vs. Auto-Detected MiniApp ID (Two-Tier Model) */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">3</span>
-              Package Identifier &amp; Portal Slug
-            </strong>
+          <div className="space-y-2.5 border-l-2 border-slate-300 dark:border-slate-700 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">03</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Package Identifier &amp; Portal Slug
+              </h5>
+            </div>
             {activeMethodTab === "flutter" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Use standard Dart <code className="font-mono text-indigo-500">snake_case</code> in <code className="font-mono">pubspec.yaml</code> (e.g. <code className="font-mono text-brand-600">fsa_hr_attendance_module</code>). When you register in BackOffice, the SuperApp <strong>auto-detects and links your binary app_id directly from pubspec.yaml</strong>—avoiding naming conflicts.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Use standard Dart <code className="font-mono text-indigo-500 dark:text-indigo-400">snake_case</code> in <code className="font-mono">pubspec.yaml</code> (e.g. <code className="font-mono text-brand-600 dark:text-brand-400">fsa_hr_attendance_module</code>). When you register in BackOffice, the SuperApp <strong className="text-slate-900 dark:text-slate-200">auto-detects and links your binary app_id directly from pubspec.yaml</strong>—avoiding naming conflicts.
               </p>
             ) : activeMethodTab === "native" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Use standard reverse-DNS in Android (<code className="font-mono text-emerald-500">com.fsa.enterprise.hr</code>) and iOS bundle ID. In BackOffice, the SuperApp <strong>auto-detects your app_id from your uploaded .aar or framework</strong> in the Integration step.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Use standard reverse-DNS in Android (<code className="font-mono text-emerald-500 dark:text-emerald-400">com.fsa.enterprise.hr</code>) and iOS bundle ID. In BackOffice, the SuperApp <strong className="text-slate-900 dark:text-slate-200">auto-detects your app_id from your uploaded .aar or framework</strong> in the Integration step.
               </p>
             ) : activeMethodTab === "deeplink" ? (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Register your custom scheme (<code className="font-mono text-amber-500">fsahr</code>) and host path (<code className="font-mono">attendance/open</code>) in the Integration tab. In Basic Info, supply a friendly human slug (<code className="font-mono">staff-portal-attendance</code>).
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Register your custom scheme (<code className="font-mono text-amber-500 dark:text-amber-400">fsahr</code>) and host path (<code className="font-mono">attendance/open</code>) in the Integration tab. In Basic Info, supply a friendly human slug (<code className="font-mono">staff-portal-attendance</code>).
               </p>
             ) : (
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Develop locally using your package name in <code className="font-mono">package.json</code> (<code className="font-mono text-brand-600">fsa-hr-attendance-miniapp</code>). When you register in BackOffice, Tab 1 sets your friendly URL <strong>Slug</strong> (<code className="font-mono">staff-portal-attendance</code>), and Tab 2 links your package.
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Develop locally using your package name in <code className="font-mono">package.json</code> (<code className="font-mono text-brand-600 dark:text-brand-400">fsa-hr-attendance-miniapp</code>). When you register in BackOffice, Tab 1 sets your friendly URL <strong className="text-slate-900 dark:text-slate-200">Slug</strong> (<code className="font-mono">staff-portal-attendance</code>), and Tab 2 links your package.
               </p>
             )}
-            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-xs text-slate-600 dark:text-slate-300 font-mono flex items-center justify-between">
+            <div className="pt-1 text-xs font-mono flex flex-wrap items-center gap-x-2 gap-y-1 text-slate-500 dark:text-slate-400">
               <span>Basic Info: Slug (URL/Catalog)</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">&rarr; Integration: Auto-Detected app_id</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">&rarr; Integration: Auto-Detected app_id</span>
             </div>
           </div>
 
           {/* STEP 4: Runtime Employee Token & Scopes */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 space-y-2">
-            <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">4</span>
-              Runtime Employee Session &amp; Scopes
-            </strong>
-            <p className="text-slate-600 dark:text-slate-400">
+          <div className="space-y-2.5 border-l-2 border-slate-300 dark:border-slate-700 pl-4 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">04</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white">
+                Runtime Employee Session &amp; Scopes
+              </h5>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               When the employee opens your MiniApp, the SuperApp host shell injects a verified session token for your backend API calls:
             </p>
-            <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800">
-              <p className="text-sky-300">const auth = await FSASuperApp.getAuthToken();</p>
-              <p className="text-slate-400"># Send: Authorization: Bearer &#36;&#123;auth.accessToken&#125;</p>
-              <p className="text-purple-300"># Scopes: staff:profile:read, notification:push, storage:secure</p>
+            <div className="p-3 bg-slate-900 text-slate-200 font-mono text-xs rounded-lg space-y-1 border border-slate-800 overflow-x-auto">
+              <p className="text-sky-300 whitespace-nowrap">const auth = await FSASuperApp.getAuthToken();</p>
+              <p className="text-slate-400 whitespace-nowrap"># Send: Authorization: Bearer &#36;&#123;auth.accessToken&#125;</p>
+              <p className="text-purple-300 whitespace-nowrap"># Scopes: staff:profile:read, notification:push, storage:secure</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* PILLAR 1: Shared Responsibility Model */}
       <section id="contract-shared-model" className="space-y-5 pb-8 border-b border-slate-200 dark:border-slate-800 scroll-mt-24">
