@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { TelegramConfigModal } from './TelegramConfigModal';
 import Link from 'next/link';
 import { User } from '@/api/users.api';
+import { Role } from '@/api/roles.api';
 import { telegramApi } from '@/api/telegram.api';
 import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/inputs';
@@ -13,10 +14,12 @@ import { ShieldCheckIcon, CheckIcon, XIcon, BuildingIcon, LockIcon } from '@/com
 import { useAuth } from '@/lib/auth';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles } from './types';
 import { UserAvatar } from './UserAvatar';
+import { AssignRoleModal } from './AssignRoleModal';
 
 
 export interface UserDetailHeaderProps {
   user: User;
+  roles?: Role[];
   canManage: boolean;
   miniAppsCount?: number;
   auditLogsCount?: number;
@@ -30,6 +33,7 @@ export interface UserDetailHeaderProps {
 
 export function UserDetailHeader({
   user,
+  roles = [],
   canManage,
   miniAppsCount = 0,
   auditLogsCount = 0,
@@ -39,8 +43,9 @@ export function UserDetailHeader({
   onDelete,
   onUserUpdated,
 }: UserDetailHeaderProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasRole } = useAuth();
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+  const [isAssignRoleOpen, setIsAssignRoleOpen] = useState(false);
   const [botUsername, setBotUsername] = useState('superapp_notification_bot');
 
 
@@ -192,6 +197,15 @@ export function UserDetailHeader({
                           },
                         ]
                       : []),
+                    ...(canEditTarget && !isConsumer && !(isSelf && !hasRole('SUPER_ADMIN'))
+                      ? [
+                          {
+                            label: 'Assign Role',
+                            onClick: () => setIsAssignRoleOpen(true),
+                            icon: <ShieldCheckIcon className="w-4 h-4 text-brand-500" />,
+                          },
+                        ]
+                      : []),
                     ...(!isTargetSuperAdmin
                       ? [
                           {
@@ -222,142 +236,164 @@ export function UserDetailHeader({
             )}
           </div>
 
-          {/* Right Attributes Grid (Spacious, Legible Font & Line-Height, Responsive) */}
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-6 md:gap-y-7 gap-x-8 py-3 content-center">
-            {/* 1. Role Authority */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Role Authority</span>
-              <div>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs sm:text-sm font-semibold border ${roleTheme.badge}`}>
-                  <ShieldCheckIcon className="w-3.5 h-3.5" />
-                  <span>{roleTheme.label}</span>
-                </span>
+          {/* Right Details Area: Separated User Information & Organization Information */}
+          <div className="flex-1 flex flex-col justify-between gap-6 py-1 min-w-0">
+            {/* Section 1: User Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>User Information</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-5 gap-x-8">
+                {/* 1. Role Authority */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Role Authority</span>
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs sm:text-sm font-semibold border ${roleTheme.badge}`}>
+                      <ShieldCheckIcon className="w-3.5 h-3.5" />
+                      <span>{roleTheme.label}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Member Status */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Member Status</span>
+                  <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isUnverified ? 'bg-sky-500 animate-pulse' : isPending ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+                    <span>{isActive ? 'Active Member' : isUnverified ? 'Unverified Email (Pending)' : isPending ? 'Pending Approval' : 'Inactive'}</span>
+                  </div>
+                </div>
+
+                {/* 3. Position / Designation */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Position / Designation</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.position || roleTheme.label || 'N/A'}>
+                    {user.position || (isConsumer ? 'Mobile App User' : roleTheme.label) || <span className="text-slate-400 font-normal italic">Unassigned</span>}
+                  </div>
+                </div>
+
+                {/* 4. Staff ID / External Ref */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Staff ID / External Ref</span>
+                  <div>
+                    {user.staffId || user.externalId ? (
+                      <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-slate-700 inline-block">
+                        {user.staffId || user.externalId}
+                      </span>
+                    ) : isConsumer ? (
+                      <span className="text-sm font-semibold text-slate-400 select-none">—</span>
+                    ) : (
+                      <span className="text-xs sm:text-sm text-slate-400 font-normal italic">Not Assigned</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Contact Phone */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Contact Phone</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                    {user.phoneNumber ? (
+                      <span className="font-mono text-slate-800 dark:text-slate-200">{user.phoneNumber}</span>
+                    ) : (
+                      <span className="text-slate-400 font-normal italic">Not Configured</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Authentication Source */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Authentication Source</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.externalId || 'Internal Platform User'}>
+                    {user.externalId ? `SSO: ${user.externalId}` : 'Internal Platform User'}
+                  </div>
+                </div>
+
+                {/* 7. Registered Date */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Registered Date</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                    {formattedCreated}
+                  </div>
+                </div>
+
+                {/* 8. Last Modified */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Last Modified</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                    {formattedUpdated}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 2. Member Status */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Member Status</span>
-              <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isUnverified ? 'bg-sky-500 animate-pulse' : isPending ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
-                <span>{isActive ? 'Active Member' : isUnverified ? 'Unverified Email (Pending)' : isPending ? 'Pending Approval' : 'Inactive'}</span>
+            {/* Section 2: Organization Information */}
+            <div className="pt-5 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <BuildingIcon className="w-3.5 h-3.5 text-slate-400" />
+                <span>Organization Information</span>
               </div>
-            </div>
 
-            {/* 3. Job Position / Title */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Position / Designation</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.position || roleTheme.label || 'N/A'}>
-                {user.position || (isConsumer ? 'Mobile App User' : roleTheme.label) || <span className="text-slate-400 font-normal italic">Unassigned</span>}
-              </div>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-y-4 gap-x-8">
+                {/* 1. Organization */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Organization</span>
+                  <div>
+                    {user.organization ? (
+                      <Link
+                        href={`/organizations/${user.organization.id}`}
+                        className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs sm:text-sm leading-normal truncate block"
+                        title={user.organization.name}
+                      >
+                        {user.organization.name}
+                      </Link>
+                    ) : isConsumer ? (
+                      <span className="text-sm font-semibold text-slate-400 select-none">—</span>
+                    ) : (
+                      <span className="text-xs sm:text-sm text-slate-500 italic">Independent</span>
+                    )}
+                  </div>
+                </div>
 
-            {/* 4. Staff / Operator ID */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Staff ID / External Ref</span>
-              <div>
-                {user.staffId || user.externalId ? (
-                  <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-slate-700 inline-block">
-                    {user.staffId || user.externalId}
-                  </span>
-                ) : isConsumer ? (
-                  <span className="text-sm font-semibold text-slate-400 select-none">—</span>
-                ) : (
-                  <span className="text-xs sm:text-sm text-slate-400 font-normal italic">Not Assigned</span>
-                )}
-              </div>
-            </div>
+                {/* 2. Regulatory Code */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Code</span>
+                  <div>
+                    {user.organization?.code ? (
+                      <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-700 inline-block">
+                        {user.organization.code}
+                      </span>
+                    ) : (
+                      <span className="text-xs sm:text-sm text-slate-400 font-normal italic">N/A</span>
+                    )}
+                  </div>
+                </div>
 
-            {/* 5. Organization */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Organization</span>
-              <div>
-                {user.organization ? (
-                  <Link
-                    href={`/organizations/${user.organization.id}`}
-                    className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs sm:text-sm leading-normal truncate block"
-                    title={user.organization.name}
-                  >
-                    {user.organization.name}
-                  </Link>
-                ) : isConsumer ? (
-                  <span className="text-sm font-semibold text-slate-400 select-none">—</span>
-                ) : (
-                  <span className="text-xs sm:text-sm text-slate-500 italic">Independent</span>
-                )}
-              </div>
-            </div>
+                {/* 3. Regulatory Authority */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Authority</span>
+                  <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.organization?.parentAuthority || 'N/A'}>
+                    {user.organization?.parentAuthority || 'N/A'}
+                  </div>
+                </div>
 
-            {/* 6. Regulatory Code */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Code</span>
-              <div>
-                {user.organization?.code ? (
-                  <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-700 inline-block">
-                    {user.organization.code}
-                  </span>
-                ) : (
-                  <span className="text-xs sm:text-sm text-slate-400 font-normal italic">N/A</span>
-                )}
-              </div>
-            </div>
-
-            {/* 7. Regulatory Authority */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Authority</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.organization?.parentAuthority || 'N/A'}>
-                {user.organization?.parentAuthority || 'N/A'}
-              </div>
-            </div>
-
-            {/* 8. Contact Phone */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Contact Phone</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                {user.phoneNumber ? (
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{user.phoneNumber}</span>
-                ) : (
-                  <span className="text-slate-400 font-normal italic">Not Configured</span>
-                )}
-              </div>
-            </div>
-
-            {/* 9. Organization Status */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Org Tenancy Status</span>
-              <div className="font-medium text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                {user.organization ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>{user.organization.status || 'Active Tenant'}</span>
-                  </span>
-                ) : (
-                  <span className="text-slate-400 font-normal italic">Unassigned</span>
-                )}
-              </div>
-            </div>
-
-            {/* 10. Authentication Source */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Authentication Source</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.externalId || 'Internal Platform User'}>
-                {user.externalId ? `SSO: ${user.externalId}` : 'Internal Platform User'}
-              </div>
-            </div>
-
-            {/* 11. Registered Date */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Registered Date</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                {formattedCreated}
-              </div>
-            </div>
-
-            {/* 12. Last Modified */}
-            <div className="space-y-1.5">
-              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Last Modified</span>
-              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                {formattedUpdated}
+                {/* 4. Org Tenancy Status */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Org Tenancy Status</span>
+                  <div className="font-medium text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                    {user.organization ? (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>{user.organization.status || 'Active Tenant'}</span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-normal italic">Unassigned</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -469,6 +505,17 @@ export function UserDetailHeader({
         onClose={() => setIsAlertsModalOpen(false)}
         user={user}
         onSuccess={(updated) => {
+          onUserUpdated?.(updated);
+        }}
+      />
+
+      {/* Dedicated Assign Role Modal */}
+      <AssignRoleModal
+        isOpen={isAssignRoleOpen}
+        onClose={() => setIsAssignRoleOpen(false)}
+        user={user}
+        roles={roles}
+        onRoleUpdated={(updated) => {
           onUserUpdated?.(updated);
         }}
       />

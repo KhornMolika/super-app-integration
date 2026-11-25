@@ -8,10 +8,8 @@ import { useAuth } from '@/lib/auth';
 import {
   usersApi,
   organizationsApi,
-  rolesApi,
   User,
   Organization,
-  Role,
   unwrapData,
   unwrapItem,
 } from '@/api';
@@ -21,63 +19,7 @@ import { toast } from '@/components/ui/Toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ShieldCheckIcon, CheckIcon, BuildingIcon } from '@/components/ui/Icons';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles, AvatarUpload } from '@/components/users';
-import { isPlatformOwnerOrgCode } from '@/lib/config';
 import { OrganizationSelect } from '@/components/organizations/OrganizationSelect';
-
-
-interface RoleOption {
-  key: string;
-  label: string;
-  badge: string;
-  desc: string;
-  capabilities: string[];
-}
-
-
-const ROLE_OPTIONS: RoleOption[] = [
-  {
-    key: 'MA_DEVELOPER',
-    label: 'MiniApp Developer',
-    badge: 'Developer',
-    desc: 'Build, configure, test in sandbox, publish mini applications and submit capability proposals',
-    capabilities: ['Create & submit MiniApps', 'Inspect build artifacts & test in sandbox', 'Request bridge capabilities'],
-  },
-  {
-    key: 'ORG_ADMIN',
-    label: 'Organization Admin',
-    badge: 'Org Admin',
-    desc: 'Manages the users, promotional banners, and mini apps of their own organization',
-    capabilities: ['Manage organization users & teams', 'Oversee tenant MiniApps', 'Manage organization banners'],
-  },
-  {
-    key: 'APP_REVIEWER',
-    label: 'App Reviewer & Auditor',
-    badge: 'Reviewer',
-    desc: 'Reviews MiniApp source code, bundle diffs, CycloneDX SBOMs, CVE vulnerabilities, and approves/rejects submissions',
-    capabilities: ['Review & Diff Deck access', 'Audit SBOMs & security scans', 'Approve / reject versions'],
-  },
-  {
-    key: 'PLATFORM_ADMIN',
-    label: 'Platform Administrator',
-    badge: 'Platform Admin',
-    desc: 'Operates ecosystem releases, partner organizations, and global settings',
-    capabilities: ['SuperApp host release pipelines', 'Manage partner organizations', 'Ecosystem operations'],
-  },
-  {
-    key: 'SUPER_ADMIN',
-    label: 'Super Administrator',
-    badge: 'Super Admin',
-    desc: 'Runs the platform across every organization (platform owner organization only)',
-    capabilities: ['Global system governance', 'Manage RBAC & permissions', 'Full audit registry inspection'],
-  },
-  {
-    key: 'STAFF',
-    label: 'Organization Staff',
-    badge: 'Staff',
-    desc: 'Internal team member for mobile and backoffice support',
-    capabilities: ['Support access', 'Internal tooling', 'Read-only profile'],
-  },
-];
 
 
 function EditUserContent() {
@@ -93,7 +35,6 @@ function EditUserContent() {
 
   const {
     user: currentUser,
-    hasRole,
     refreshSession,
     setAvatarPreview,
     clearAvatarPreview,
@@ -107,14 +48,12 @@ function EditUserContent() {
 
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
 
   // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState('MA_DEVELOPER');
   const [organizationId, setOrganizationId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -188,10 +127,6 @@ function EditUserContent() {
 
       setName(data.name || '');
       setEmail(data.email || '');
-      const userRoles = getUserRoles(data);
-      const rawRole = userRoles[0]?.name || data.role?.name || 'MA_DEVELOPER';
-      const primaryRole = rawRole === 'ADMIN' ? 'ORG_ADMIN' : rawRole;
-      setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);
       setPosition(data.position || '');
@@ -211,25 +146,15 @@ function EditUserContent() {
   }, [id]);
 
 
-  // Load Organizations and Roles
+  // Load Organizations
   const fetchMetadata = useCallback(async () => {
     try {
       setLoadingOrgs(true);
-      const [orgsRes, rolesRes] = await Promise.allSettled([
-        organizationsApi.getAll({ limit: 100 }),
-        rolesApi.getAll(),
-      ]);
-
-
-      if (orgsRes.status === 'fulfilled') {
-        const orgs = unwrapData<Organization>(orgsRes.value);
-        setOrganizations(orgs);
-      }
-      if (rolesRes.status === 'fulfilled') {
-        setRoles(Array.isArray(rolesRes.value) ? rolesRes.value : []);
-      }
+      const orgsRes = await organizationsApi.getAll({ limit: 100 });
+      const orgs = unwrapData<Organization>(orgsRes);
+      setOrganizations(orgs);
     } catch (err) {
-      console.error('Failed to load metadata:', err);
+      console.error('Failed to load organizations:', err);
     } finally {
       setLoadingOrgs(false);
     }
@@ -257,36 +182,17 @@ function EditUserContent() {
     .toUpperCase();
 
 
-  const roleTheme = getRoleTheme(selectedRole);
+  const userRolesList = user ? getUserRoles(user) : [];
+  const rawPrimaryRole = userRolesList[0]?.name || user?.role?.name || 'MA_DEVELOPER';
+  const currentPrimaryRole = rawPrimaryRole === 'ADMIN' ? 'ORG_ADMIN' : rawPrimaryRole;
+  const roleTheme = getRoleTheme(currentPrimaryRole);
   const isTargetSuperAdmin = Boolean(
     user && (
       (user.roles && user.roles.some((r: any) => (typeof r === 'string' ? r : r?.name) === 'SUPER_ADMIN')) ||
       user.role?.name === 'SUPER_ADMIN' ||
-      getUserRoles(user).some((r) => r.name === 'SUPER_ADMIN')
+      userRolesList.some((r) => r.name === 'SUPER_ADMIN')
     )
   );
-  const isSuper = hasRole('SUPER_ADMIN') || hasRole('PLATFORM_ADMIN');
-
-  // Super Admin is only offered for members of the platform owner organization
-  // Org Admin / non-super users can only assign tenant roles
-  const roleOptions = ROLE_OPTIONS.filter((opt) => {
-    if (opt.key === 'SUPER_ADMIN') {
-      return isTargetSuperAdmin || (isSuper && isPlatformOwnerOrgCode(selectedOrg?.code));
-    }
-    if (!isSuper) {
-      return (['ORG_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'] as string[]).includes(opt.key);
-    }
-    return true;
-  });
-  useEffect(() => {
-    if (
-      selectedRole === 'SUPER_ADMIN' &&
-      !isTargetSuperAdmin &&
-      !isPlatformOwnerOrgCode(selectedOrg?.code)
-    ) {
-      setSelectedRole('ORG_ADMIN');
-    }
-  }, [selectedRole, isTargetSuperAdmin, selectedOrg]);
 
   const isSelf = Boolean(
     user && currentUser && (
@@ -322,15 +228,9 @@ function EditUserContent() {
     }
 
 
-    if (isTargetSuperAdmin) {
-      if (!isActive) {
-        toast.error('Protected Account Guard: Super Admin accounts cannot be set to inactive.');
-        return;
-      }
-      if (selectedRole !== 'SUPER_ADMIN') {
-        toast.error('Protected Role Guard: Super Admin clearance level cannot be downgraded or revoked.');
-        return;
-      }
+    if (isTargetSuperAdmin && !isActive) {
+      toast.error('Protected Account Guard: Super Admin accounts cannot be set to inactive.');
+      return;
     }
 
 
@@ -377,7 +277,6 @@ function EditUserContent() {
             position: position.trim() || undefined,
             staffId: staffId.trim() || undefined,
             phoneNumber: phoneNumber.trim() || undefined,
-            roleNames: [selectedRole],
             organizationId: organizationId.trim() || '',
             isActive,
           };
@@ -680,88 +579,6 @@ function EditUserContent() {
                 </div>
               </div>
             </div>
-
-
-            {/* Card 2: Role Authority & Access Scope */}
-            {user?.accountType === 'CONSUMER' ? (
-              <div className="rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 p-6 space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <ShieldCheckIcon className="w-4 h-4 text-slate-400" />
-                  <span>Mobile App Consumer Account</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Mobile app consumer accounts do not have back-office RBAC roles or an assigned organization.
-                </p>
-              </div>
-            ) : (
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
-              <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <ShieldCheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                  <span>Role Authority &amp; Access Scope</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Select the administrative clearance level and RBAC permissions for this operator
-                </p>
-              </div>
-
-
-              <div className={`grid grid-cols-1 gap-3 ${roleOptions.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-                {roleOptions.map((opt) => {
-                  const isSelected = selectedRole === opt.key;
-                  const theme = getRoleTheme(opt.key);
-                  return (
-                    <div
-                      key={opt.key}
-                      onClick={() => {
-                        if (isTargetSuperAdmin && opt.key !== 'SUPER_ADMIN') {
-                          toast.error('Protected Role Guard: Super Admin clearance level cannot be downgraded or revoked.');
-                          return;
-                        }
-                        setSelectedRole(opt.key);
-                      }}
-                      className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-between space-y-3 ${
-                        isTargetSuperAdmin && opt.key !== 'SUPER_ADMIN'
-                          ? 'opacity-40 cursor-not-allowed border-slate-200/60 dark:border-slate-800/60 bg-slate-50/20 dark:bg-slate-900/20'
-                          : 'cursor-pointer ' + (isSelected
-                              ? 'border-brand-500 bg-brand-50/20 dark:bg-brand-500/10 shadow-sm'
-                              : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/40 dark:bg-slate-800/30')
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${theme.badge}`}>
-                            {opt.badge}
-                          </span>
-                          {isSelected && (
-                            <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs">
-                              <CheckIcon className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                          {opt.label}
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                          {opt.desc}
-                        </p>
-                      </div>
-
-
-                      <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/50 space-y-1">
-                        {opt.capabilities.map((c, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-600 dark:text-slate-300">
-                            <span className="w-1 h-1 rounded-full bg-brand-500 shrink-0" />
-                            <span>{c}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            )}
           </div>
 
 
