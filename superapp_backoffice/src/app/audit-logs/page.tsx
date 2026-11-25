@@ -37,6 +37,15 @@ const COMMON_AUDIT_ACTIONS = [
   'ROLE_DELETE',
 ];
 
+const COMMON_ACTOR_ROLES = [
+  'ALL',
+  'SUPER_ADMIN',
+  'ORG_ADMIN',
+  'ADMIN',
+  'APP_REVIEWER',
+  'MA_DEVELOPER',
+];
+
 function AuditLogsContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -50,6 +59,7 @@ function AuditLogsContent() {
   const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialAction = searchParams.get('action') || 'ALL';
+  const initialRole = searchParams.get('actorRole') || 'ALL';
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +70,7 @@ function AuditLogsContent() {
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState<string>(initialSearch);
   const [actionFilter, setActionFilter] = useState<string>(initialAction);
+  const [roleFilter, setRoleFilter] = useState<string>(initialRole);
 
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: initialPage,
@@ -95,6 +106,7 @@ function AuditLogsContent() {
     if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (actionFilter !== 'ALL') params.set('action', actionFilter);
+    if (roleFilter !== 'ALL') params.set('actorRole', roleFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
@@ -104,7 +116,7 @@ function AuditLogsContent() {
         window.history.replaceState(null, '', targetUrl);
       }
     }
-  }, [currentPage, pageSize, debouncedSearch, actionFilter, pathname]);
+  }, [currentPage, pageSize, debouncedSearch, actionFilter, roleFilter, pathname]);
 
   // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
@@ -115,10 +127,12 @@ function AuditLogsContent() {
       const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
       const searchFromUrl = params.get('search') || '';
       const actionFromUrl = params.get('action') || 'ALL';
+      const roleFromUrl = params.get('actorRole') || 'ALL';
 
       setCurrentPage(pageFromUrl);
       setPageSize(limitFromUrl);
       setActionFilter(actionFromUrl);
+      setRoleFilter(roleFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
     };
@@ -140,6 +154,9 @@ function AuditLogsContent() {
       }
       if (actionFilter !== 'ALL') {
         queryParams.action = actionFilter;
+      }
+      if (roleFilter !== 'ALL') {
+        queryParams.actorRole = roleFilter;
       }
 
       const res = await auditLogsApi.getAll(queryParams);
@@ -166,7 +183,7 @@ function AuditLogsContent() {
     } finally {
       setLoading(false);
     }
-  }, [can, currentPage, pageSize, debouncedSearch, actionFilter]);
+  }, [can, currentPage, pageSize, debouncedSearch, actionFilter, roleFilter]);
 
   useEffect(() => {
     if (hasAuditRead) {
@@ -177,6 +194,28 @@ function AuditLogsContent() {
   const handleActionChange = (val: string) => {
     setActionFilter(val);
     setCurrentPage(1);
+  };
+
+  const handleRoleChange = (val: string) => {
+    setRoleFilter(val);
+    setCurrentPage(1);
+  };
+
+  const getRoleBadgeClass = (role?: string) => {
+    const r = (role || '').toUpperCase();
+    if (r === 'SUPER_ADMIN' || r === 'PLATFORM_ADMIN') {
+      return 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+    }
+    if (r === 'ORG_ADMIN' || r === 'ADMIN' || r === 'ORGANIZATION_ADMIN') {
+      return 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800';
+    }
+    if (r === 'APP_REVIEWER') {
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+    }
+    if (r === 'MA_DEVELOPER') {
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+    }
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
   };
 
   const parseDate = (d?: string | Date): Date => {
@@ -302,11 +341,22 @@ function AuditLogsContent() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div
-                className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate"
-                title={actorName}
-              >
-                {actorName}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span
+                  className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate"
+                  title={actorName}
+                >
+                  {actorName}
+                </span>
+                {log.actorRole && (
+                  <span
+                    className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shrink-0 ${getRoleBadgeClass(
+                      log.actorRole
+                    )}`}
+                  >
+                    {log.actorRole}
+                  </span>
+                )}
               </div>
               <div
                 className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate"
@@ -467,11 +517,26 @@ function AuditLogsContent() {
               onChange: handleActionChange,
               dropdownWidth: 'w-72',
             },
+            {
+              id: 'actorRole',
+              label: 'Role',
+              value: roleFilter,
+              options: [
+                { label: 'All Roles', value: 'ALL' },
+                ...COMMON_ACTOR_ROLES.filter((r) => r !== 'ALL').map((r) => ({
+                  label: r,
+                  value: r,
+                })),
+              ],
+              onChange: handleRoleChange,
+              dropdownWidth: 'w-56',
+            },
           ]}
-          isFiltered={searchQuery.trim() !== '' || actionFilter !== 'ALL'}
+          isFiltered={searchQuery.trim() !== '' || actionFilter !== 'ALL' || roleFilter !== 'ALL'}
           onResetFilters={() => {
             setSearchQuery('');
             setActionFilter('ALL');
+            setRoleFilter('ALL');
             setCurrentPage(1);
           }}
           totalItemsCount={paginationMeta.totalItems}
@@ -531,6 +596,15 @@ function AuditLogsContent() {
                     <div className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
                       {selectedLog.actorEmail || (selectedLog.actorId ? `ID: ${selectedLog.actorId.substring(0, 8)}...` : 'System')}
                     </div>
+                    {selectedLog.actorRole && (
+                      <span
+                        className={`inline-flex mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getRoleBadgeClass(
+                          selectedLog.actorRole
+                        )}`}
+                      >
+                        {selectedLog.actorRole}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-semibold">Resource</span>

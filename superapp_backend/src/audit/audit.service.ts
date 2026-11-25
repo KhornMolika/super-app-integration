@@ -2,6 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, IsNull, Brackets, SelectQueryBuilder } from 'typeorm';
 import {
+  isOrgAdmin,
   isPlatformAdmin,
   requesterOrgId,
 } from '../access-control/helpers/platform-admin.helper';
@@ -262,28 +263,48 @@ export class AuditService implements OnApplicationBootstrap {
   }
 
   /**
-   * Organization admins (anyone but SUPER_ADMIN) see the entries made by a
-   * member of their organization or about one of its mini apps. Platform
-   * entries (settings, storage, security) are SUPER_ADMIN only. Without a
-   * requester (internal call) nothing is filtered.
+   * Role-level scoping for audit logs:
+   * - SUPER_ADMIN / PLATFORM_ADMIN: unrestricted platform-wide visibility.
+   * - ORG_ADMIN / ADMIN: scoped to actors in their organization, MiniApps
+   *   belonging to their organization, or their Organization resource itself.
+   * - Other roles with audit_log:read: scoped strictly to their own actions.
+   * - Internal calls (requester === undefined): unrestricted.
    */
   private scopeToRequester(
     qb: SelectQueryBuilder<AuditLog>,
     requester?: any,
   ): void {
     if (requester === undefined || isPlatformAdmin(requester)) return;
-    const orgId = requesterOrgId(requester);
-    if (!orgId) {
+
+    if (isOrgAdmin(requester)) {
+      const orgId = requesterOrgId(requester);
+      if (!orgId) {
+        qb.andWhere('1 = 0');
+        return;
+      }
+      qb.andWhere(
+        '(EXISTS (SELECT 1 FROM "staff_profiles" scope_sp ' +
+          'WHERE scope_sp."identityId"::text = log."actorId" AND scope_sp."organizationId" = :scopeOrgId) ' +
+          'OR (log."resourceType" = :scopeAppType AND EXISTS (SELECT 1 FROM "mini_apps" scope_app ' +
+          'WHERE scope_app."id"::text = log."resourceId" AND scope_app."organizationId" = :scopeOrgId)) ' +
+          'OR (log."resourceType" = :scopeOrgType AND log."resourceId" = :scopeOrgId))',
+        {
+          scopeOrgId: orgId,
+          scopeAppType: 'MiniApp',
+          scopeOrgType: 'Organization',
+        },
+      );
+      return;
+    }
+
+    const requesterId = requester?.sub || requester?.id;
+    if (!requesterId) {
       qb.andWhere('1 = 0');
       return;
     }
-    qb.andWhere(
-      '(EXISTS (SELECT 1 FROM "staff_profiles" scope_sp ' +
-        'WHERE scope_sp."identityId"::text = log."actorId" AND scope_sp."organizationId" = :scopeOrgId) ' +
-        'OR (log."resourceType" = :scopeAppType AND EXISTS (SELECT 1 FROM "mini_apps" scope_app ' +
-        'WHERE scope_app."id"::text = log."resourceId" AND scope_app."organizationId" = :scopeOrgId)))',
-      { scopeOrgId: orgId, scopeAppType: 'MiniApp' },
-    );
+    qb.andWhere('log."actorId" = :scopeActorId', {
+      scopeActorId: String(requesterId),
+    });
   }
 
   async findAll(
@@ -311,6 +332,7 @@ export class AuditService implements OnApplicationBootstrap {
       action,
       resourceType,
       actorId,
+      actorRole,
       resourceId,
       sortBy = 'createdAt',
       sortOrder = SortOrder.DESC,
@@ -329,6 +351,12 @@ export class AuditService implements OnApplicationBootstrap {
 
     if (actorId) {
       qb.andWhere('log.actorId = :actorId', { actorId });
+    }
+
+    if (actorRole && actorRole !== 'ALL') {
+      qb.andWhere('UPPER(COALESCE(log.actorRole, \'\')) = :actorRole', {
+        actorRole: actorRole.toUpperCase(),
+      });
     }
 
     if (resourceId) {
@@ -416,7 +444,11 @@ export class AuditService implements OnApplicationBootstrap {
       .createQueryBuilder('log')
       .where('log.id = :id', { id });
     this.scopeToRequester(qb, requester);
-    return qb.getOne();
+    const log = await qb.getOne();
+    if (log) {
+      await this.enrichActorDetails([log]);
+    }
+    return log;
   }
 
   async findByResource(

@@ -25,6 +25,7 @@ export const auditLogsApi = {
     action?: string;
     resourceType?: string;
     actorId?: string;
+    actorRole?: string;
     sortBy?: string;
     sortOrder?: 'ASC' | 'DESC';
   }) =>
