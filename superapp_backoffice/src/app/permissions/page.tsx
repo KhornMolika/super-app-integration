@@ -18,6 +18,7 @@ import { rolesApi, Role } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { RolesTab } from '@/components/users/RolesTab';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   TOTAL_PERMISSIONS_COUNT,
   ALL_FLAT_PERMISSIONS,
@@ -111,59 +112,41 @@ function PermissionsPageContent() {
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Header & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+      <PageHeader
+        title="Roles & Permissions"
+        description="Inspect granted security scopes by role or switch to Matrix View for side-by-side comparison."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              title="Refresh Permissions"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+
             <Link
               href="/roles"
-              className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
             >
-              Access Control
+              <ArrowLeft className="w-4 h-4 text-slate-400" />
+              <span>Manage Roles</span>
             </Link>
-            <span>/</span>
-            <span className="text-slate-800 dark:text-slate-200 font-semibold">
-              Permissions &amp; RBAC
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            <SlidersHorizontal className="w-6 h-6 text-brand-600 dark:text-brand-400" />
-            <span>Roles &amp; Permissions</span>
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Inspect granted security scopes by role or switch to Matrix View for side-by-side comparison.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-            title="Refresh Permissions"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <Link
-            href="/roles"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-400" />
-            <span>Manage Roles</span>
-          </Link>
-
-          {canManageRoles && (
-            <Link
-              href="/roles/create"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Role</span>
-            </Link>
-          )}
-        </div>
-      </div>
+            {canManageRoles && (
+              <Link
+                href="/roles/create"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Role</span>
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* KPI Shelf */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

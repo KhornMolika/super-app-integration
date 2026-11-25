@@ -101,14 +101,14 @@ export default function ReleasesPage() {
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               SuperApp Release Pipeline
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
               Release Verification
             </span>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
             Verify mini-app packages, validate security checksums, and assemble official SuperApp releases.
           </p>
         </div>

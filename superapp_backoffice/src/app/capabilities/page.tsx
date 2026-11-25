@@ -18,6 +18,7 @@ import { ProposalReviewModal } from '@/components/capabilities/ProposalReviewMod
 import { ProposalProgressModal } from '@/components/capabilities/ProposalProgress';
 import { useCapabilityView } from '@/components/capabilities/capability-view';
 import { CreateProposalModal } from '@/components/capabilities/CreateProposalModal';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/inputs';
 import {
   Zap,
@@ -234,53 +235,49 @@ function CapabilitiesContent() {
     <ProtectedRoute permission="permission:read">
       <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-500 pb-12">
         {/* Sleek Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-              <div className="p-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400">
-                <Zap className="w-5 h-5" />
-              </div>
-              Capabilities
-              {view.audience === 'overseer' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  <Eye className="w-3 h-3" />
-                  View only
-                </span>
+        <PageHeader
+          title="Capabilities"
+          description={view.text.subtitle}
+          badge={
+            view.audience === 'overseer' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <Eye className="w-3 h-3" />
+                View only
+              </span>
+            ) : undefined
+          }
+          actions={
+            <>
+              {view.canSync && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncGitLab}
+                  disabled={isSyncingGitLab || loading}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+                  title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
+                </Button>
               )}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">{view.text.subtitle}</p>
-          </div>
 
-          <div className="flex items-center gap-2.5">
-            {view.canSync && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSyncGitLab}
-                disabled={isSyncingGitLab || loading}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-                title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
-                <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
-              </Button>
-            )}
-
-            {view.canRequest && (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>{view.text.requestButton}</span>
-              </Button>
-            )}
-          </div>
-        </div>
+              {view.canRequest && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>{view.text.requestButton}</span>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Deciders: requests waiting for them */}
         {view.audience === 'decider' && pendingProposalsCount > 0 && (

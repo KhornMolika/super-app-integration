@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { miniappsApi, unwrapData } from '@/api';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 import { PaginationProps } from '@/components/ui/Pagination';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface MiniAppIssueItem {
   id: string;
@@ -263,14 +264,10 @@ function IssuesContent() {
 
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-          Issues Management
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-          Centralized view of all validation, security, and integration failures across registered MiniApps.
-        </p>
-      </div>
+      <PageHeader
+        title="Issues Management"
+        description="Centralized view of all validation, security, and integration failures across registered MiniApps."
+      />
 
       <DataTable<MiniAppIssueItem>
         data={paginatedIssues}

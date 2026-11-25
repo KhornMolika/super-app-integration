@@ -247,9 +247,9 @@ function NotificationsPageContent() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               Notifications
-            </h2>
+            </h1>
             {unreadCount > 0 && (
               <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 {unreadCount} unread
