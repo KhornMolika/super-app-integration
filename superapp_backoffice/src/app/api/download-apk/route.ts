@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const urlObj = new URL(request.url);
-  const pathMatch = urlObj.pathname.match(/superapp-test-(v?\d+\.\d+\.\d+|latest)\.apk/i);
+  const pathMatch = urlObj.pathname.match(/superapp-test-(v?\d+\.\d+\.\d+|latest)(?:-arm64-v8a)?\.apk/i);
   const type = urlObj.searchParams.get('type') || 'test';
   const rawVersion = urlObj.searchParams.get('version') || (pathMatch ? pathMatch[1] : 'latest');
   const appName = urlObj.searchParams.get('appName') || 'superapp';
@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       effective = 'v0.2.4';
     }
     const norm = effective.startsWith('v') ? effective : `v${effective}`;
-    return `superapp-test-${norm}.apk`;
+    return type === 'release'
+      ? `superapp-release-${norm}.apk`
+      : `superapp-test-${norm}-arm64-v8a.apk`;
   };
 
   const versionCandidates = [

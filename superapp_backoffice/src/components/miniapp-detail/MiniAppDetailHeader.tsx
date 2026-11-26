@@ -166,7 +166,15 @@ export default function MiniAppDetailHeader({
                 }
               />
             </svg>
-            <span>{isEditingUnlocked ? 'Cancel Edit' : 'Edit Configuration'}</span>
+            <span>
+              {isEditingUnlocked
+                ? 'Cancel Edit'
+                : actions.isLive
+                  ? formData.pendingRevision
+                    ? 'Edit Pending Version'
+                    : 'Update Version'
+                  : 'Edit Configuration'}
+            </span>
           </button>
         )}
 

@@ -225,9 +225,9 @@ export default function DownloadApkModal({
   const activeVersion = selectedVersion || activeVerObj?.version || defaultVersion;
   const isRelease =
     activeVerObj?.buildMode === 'release' || networkData?.apk?.buildMode === 'release';
-  const activeSize = activeVerObj?.size || networkData?.apk?.size || '19.50 MB';
+  const activeSize = activeVerObj?.size || networkData?.apk?.size || '';
   const normVer = activeVersion.startsWith('v') ? activeVersion : `v${activeVersion}`;
-  const activeFilename = `superapp-test-${normVer}.apk`;
+  const activeFilename = `superapp-test-${normVer}-arm64-v8a.apk`;
 
   const isCloud = isProduction || targetEnv === 'cloud';
   const cloudOrigin =
@@ -256,7 +256,7 @@ export default function DownloadApkModal({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.info(`Starting download for ${activeFilename} (${activeSize})...`);
+    toast.info(`Starting download for ${activeFilename}${activeSize ? ` (${activeSize})` : ''}...`);
   };
 
   return createPortal(
@@ -289,7 +289,7 @@ export default function DownloadApkModal({
                       : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                   }`}
                 >
-                  {activeSize} • {isRelease ? 'Release ARM64 AOT' : 'Debug Test Build'}
+                  {activeSize ? `${activeSize} • ` : ''}{isRelease ? 'Release ARM64 AOT' : 'Debug Test Build'}
                 </span>
               </div>
 
@@ -423,7 +423,7 @@ export default function DownloadApkModal({
                   className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs hover:shadow transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download APK ({activeSize})</span>
+                  <span>Download APK{activeSize ? ` (${activeSize})` : ''}</span>
                 </button>
 
                 <button
@@ -546,7 +546,7 @@ export default function DownloadApkModal({
                   <div className="space-y-0.5 text-slate-800 dark:text-slate-200">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-emerald-800 dark:text-emerald-300">
-                        Size-Optimized Release Build ({activeSize})
+                        Size-Optimized Release Build{activeSize ? ` (${activeSize})` : ''}
                       </span>
                       <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                         ARM64 AOT
@@ -562,7 +562,7 @@ export default function DownloadApkModal({
                   <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                   <div className="space-y-0.5 text-slate-800 dark:text-slate-200">
                     <span className="font-bold text-amber-800 dark:text-amber-300">
-                      Debug Test Build Active ({activeSize})
+                      Debug Test Build Active{activeSize ? ` (${activeSize})` : ''}
                     </span>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                       Debug APK includes debugging symbols and hot-reload hooks for local developer testing.

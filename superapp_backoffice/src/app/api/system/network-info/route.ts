@@ -175,13 +175,16 @@ export async function GET(request: NextRequest) {
             const sizeMb = (sizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
             const isRel = mode === 'release' || sizeBytes < 50 * 1024 * 1024;
 
-            if (!versionMap.has(ver) || isRel) {
-              const standardizedName = `superapp-test-${ver}.apk`;
+            const isArm64 = apkName.includes('arm64-v8a');
+            const existing = versionMap.get(ver);
+            if (!existing || isArm64 || (!existing.isArm64 && isRel)) {
+              const standardizedName = `superapp-test-${ver}-arm64-v8a.apk`;
               versionMap.set(ver, {
                 version: ver,
                 filename: standardizedName,
                 size: sizeMb,
                 sizeBytes,
+                isArm64,
                 buildMode: isRel ? 'release' : 'debug',
                 lastModified: asset.lastModified || asset.blobUpdated,
               });
@@ -254,12 +257,12 @@ export async function GET(request: NextRequest) {
             const normVer = testVer.startsWith('v') ? testVer : `v${testVer}`;
             apkExists = true;
             apkVersion = normVer;
-            apkFilename = `superapp-test-${normVer}.apk`;
-            apkSizeMb = '28.9 MB';
+            apkFilename = `superapp-test-${normVer}-arm64-v8a.apk`;
+            apkSizeMb = data?.apkSizeMb || '';
             availableVersions = [
               {
                 version: normVer,
-                size: '28.9 MB',
+                size: apkSizeMb,
                 buildMode: 'release',
                 lastModified: new Date().toISOString(),
                 downloadUrl: `/api/download-apk?version=${normVer}&type=test&appName=superapp`,
@@ -290,7 +293,7 @@ export async function GET(request: NextRequest) {
               const ver = match ? `v${match[1]}` : 'v0.2.3';
               // Releases are typically <50MB because of AOT compilation and tree-shaking
               const isRel = fn.includes('release') || stats.size < 50 * 1024 * 1024;
-              const standardizedName = `superapp-test-${ver}.apk`;
+              const standardizedName = `superapp-test-${ver}-arm64-v8a.apk`;
               return {
                 filename: standardizedName,
                 version: ver,

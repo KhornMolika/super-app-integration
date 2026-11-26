@@ -259,24 +259,21 @@ function Push-ToSuperAppBackend {
 }
 
 function Push-ToSuperAppMobile {
-    Write-Host "[4/4] Splitting and Pushing super-app to superapp-mobile ($TargetBranch)..." -ForegroundColor Blue
-    Write-Host "  -> Computing subtree split for super-app..." -ForegroundColor Cyan
-    $rawCommit = git subtree split --prefix=super-app "$SourceBranch" 2>$null
-    $splitCommit = if ($rawCommit) { ([string]($rawCommit | Select-Object -Last 1)).Trim() } else { "" }
-    if (-not $splitCommit) {
-        Write-Host "[INFO] No separate subtree changes found in super-app.`n" -ForegroundColor Yellow
+    Write-Host "[4/4] Pushing nested super-app repo to superapp-mobile ($TargetBranch)..." -ForegroundColor Blue
+    $MobileDir = Join-Path $PSScriptRoot "super-app"
+    if (-not (Test-Path (Join-Path $MobileDir ".git"))) {
+        Write-Host "[INFO] super-app/.git not found; skipping superapp-mobile push.`n" -ForegroundColor Yellow
         return
     }
-    Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    $refSpecs = @(("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch))
+    $refSpecs = @(("{0}:refs/heads/{1}" -f $SourceBranch, $TargetBranch))
     if ($SyncDevelopment -and $TargetBranch -ne 'development') {
-        $refSpecs += ("{0}:refs/heads/development" -f $splitCommit)
+        $refSpecs += ("{0}:refs/heads/development" -f $SourceBranch)
     }
-    git push superapp-mobile $refSpecs --force
+    git -C $MobileDir push origin $refSpecs
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Mobile SuperApp successfully pushed to superapp-mobile ($($refSpecs -join ', '))!`n" -ForegroundColor Green
+        Write-Host "[OK] Mobile SuperApp successfully pushed from super-app ($($refSpecs -join ', '))!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to superapp-mobile ($TargetBranch).`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push super-app ($TargetBranch).`n" -ForegroundColor Red
     }
 }
 

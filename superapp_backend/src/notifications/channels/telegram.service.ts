@@ -550,13 +550,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           rawApkUrl,
           version,
           resolvedName,
-        ).catch((err: unknown) => {
-          TelegramService.dispatchedBuildApkCache.delete(apkKey);
-          const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.debug(
-            `Could not attach APK document to chat ${chatId}: ${errMsg}`,
-          );
-        });
+        )
+          .then((sent) => {
+            if (!sent) {
+              TelegramService.dispatchedBuildApkCache.delete(apkKey);
+            }
+          })
+          .catch((err: unknown) => {
+            TelegramService.dispatchedBuildApkCache.delete(apkKey);
+            const errMsg = err instanceof Error ? err.message : String(err);
+            this.logger.debug(
+              `Could not attach APK document to chat ${chatId}: ${errMsg}`,
+            );
+          });
       }
     }
   }

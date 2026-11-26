@@ -44,9 +44,10 @@ export class ApkDownloadController {
     const normVer = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
     const standardizedFilename = isRelease
       ? `superapp-release-${normVer}.apk`
-      : `superapp-test-${normVer}.apk`;
+      : `superapp-test-${normVer}-arm64-v8a.apk`;
 
     const nexusBase = (
+      process.env.NEXUS_INTERNAL_URL ||
       process.env.NEXUS_BASE_URL ||
       process.env.NEXUS_URL ||
       'http://localhost:8081'
@@ -68,7 +69,7 @@ export class ApkDownloadController {
 
     const candidateUrls = [
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${standardizedFilename}`,
-      `${nexusBase}/repository/${repoName}/superapp/${normVer}/${standardizedFilename.replace(/\.apk$/, '-arm64-v8a.apk')}`,
+      `${nexusBase}/repository/${repoName}/superapp/${normVer}/${isRelease ? `superapp-release-${normVer}-arm64-v8a.apk` : `superapp-test-${normVer}.apk`}`,
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${primaryFilename}`,
       `${nexusBase}/repository/${repoName}/superapp/${normVer}/${altFilename}`,
       `${nexusBase}/repository/${repoName}/superapp/latest/${primaryFilename}`,

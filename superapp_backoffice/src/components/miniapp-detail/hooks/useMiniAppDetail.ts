@@ -729,7 +729,12 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   const executeSave = async (isDraftOnly = false, changelog?: string, justification?: string) => {
     setIsSubmitting(true);
     if (!isDraftOnly) {
-      setModalState({ isOpen: true, status: 'loading' });
+      setModalState({
+        isOpen: true,
+        status: 'loading',
+        integrationMethod: formData.integrationMethod,
+        securityChecks: formData.securityChecks,
+      });
     }
 
     const cleanPermissions = Array.from(
@@ -845,25 +850,52 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
                 integrationConfigNativeSdk: appData.integrationMethod === IntegrationMethod.NATIVE_SDK ? appData.integrationConfig : prev.integrationConfigNativeSdk,
               }));
 
-              const statusUpper = (appData.status || '').toUpperCase();
-              if (statusUpper !== 'PROCESSING') {
-                const hasValidationErrors = appData.validationErrors && Object.keys(appData.validationErrors).length > 0;
-                setModalState({
-                  isOpen: false,
-                  status: (statusUpper === 'REJECTED' || hasValidationErrors) ? 'error' : 'success',
-                  errors: appData.validationErrors,
-                });
-                clearInterval(pollTimer);
-                setIsSubmitting(false);
-                setIsEditingUnlocked(false);
-                fetchApp();
+              if (appData.validationStages || appData.securityChecks) {
+                setModalState((prev) => ({
+                  ...prev,
+                  stages: appData.validationStages ?? prev.stages,
+                  securityChecks: appData.securityChecks ?? prev.securityChecks,
+                }));
               }
+
+              const statusUpper = (appData.status || '').toUpperCase();
+              const valStatusUpper = (appData.validationStatus || '').toUpperCase();
+              if (statusUpper === 'PROCESSING' || valStatusUpper === 'RUNNING') {
+                return;
+              }
+
+              const hasValidationErrors =
+                valStatusUpper === 'FAILED' ||
+                (appData.validationErrors && Object.keys(appData.validationErrors).length > 0) ||
+                (Array.isArray(appData.issues) && appData.issues.length > 0);
+
+              clearInterval(pollTimer);
+              setModalState((prev) => ({
+                ...prev,
+                isOpen: prev.isOpen,
+                status: statusUpper === 'REJECTED' || hasValidationErrors ? 'error' : 'success',
+                message:
+                  statusUpper === 'REJECTED' || hasValidationErrors
+                    ? 'Security audit identified blocking issues. Please review and resolve the flagged violations.'
+                    : undefined,
+                errors: appData.validationErrors,
+                stages: appData.validationStages ?? prev.stages,
+                securityChecks: appData.securityChecks ?? prev.securityChecks,
+              }));
+              setIsSubmitting(false);
+              setIsEditingUnlocked(false);
+              fetchApp();
             }
           } catch (_) { }
 
-          if (attempts >= 15) {
+          if (attempts >= 300) {
             clearInterval(pollTimer);
-            setModalState({ isOpen: false, status: 'success' });
+            setModalState((prev) => ({
+              ...prev,
+              isOpen: prev.isOpen,
+              status: 'error',
+              message: 'Validation timed out.',
+            }));
             setIsSubmitting(false);
             setIsEditingUnlocked(false);
             fetchApp();

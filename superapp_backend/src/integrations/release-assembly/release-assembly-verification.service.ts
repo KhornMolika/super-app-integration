@@ -543,7 +543,9 @@ export class ReleaseAssemblyVerificationService {
         await this.runs?.recordBuild(id, { status: 'COMPLETED' });
       }
 
-      const repoName = 'apk-test-builds';
+      const repoName =
+        body.repoName ||
+        (body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds');
       const filename =
         body.filename ||
         (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');

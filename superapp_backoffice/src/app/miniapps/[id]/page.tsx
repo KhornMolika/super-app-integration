@@ -300,6 +300,11 @@ function ManageMiniAppContent() {
           canEdit={actions.edit}
           canPublish={can('miniapp:approve')}
           onStartEdit={() => setIsEditingUnlocked(true)}
+          canStartNewVersion={Boolean(actions.edit && actions.isLive && !formData.pendingRevision)}
+          onStartNewVersion={() => {
+            setIsEditingUnlocked(true);
+            setActiveTab('integration');
+          }}
           handleWebViewChange={handleWebViewChange}
           handleFlutterChange={handleFlutterChange}
           onUpdateFlutterConfig={handleUpdateFlutterConfig}

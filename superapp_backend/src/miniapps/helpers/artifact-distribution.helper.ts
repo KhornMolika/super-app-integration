@@ -267,28 +267,37 @@ export class ArtifactDistributionHelper {
       artifactType === 'release' ? 'apk-releases' : 'apk-test-builds';
     const filename =
       artifactType === 'release' ? 'app-release.apk' : 'app-debug.apk';
-    const nexusBase = (
-      process.env.NEXUS_BASE_URL || 'http://localhost:8081'
-    ).replace(/\/+$/, '');
-    const nexusUrl = `${nexusBase}/repository/${repoName}/superapp/${version}/${filename}`;
-
-    const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-    const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
-    const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
-
     const cleanVer = (version || 'v0.2.5').trim();
     const normVer = cleanVer.startsWith('v') ? cleanVer : `v${cleanVer}`;
     const downloadFilename =
       artifactType === 'release'
         ? `superapp-release-${normVer}.apk`
-        : `superapp-test-${normVer}.apk`;
+        : `superapp-test-${normVer}-arm64-v8a.apk`;
+    const nexusBase = (
+      process.env.NEXUS_BASE_URL || 'http://localhost:8081'
+    ).replace(/\/+$/, '');
+    const candidateUrls = [
+      `${nexusBase}/repository/${repoName}/superapp/${normVer}/${downloadFilename}`,
+      `${nexusBase}/repository/${repoName}/superapp/${version}/${filename}`,
+    ];
+
+    const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
+    const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
+    const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
     try {
-      const response = await fetch(nexusUrl, {
-        headers: { Authorization: `Basic ${b64}` },
-      });
+      let response: globalThis.Response | null = null;
+      for (const candidateUrl of candidateUrls) {
+        const res = await fetch(candidateUrl, {
+          headers: { Authorization: `Basic ${b64}` },
+        });
+        if (res.ok) {
+          response = res;
+          break;
+        }
+      }
 
-      if (!response.ok) {
+      if (!response) {
         // Try local disk fallback from mobile app build
         const mobileDir = process.env.MOBILE_APP_DIR
           ? path.resolve(process.env.MOBILE_APP_DIR)
