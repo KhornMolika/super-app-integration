@@ -495,6 +495,20 @@ export class MiniappLifecycleHelper {
       `Triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
 
+    const methodJobMap: Record<string, string> = {
+      WEBVIEW: 'miniapp-validation-webview',
+      FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+      NATIVE_SDK: 'miniapp-validation-native-sdk',
+      DEEP_LINK: 'miniapp-validation-deep-link',
+    };
+    const targetJob = methodJobMap[method] || 'miniapp-validation';
+    const prevBuild = await this.jenkinsService
+      .getJobBuildStatus?.(targetJob)
+      .catch(() => null);
+    const previousBuildNumber = prevBuild?.available
+      ? prevBuild.buildNumber
+      : undefined;
+
     this.jenkinsService
       .triggerMiniAppValidation({
         miniAppId: id,
@@ -539,7 +553,7 @@ export class MiniappLifecycleHelper {
             securityChecks: app.securityChecks,
           });
         } else {
-          this.monitorJenkinsValidation(id, method);
+          this.monitorJenkinsValidation(id, method, previousBuildNumber);
         }
       })
       .catch(async (err) => {
@@ -718,6 +732,20 @@ export class MiniappLifecycleHelper {
       `Re-triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
 
+    const methodJobMap: Record<string, string> = {
+      WEBVIEW: 'miniapp-validation-webview',
+      FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+      NATIVE_SDK: 'miniapp-validation-native-sdk',
+      DEEP_LINK: 'miniapp-validation-deep-link',
+    };
+    const targetJob = methodJobMap[method] || 'miniapp-validation';
+    const prevBuild = await this.jenkinsService
+      .getJobBuildStatus?.(targetJob)
+      .catch(() => null);
+    const previousBuildNumber = prevBuild?.available
+      ? prevBuild.buildNumber
+      : undefined;
+
     const jenkinsRes = await this.jenkinsService
       .triggerMiniAppValidation({
         miniAppId: id,
@@ -750,10 +778,16 @@ export class MiniappLifecycleHelper {
             ? this.gitService.getDeployPrivateKey()
             : ''),
       })
-      .catch((err) => ({
-        success: false,
-        message: `Could not connect to Jenkins: ${err.message}`,
-      }));
+      .catch(
+        (err): {
+          success: boolean;
+          message: string;
+          previousBuildNumber?: number;
+        } => ({
+          success: false,
+          message: `Could not connect to Jenkins: ${err.message}`,
+        }),
+      );
 
     if (!jenkinsRes.success) {
       const failureReason =
@@ -815,7 +849,7 @@ export class MiniappLifecycleHelper {
     );
 
     // Watchdog poller for Jenkins validation pipeline
-    this.monitorJenkinsValidation(id, method);
+    this.monitorJenkinsValidation(id, method, previousBuildNumber);
 
     return {
       success: true,
@@ -830,7 +864,11 @@ export class MiniappLifecycleHelper {
    * Watchdog poller for Jenkins validation pipelines (WebView, Flutter Package, Native SDK, Deep Link).
    * Detects early Jenkins crashes, updates live stages, and finalizes on pipeline completion.
    */
-  private monitorJenkinsValidation(miniAppId: string, integrationMethod: string) {
+  private monitorJenkinsValidation(
+    miniAppId: string,
+    integrationMethod: string,
+    previousBuildNumber?: number,
+  ) {
     const methodJobMap: Record<string, string> = {
       WEBVIEW: 'miniapp-validation-webview',
       FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
@@ -864,6 +902,15 @@ export class MiniappLifecycleHelper {
 
         const jStatus = await this.jenkinsService.getJobBuildStatus(targetJob);
         if (!jStatus.available) return;
+
+        // Ignore the stale previous build while the newly triggered build is still in the Jenkins queue
+        if (
+          previousBuildNumber !== undefined &&
+          jStatus.buildNumber !== undefined &&
+          jStatus.buildNumber <= previousBuildNumber
+        ) {
+          return;
+        }
 
         // If the build belongs to another miniApp, ignore until our build is active
         if (jStatus.miniAppId && jStatus.miniAppId !== miniAppId) return;

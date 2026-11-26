@@ -37,9 +37,11 @@ import { MobileProfileService, toProfile } from './mobile-profile.service';
 import { MobileRegulatorsService } from './mobile-regulators.service';
 import { BannersService } from '../banners/banners.service';
 import { BannerAudience } from '../banners/entities/banner.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   LoginDto,
   LogoutDto,
+  PreviewExchangeDto,
   RefreshDto,
   RegisterDto,
   TokenExchangeDto,
@@ -134,6 +136,27 @@ export class MobileController {
       dto.scope,
       phoneBuildOf(req.headers['x-super-app-build']),
     );
+  }
+
+  /** Backoffice-authenticated: issues a single-use 60s code for SuperApp Preview auto-login. */
+  @Post('auth/preview-session')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  createPreviewSession(@Req() req: any) {
+    const userId = req?.user?.id || req?.user?.sub;
+    return this.auth.createPreviewCode(userId);
+  }
+
+  /** Exchanges a single-use preview code for a mobile session. */
+  @Post('auth/preview-exchange')
+  @HttpCode(200)
+  @UseGuards(AuthRateLimitGuard)
+  @RateLimit({ scope: 'preview-exchange', ipMax: 30 })
+  previewExchange(
+    @Body() dto: PreviewExchangeDto,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.auth.exchangePreviewCode(dto.code, userAgent);
   }
 
   /** Public: force-update rules and legal URLs. Fails open (see sanitizeMobileAppConfig). */

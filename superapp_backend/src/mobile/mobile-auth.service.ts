@@ -90,6 +90,10 @@ export function intEnv(
 @Injectable()
 export class MobileAuthService {
   private readonly logger = new Logger(MobileAuthService.name);
+  private readonly previewCodes = new Map<
+    string,
+    { userId: string; expiresAt: number }
+  >();
 
   constructor(
     @InjectRepository(Identity) private readonly users: Repository<Identity>,
@@ -839,5 +843,49 @@ export class MobileAuthService {
       issued_token_type: 'urn:ietf:params:oauth:token-type:access_token',
       scope,
     };
+  }
+
+  // --------------------------------------------------- backoffice preview SSO
+
+  async createPreviewCode(
+    userId: string,
+  ): Promise<{ code: string; expiresIn: number }> {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user || user.status === 'DISABLED' || user.status === 'DELETED') {
+      throw new UnauthorizedException('User account is not active');
+    }
+
+    const now = Date.now();
+    for (const [k, v] of this.previewCodes.entries()) {
+      if (v.expiresAt <= now) this.previewCodes.delete(k);
+    }
+
+    const code = crypto.randomBytes(24).toString('hex');
+    const expiresIn = 60;
+    this.previewCodes.set(code, {
+      userId: user.id,
+      expiresAt: now + expiresIn * 1000,
+    });
+    return { code, expiresIn };
+  }
+
+  async exchangePreviewCode(
+    code: string,
+    userAgent?: string,
+  ): Promise<TokenResponse> {
+    const trimmed = (code || '').trim();
+    const entry = this.previewCodes.get(trimmed);
+    if (entry) this.previewCodes.delete(trimmed);
+
+    if (!entry || entry.expiresAt <= Date.now()) {
+      throw new UnauthorizedException('Invalid or expired preview session');
+    }
+
+    const user = await this.users.findOne({ where: { id: entry.userId } });
+    if (!user || user.status === 'DISABLED' || user.status === 'DELETED') {
+      throw new UnauthorizedException('User account is not active');
+    }
+
+    return this.issueTokens(user, crypto.randomUUID(), userAgent);
   }
 }

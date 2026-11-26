@@ -9,6 +9,7 @@ import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from './DownloadApkModal';
 import { miniappsApi } from '@/api/miniapps.api';
+import { authApi } from '@/api/auth.api';
 
 export type DeviceType = 
   | 'Responsive' | 'Custom' 
@@ -61,6 +62,8 @@ export default function PreviewModal({
   const [showApkModal, setShowApkModal] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState<boolean>(false);
+  const [sandboxPreviewCode, setSandboxPreviewCode] = useState<string | null>(null);
+  const [sandboxSessionReady, setSandboxSessionReady] = useState<boolean>(false);
   
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [autoScale, setAutoScale] = useState(1);
@@ -134,7 +137,9 @@ export default function PreviewModal({
   // Effective SuperApp URL (Host shell container)
   const sandboxBase =
     process.env.NEXT_PUBLIC_SUPERAPP_SANDBOX_URL || '/superapp-sandbox/index.html';
-  const superAppContainerUrl = `${sandboxBase}?t=${reloadKey}`;
+  const superAppContainerUrl = sandboxSessionReady
+    ? `${sandboxBase}?t=${reloadKey}${sandboxPreviewCode ? `&previewCode=${encodeURIComponent(sandboxPreviewCode)}` : ''}`
+    : 'about:blank';
 
   // Effective MiniApp starting URL (Loads directly into the mini app's own home screen)
   const tokenQueryParam = previewToken ? `&token=${encodeURIComponent(previewToken)}` : '';
@@ -147,6 +152,30 @@ export default function PreviewModal({
   const displayMiniAppSubtitle = isDirectWebUrl
     ? url.replace(/^https?:\/\//, '')
     : `#/miniapp/${targetAppId || title.toLowerCase().replace(/\s+/g, '_')}`;
+
+  // Fetch single-use preview SSO code when SuperApp container screen is active
+  useEffect(() => {
+    let cancelled = false;
+    if (isOpen && currentScreen === 'sandbox') {
+      setSandboxSessionReady(false);
+      authApi
+        .createMobilePreviewSession()
+        .then((res) => {
+          if (!cancelled && res?.code) {
+            setSandboxPreviewCode(res.code);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setSandboxPreviewCode(null);
+        })
+        .finally(() => {
+          if (!cancelled) setSandboxSessionReady(true);
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, currentScreen, reloadKey]);
 
   // Fetch dynamic preview token from backend only when user accesses the MiniApp tab or reloads
   useEffect(() => {

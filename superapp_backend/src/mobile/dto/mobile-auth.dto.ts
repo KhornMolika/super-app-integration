@@ -82,3 +82,11 @@ export class RefreshDto {
   @MaxLength(512)
   refresh_token!: string;
 }
+
+export class PreviewExchangeDto {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  code!: string;
+}

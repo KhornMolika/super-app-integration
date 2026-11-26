@@ -165,5 +165,10 @@ export const authApi = {
       method: 'POST',
       body: { resetToken, newPassword },
     }).then((res) => unwrapItem(res)),
+
+  createMobilePreviewSession: () =>
+    apiClient<{ code: string; expiresIn: number }>('/api/mobile/auth/preview-session', {
+      method: 'POST',
+    }).then((res) => unwrapItem(res)),
 };
 
