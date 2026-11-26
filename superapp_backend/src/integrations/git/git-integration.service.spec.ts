@@ -88,6 +88,8 @@ describe('GitIntegrationService & Providers', () => {
       await expect(service.detectWidgetClasses(url, 'v1.2.0')).resolves.toEqual({
         packageName: 'hr_pkg',
         widgetCandidates: ['HrHomeWidget'],
+        entryPointCandidates: ['HrHomeWidget'],
+        mainLibraryExists: true,
       });
     });
 
@@ -108,6 +110,8 @@ describe('GitIntegrationService & Providers', () => {
       await expect(service.detectWidgetClasses(url)).resolves.toEqual({
         packageName: 'hr_pkg',
         widgetCandidates: [],
+        entryPointCandidates: [],
+        mainLibraryExists: true,
       });
     });
 
@@ -117,6 +121,8 @@ describe('GitIntegrationService & Providers', () => {
       await expect(service.detectWidgetClasses(url)).resolves.toEqual({
         packageName: 'hr_pkg',
         widgetCandidates: null,
+        entryPointCandidates: null,
+        mainLibraryExists: false,
       });
     });
   });

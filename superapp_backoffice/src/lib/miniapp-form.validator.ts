@@ -336,6 +336,36 @@ export async function validateMiniAppStep(
           }
         }
       }
+
+      // Entry Widget (entryPoint) validation when package inspection data is available
+      const rawEntry = conf?.entryPoint?.trim() || '';
+      if (rawEntry && !/^[A-Z][A-Za-z0-9_]*$/.test(rawEntry)) {
+        errors['integrationConfigFlutter.entryPoint'] =
+          'Entry Widget must be a valid Dart class or typedef name (e.g. MiniAppEntry or TrustRegulatorAppEntry).';
+        isValid = false;
+      } else {
+        const entryCandidates = isFlutterArtifact(conf)
+          ? conf?.entryPointCandidates
+          : conf?.gitEntryPointCandidates;
+        const pkgLabel = conf?.packageName?.trim() || 'your_package';
+        if (conf?.mainLibraryExists === false && Array.isArray(entryCandidates)) {
+          errors['integrationConfigFlutter.entryPoint'] =
+            `Main library lib/${pkgLabel}.dart was not found in the package. The MiniApp package must export MiniAppEntry (or a root Widget).`;
+          isValid = false;
+        } else if (Array.isArray(entryCandidates)) {
+          const effectiveEntry = rawEntry || 'MiniAppEntry';
+          if (!entryCandidates.includes(effectiveEntry)) {
+            if (entryCandidates.length > 0) {
+              errors['integrationConfigFlutter.entryPoint'] =
+                `Entry widget '${effectiveEntry}' was not found in lib/${pkgLabel}.dart. Detected: ${entryCandidates.join(', ')}. Select a detected widget or ask the MiniApp developer to export 'typedef MiniAppEntry = ${entryCandidates[0]};'.`;
+            } else {
+              errors['integrationConfigFlutter.entryPoint'] =
+                `No exported Widget found in lib/${pkgLabel}.dart. The MiniApp package must export 'MiniAppEntry' (e.g. typedef MiniAppEntry = YourEntryWidget;).`;
+            }
+            isValid = false;
+          }
+        }
+      }
     }
 
     if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {

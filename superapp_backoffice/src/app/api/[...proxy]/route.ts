@@ -188,6 +188,7 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
         method: request.method,
         headers,
         body,
+        cache: 'no-store',
         signal: AbortSignal.timeout(10000),
       });
     } catch (fetchErr: any) {
@@ -325,10 +326,20 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     // Try to get response as JSON, fallback to text
     if (contentTypeHeader && contentTypeHeader.includes('application/json')) {
       const data = await res.json().catch(() => null);
-      return applyAuthCookie(NextResponse.json(data, { status: res.status }));
+      return applyAuthCookie(
+        NextResponse.json(data, {
+          status: res.status,
+          headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+        }),
+      );
     } else {
       const text = await res.text();
-      return applyAuthCookie(new NextResponse(text, { status: res.status }));
+      return applyAuthCookie(
+        new NextResponse(text, {
+          status: res.status,
+          headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+        }),
+      );
     }
 
     

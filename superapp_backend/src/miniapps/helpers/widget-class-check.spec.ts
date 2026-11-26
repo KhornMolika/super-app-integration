@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import {
   dartFilesFromZip,
+  findEntryPointCandidates,
   findWidgetCandidates,
   hasWidgetClass,
 } from './widget-class-check';
@@ -298,6 +299,51 @@ describe('ArchiveSanitizerHelper widgetCandidates', () => {
       zip.addFile('pubspec.yaml', Buffer.from('name: fsa_hr_miniapp\n'));
       zip.addFile('lib/fsa_hr_miniapp.dart', Buffer.from(widget('HrHomeWidget')));
       expect(candidates(zip.toBuffer())).toEqual(['HrHomeWidget']);
+    });
+  });
+});
+
+describe('findEntryPointCandidates', () => {
+  it('returns mainLibraryExists: false when lib/<pkg>.dart is missing', () => {
+    expect(
+      findEntryPointCandidates(
+        { 'lib/other.dart': 'class MiniAppEntry extends StatelessWidget {}' },
+        'ma_flutter_trust_regulator',
+      ),
+    ).toEqual({ mainLibraryExists: false, candidates: [] });
+  });
+
+  it('detects MiniAppEntry typedef and StatelessWidget entry classes, putting MiniAppEntry first', () => {
+    const res = findEntryPointCandidates(
+      {
+        'lib/ma_flutter_trust_regulator.dart':
+          "export 'src/app.dart';\ntypedef MiniAppEntry = TrustRegulatorAppEntry;\n",
+        'lib/src/app.dart':
+          'class TrustRegulatorAppEntry extends StatelessWidget { const TrustRegulatorAppEntry({super.key, this.onExit}); final VoidCallback? onExit; }',
+      },
+      'ma_flutter_trust_regulator',
+    );
+    expect(res).toEqual({
+      mainLibraryExists: true,
+      candidates: ['MiniAppEntry', 'TrustRegulatorAppEntry'],
+    });
+  });
+
+  it('respects export show/hide combinators', () => {
+    const res = findEntryPointCandidates(
+      {
+        'lib/my_pkg.dart':
+          "export 'src/a.dart' show PublicEntry;\nexport 'src/b.dart' hide HiddenEntry;\n",
+        'lib/src/a.dart':
+          'class PublicEntry extends StatelessWidget {}\nclass SecretEntry extends StatelessWidget {}',
+        'lib/src/b.dart':
+          'class HiddenEntry extends StatefulWidget {}\nclass VisibleEntry extends StatefulWidget {}',
+      },
+      'my_pkg',
+    );
+    expect(res).toEqual({
+      mainLibraryExists: true,
+      candidates: ['PublicEntry', 'VisibleEntry'],
     });
   });
 });

@@ -89,6 +89,10 @@ export interface FlutterPackageConfigDto {
   isArchiveSubmission?: boolean;
   widgetCandidates?: string[];
   gitWidgetCandidates?: string[];
+  entryPoint?: string;
+  entryPointCandidates?: string[];
+  gitEntryPointCandidates?: string[];
+  mainLibraryExists?: boolean;
   isScanningGitWidgets?: boolean;
 }
 

@@ -265,6 +265,130 @@ export function hasWidgetClass(
 }
 
 /**
+ * Public, non-abstract, non-sealed classes and widget typedefs in one source
+ * file that can serve as a MiniApp root entry widget:
+ *  - Named `MiniAppEntry`, OR
+ *  - Extends `StatelessWidget` / `StatefulWidget`, OR
+ *  - Mentions `onExit` in its class body, OR
+ *  - `typedef Name = Target;` where both are PascalCase Dart identifiers.
+ */
+function entryPointsInSource(raw: string): Set<string> {
+  const found = new Set<string>();
+  const src = scan(raw, false);
+  const n = src.length;
+
+  // Match `typedef Name = Target;` (e.g. `typedef MiniAppEntry = TrustRegulatorAppEntry;`)
+  for (const m of src.matchAll(/\btypedef\s+([A-Z][A-Za-z0-9_]*)\s*=\s*([A-Z][A-Za-z0-9_]*)\s*;/g)) {
+    found.add(m[1]);
+  }
+
+  const onExitAt: number[] = [];
+  for (const m of src.matchAll(/\bonExit\b/g)) onExitAt.push(m.index!);
+
+  // matching close brace for every open brace, one stack pass
+  const close = new Int32Array(n).fill(-1);
+  const stack: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const c = src.charCodeAt(i);
+    if (c === 123) stack.push(i);
+    else if (c === 125 && stack.length) close[stack.pop()!] = i;
+  }
+  const nextStop = new Int32Array(n + 1);
+  nextStop[n] = n;
+  for (let i = n - 1; i >= 0; i--) {
+    const c = src.charCodeAt(i);
+    nextStop[i] = c === 123 || c === 59 ? i : nextStop[i + 1];
+  }
+
+  for (const m of src.matchAll(/\bclass\s+([A-Za-z_]\w*)/g)) {
+    const name = m[1];
+    if (!/^[A-Z][A-Za-z0-9_]*$/.test(name)) continue;
+
+    let skip = false;
+    let p = m.index!;
+    for (;;) {
+      let e = p;
+      while (e > 0 && /\s/.test(src[e - 1])) e--;
+      let b = e;
+      while (b > 0 && /\w/.test(src[b - 1])) b--;
+      if (!CLASS_MODIFIERS.has(src.slice(b, e))) break;
+      if (src.slice(b, e) === 'abstract' || src.slice(b, e) === 'sealed') {
+        skip = true;
+      }
+      p = b;
+    }
+    if (skip) continue;
+
+    const open = nextStop[m.index! + m[0].length];
+    if (open >= n || src[open] !== '{') continue;
+    const header = src.slice(m.index! + m[0].length, open);
+    const isWidget = /\bextends\s+(?:StatelessWidget|StatefulWidget)\b/.test(header);
+    const end = close[open] === -1 ? n : close[open];
+    const k = lowerBound(onExitAt, open + 1);
+    const hasOnExit = k < onExitAt.length && onExitAt[k] < end;
+
+    if (name === 'MiniAppEntry' || isWidget || hasOnExit) {
+      found.add(name);
+    }
+  }
+  return found;
+}
+
+/**
+ * Inspects `lib/<packageName>.dart` (and transitive relative `export`s,
+ * honouring `show` / `hide` combinators) for root entry widget candidates.
+ * Returns `MiniAppEntry` first when exported, followed by other candidates.
+ */
+export function findEntryPointCandidates(
+  files: Record<string, string>,
+  packageName: string,
+): { mainLibraryExists: boolean; candidates: string[] } {
+  const main = `lib/${packageName}.dart`;
+  if (!Object.prototype.hasOwnProperty.call(files, main)) {
+    return { mainLibraryExists: false, candidates: [] };
+  }
+
+  const found = new Set<string>();
+  const visited = new Set<string>();
+  // Track allowed symbol filters when traversing `export ... show ...` / `hide ...`
+  const queue: Array<{ path: string; allow?: Set<string>; deny?: Set<string> }> = [
+    { path: main },
+  ];
+
+  while (queue.length) {
+    const { path, allow, deny } = queue.pop()!;
+    if (visited.has(path)) continue;
+    visited.add(path);
+    const text = files[path];
+    if (!isAnalysable(path, text)) continue;
+
+    for (const name of entryPointsInSource(text)) {
+      if (allow && !allow.has(name)) continue;
+      if (deny?.has(name)) continue;
+      found.add(name);
+    }
+
+    for (const e of exportEdges(path, text, files)) {
+      let nextAllow = allow;
+      if (e.show) {
+        nextAllow = allow
+          ? new Set([...e.show].filter((x) => allow.has(x)))
+          : new Set(e.show);
+      }
+      const nextDeny = deny || e.hide ? new Set([...(deny ?? []), ...(e.hide ?? [])]) : undefined;
+      queue.push({ path: e.target, allow: nextAllow, deny: nextDeny });
+    }
+  }
+
+  const sorted = [...found].sort((a, b) => {
+    if (a === 'MiniAppEntry') return -1;
+    if (b === 'MiniAppEntry') return 1;
+    return a.localeCompare(b);
+  });
+  return { mainLibraryExists: true, candidates: sorted };
+}
+
+/**
  * Builds the `lib/**.dart` source map (package-root-relative keys) from zip
  * entries. Strips one wrapper folder when every entry shares a top folder that
  * contains pubspec.yaml; ignores example/.

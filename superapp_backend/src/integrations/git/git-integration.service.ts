@@ -17,6 +17,7 @@ import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
 import { gitDartFiles } from '../../miniapps/helpers/home-widget-verifier';
 import {
+  findEntryPointCandidates,
   findWidgetCandidates,
   hasWidgetClass,
 } from '../../miniapps/helpers/widget-class-check';
@@ -239,23 +240,45 @@ export class GitIntegrationService {
     explicitProvider?: GitProviderType,
     token?: string,
     path?: string,
-  ): Promise<{ packageName: string | null; widgetCandidates: string[] | null }> {
+  ): Promise<{
+    packageName: string | null;
+    widgetCandidates: string[] | null;
+    entryPointCandidates: string[] | null;
+    mainLibraryExists: boolean;
+  }> {
     const provider = this.resolveProvider(url, explicitProvider);
     const validation = await provider.validateFlutterPackage(url, ref, token, path);
     const packageName = validation.packageName || inferPackageNameFromGitUrl(url, path);
-    if (!packageName) return { packageName: null, widgetCandidates: null };
+    if (!packageName) {
+      return {
+        packageName: null,
+        widgetCandidates: null,
+        entryPointCandidates: null,
+        mainLibraryExists: false,
+      };
+    }
 
     const files = await gitDartFiles(
       (filePath) => provider.getFileContent(url, filePath, ref, token),
       packageName,
       path || validation.path,
     );
-    if (!files[`lib/${packageName}.dart`]) return { packageName, widgetCandidates: null };
+    if (!files[`lib/${packageName}.dart`]) {
+      return {
+        packageName,
+        widgetCandidates: null,
+        entryPointCandidates: null,
+        mainLibraryExists: false,
+      };
+    }
+    const entryInfo = findEntryPointCandidates(files, packageName);
     return {
       packageName,
       widgetCandidates: findWidgetCandidates(files).filter((c) =>
         hasWidgetClass(files, packageName, c),
       ),
+      entryPointCandidates: entryInfo.candidates,
+      mainLibraryExists: entryInfo.mainLibraryExists,
     };
   }
 

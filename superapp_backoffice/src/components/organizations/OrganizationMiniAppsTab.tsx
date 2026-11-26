@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
 import { PackageIcon, ExternalLinkIcon } from '@/components/ui/Icons';
 import { Pagination, usePagination } from '@/components/ui/Pagination';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 
 export interface OrganizationMiniAppsTabProps {
   miniApps?: OrganizationMiniApp[];
@@ -68,9 +69,7 @@ export function OrganizationMiniAppsTab({
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-xs flex items-center justify-center shrink-0">
-                        {app.name.charAt(0).toUpperCase()}
-                      </div>
+                      <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
                       <div className="min-w-0">
                         <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
                           {app.name}

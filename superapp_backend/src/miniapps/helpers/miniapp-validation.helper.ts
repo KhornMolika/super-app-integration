@@ -373,6 +373,31 @@ export class MiniappValidationHelper {
           );
         }
       }
+
+      // Server-side Entry Widget (entryPoint) validation
+      const rawEntry = String(app.integrationConfig?.entryPoint || '').trim();
+      if (rawEntry && !/^[A-Z][A-Za-z0-9_]*$/.test(rawEntry)) {
+        errors['integrationConfigFlutter.entryPoint'] =
+          'Entry Widget must be a valid Dart class or typedef name (e.g. MiniAppEntry).';
+      } else {
+        const entryCandidates =
+          app.integrationConfig?.sourceType === 'GIT'
+            ? app.integrationConfig?.gitEntryPointCandidates
+            : app.integrationConfig?.entryPointCandidates;
+        const pkgLabel = String(app.integrationConfig?.packageName || '').trim() || 'your_package';
+        if (app.integrationConfig?.mainLibraryExists === false && Array.isArray(entryCandidates)) {
+          errors['integrationConfigFlutter.entryPoint'] =
+            `Main library lib/${pkgLabel}.dart was not found in the package.`;
+        } else if (Array.isArray(entryCandidates)) {
+          const effectiveEntry = rawEntry || 'MiniAppEntry';
+          if (!entryCandidates.includes(effectiveEntry)) {
+            errors['integrationConfigFlutter.entryPoint'] =
+              entryCandidates.length > 0
+                ? `Entry widget '${effectiveEntry}' was not found in lib/${pkgLabel}.dart. Detected: ${entryCandidates.join(', ')}.`
+                : `No exported Widget found in lib/${pkgLabel}.dart. Package must export MiniAppEntry.`;
+          }
+        }
+      }
     } else if (app.integrationMethod === 'DEEP_LINK') {
       const scheme = app.integrationConfig?.urlScheme?.trim();
       if (!scheme) {
