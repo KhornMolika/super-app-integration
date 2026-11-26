@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { io } from 'socket.io-client';
+import { authApi } from '@/api/auth.api';
 import {
   DevicePhoneIcon,
   RefreshIcon,
@@ -65,6 +66,8 @@ export default function MobilePreviewPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'kyc' | 'marketplace'>('all');
   const [autoScaleFactor, setAutoScaleFactor] = useState(1);
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const [previewSessionReady, setPreviewSessionReady] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const spec = DEVICE_SPECS[device];
@@ -105,6 +108,28 @@ export default function MobilePreviewPage() {
     };
   }, []);
 
+  // Request a single-use preview SSO code for the logged-in Backoffice user
+  useEffect(() => {
+    let cancelled = false;
+    setPreviewSessionReady(false);
+    authApi
+      .createMobilePreviewSession()
+      .then((res) => {
+        if (!cancelled && res?.code) {
+          setPreviewCode(res.code);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewCode(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewSessionReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
   // Compute responsive auto-scale to ensure the entire phone fits nicely on any desktop/tablet screen
   useEffect(() => {
     const calculateScale = () => {
@@ -133,9 +158,11 @@ export default function MobilePreviewPage() {
 
   const sandboxBase =
     process.env.NEXT_PUBLIC_SUPERAPP_SANDBOX_URL || '/superapp-sandbox/index.html';
-  const sandboxUrl = `${sandboxBase}?t=${reloadKey}${
-    activeTab !== 'all' ? `#/miniapp/${activeTab}` : ''
-  }`;
+  const sandboxUrl = previewSessionReady
+    ? `${sandboxBase}?t=${reloadKey}${previewCode ? `&previewCode=${encodeURIComponent(previewCode)}` : ''}${
+        activeTab !== 'all' ? `#/miniapp/${activeTab}` : ''
+      }`
+    : 'about:blank';
 
   const getFinishBorder = () => {
     switch (finish) {

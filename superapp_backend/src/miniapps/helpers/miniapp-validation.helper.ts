@@ -706,6 +706,20 @@ export class MiniappValidationHelper {
         `Triggering universal Jenkins security scan for ${method} MiniApp ${id}...`,
       );
 
+      const methodJobMap: Record<string, string> = {
+        WEBVIEW: 'miniapp-validation-webview',
+        FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+        NATIVE_SDK: 'miniapp-validation-native-sdk',
+        DEEP_LINK: 'miniapp-validation-deep-link',
+      };
+      const targetJob = methodJobMap[method] || 'miniapp-validation';
+      const prevBuild = await this.jenkinsService
+        .getJobBuildStatus?.(targetJob)
+        .catch(() => null);
+      const previousBuildNumber = prevBuild?.available
+        ? prevBuild.buildNumber
+        : undefined;
+
       this.jenkinsService
         .triggerMiniAppValidation({
           miniAppId: id,
@@ -751,7 +765,7 @@ export class MiniappValidationHelper {
             });
           } else {
             // Watchdog poller for Jenkins validation pipeline in case of Groovy/runner crash or abort
-            this.monitorJenkinsValidation(id, method);
+            this.monitorJenkinsValidation(id, method, previousBuildNumber);
           }
         })
         .catch(async (err) => {
@@ -830,7 +844,11 @@ export class MiniappValidationHelper {
    * Watchdog poller for Jenkins validation pipelines (WebView, Flutter Package, Native SDK, Deep Link).
    * Detects early Jenkins crashes, Groovy compilation failures, or pipeline aborts.
    */
-  private monitorJenkinsValidation(miniAppId: string, integrationMethod: string) {
+  private monitorJenkinsValidation(
+    miniAppId: string,
+    integrationMethod: string,
+    previousBuildNumber?: number,
+  ) {
     const methodJobMap: Record<string, string> = {
       WEBVIEW: 'miniapp-validation-webview',
       FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
@@ -869,6 +887,15 @@ export class MiniappValidationHelper {
         }
 
         const jStatus = await this.jenkinsService.getJobBuildStatus(targetJob);
+        // Ignore the stale previous build while the newly triggered build is still in the Jenkins queue
+        if (
+          jStatus.available &&
+          previousBuildNumber !== undefined &&
+          jStatus.buildNumber !== undefined &&
+          jStatus.buildNumber <= previousBuildNumber
+        ) {
+          return;
+        }
         // The job's last build may be another app's scan (or ours is still queued)
         if (jStatus.available && jStatus.miniAppId && jStatus.miniAppId !== miniAppId) return;
 
