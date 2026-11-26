@@ -106,7 +106,7 @@ describe('MiniappMutationHelper and homeWidget', () => {
       );
     });
 
-    it('stages clearing the widget (null) on a TESTING app', async () => {
+    it('updates the draft directly when clearing the widget (null) on an unreleased TESTING app', async () => {
       const { helper } = setup();
       const existing = hr({
         status: 'TESTING',
@@ -115,8 +115,8 @@ describe('MiniappMutationHelper and homeWidget', () => {
 
       await helper.update(existing, edit({ homeWidget: null }), 'admin-1');
 
-      expect(existing.homeWidget).toEqual({ widgetClass: 'HrHomeWidget' });
-      expect(existing.pendingRevision).toMatchObject({ homeWidget: null });
+      expect(existing.homeWidget).toBeNull();
+      expect(existing.pendingRevision).toBeNull();
     });
 
     it('fast-tracks an unchanged widget without review', async () => {

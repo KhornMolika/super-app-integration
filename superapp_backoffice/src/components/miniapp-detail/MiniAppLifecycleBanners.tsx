@@ -220,8 +220,8 @@ export default function MiniAppLifecycleBanners({
         </div>
       )}
 
-      {/* 0. Staged Revision in Review Banner for live Apps */}
-      {actions.isLive && pendingRevision && (
+      {/* 0. Staged Revision in Review Banner for Live or Testing Apps */}
+      {pendingRevision && (actions.isLive || status === 'TESTING' || status === 'TEST_PASSED') && (
         <div className="mb-6 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
@@ -230,19 +230,21 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-base font-bold text-amber-900 dark:text-amber-200">
-                  Pending Staged Revision
+                  {draftVersion ? `New Version (${draftVersion}) Ready for Review` : 'Pending Staged Revision'}
                 </h4>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                  Active Version Running in SuperApp
+                  {actions.isLive ? 'Active Version Running in SuperApp' : 'Current Test Build Active'}
                 </span>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
                   Revision {pendingRevision.revisionStatus || 'IN_REVIEW'}
                 </span>
               </div>
               <p className="text-sm text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
-                You have staged updates pending publication. The current live version remains active for users in the SuperApp until this revision is published.
+                {actions.isLive
+                  ? 'You have staged updates pending publication. The current live version remains active for users in the SuperApp until this revision is published.'
+                  : 'You submitted a new version while the previous build is in testing. Review & Start Testing on this revision to rebuild the Sandbox and APK with your latest changes.'}
               </p>
             </div>
           </div>
@@ -256,7 +258,7 @@ export default function MiniAppLifecycleBanners({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
-                <span>Compare &amp; Review Revision</span>
+                <span>{actions.isLive ? 'Compare & Review Revision' : 'Review & Start Testing'}</span>
               </Button>
             )}
             {actions.publishRevision && (
