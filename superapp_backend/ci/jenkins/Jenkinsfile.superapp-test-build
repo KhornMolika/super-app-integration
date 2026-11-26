@@ -517,17 +517,10 @@ pipeline {
                                     printf 'user = "%s:%s"\\n' "${NEXUS_USER:-admin}" "${NEXUS_PASSWORD:-}" \
                                         | curl -sSf -K - --upload-file "$1" "$2" > /dev/null
                                 }
-                                # 1. Upload primary test APK (superapp-test-<version>.apk) - lean ARM64 build (~30MB)
-                                upload "$APK" "$APK_URL"
-                                echo "Uploaded $APK_URL (lean ARM64 ~30 MB)"
-
-                                # 2. app-debug.apk / app-release.apk alias for direct download routes
-                                upload "$APK" "${APK_URL%/*}/app-$BUILD_TYPE.apk"
-                                echo "Uploaded ${APK_URL%/*}/app-$BUILD_TYPE.apk"
-
-                                # 3. Explicit arm64 named copy for Telegram bot or ABI-specific callers
-                                upload "$APK" "${APK_URL%.apk}-arm64-v8a.apk"
-                                echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
+                                # Upload single standardized ARM64 test APK (superapp-test-<version>-arm64-v8a.apk)
+                                ARM64_APK_URL="${APK_URL%.apk}-arm64-v8a.apk"
+                                upload "$APK" "$ARM64_APK_URL"
+                                echo "Uploaded $ARM64_APK_URL"
                                 if [ -f "$MOBILE_DIR/native_sdks.json" ]; then upload "$MOBILE_DIR/native_sdks.json" "$LIST_URL"; echo "Uploaded $LIST_URL"; fi
                                 # Web build of this same version, published only after the APK, so the
                                 # previews never show a build whose APK failed. latest.json last.
