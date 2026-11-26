@@ -272,7 +272,7 @@ export default function DownloadApkModal({
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
-                  SuperApp Mobile APK
+                  SuperApp Test APK
                 </h3>
 
                 {/* Version badge with live dot */}
@@ -289,12 +289,12 @@ export default function DownloadApkModal({
                       : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                   }`}
                 >
-                  {activeSize ? `${activeSize} • ` : ''}{isRelease ? 'Release ARM64 AOT' : 'Debug Test Build'}
+                  {activeSize ? `${activeSize} • ` : ''}{isRelease ? 'AOT Test Build' : 'Debug Test Build'}
                 </span>
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                Install and test the native SuperApp host shell on physical Android devices.
+                Install and test candidate MiniApps on your Android device.
               </p>
             </div>
           </div>
@@ -517,10 +517,10 @@ export default function DownloadApkModal({
                   <div className="space-y-0.5">
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-brand-500" />
-                      <span>Target APK Release Version</span>
+                      <span>Test Build Version</span>
                     </span>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Select published SuperApp build version from artifact repository.
+                      Choose which test build version to download and install.
                     </p>
                   </div>
                   <div>
@@ -531,7 +531,7 @@ export default function DownloadApkModal({
                     >
                       {allVersions.map((v) => (
                         <option key={v.version} value={v.version}>
-                          {v.version} — {v.size} ({v.buildMode === 'release' ? 'Release' : 'Debug'})
+                          {v.version} — {v.size} ({v.buildMode === 'release' ? 'AOT Test Build' : 'Debug Test Build'})
                         </option>
                       ))}
                     </Select>
@@ -546,7 +546,7 @@ export default function DownloadApkModal({
                   <div className="space-y-0.5 text-slate-800 dark:text-slate-200">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-emerald-800 dark:text-emerald-300">
-                        Size-Optimized Release Build{activeSize ? ` (${activeSize})` : ''}
+                        Size-Optimized AOT Test Build{activeSize ? ` (${activeSize})` : ''}
                       </span>
                       <span className="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                         ARM64 AOT

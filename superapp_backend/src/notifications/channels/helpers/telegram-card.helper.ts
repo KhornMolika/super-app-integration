@@ -164,7 +164,26 @@ ${cleanIssue}
           (metadata?.version as string) ||
           (metadata?.releaseVersion as string) ||
           'v1.0.0';
-        const text = `
+        const isRelease =
+          metadata?.buildType === 'release' ||
+          metadata?.miniAppSet === 'release';
+        const text = isRelease
+          ? `
+🔵 <b>SUPER APP RELEASE BUILD IN PROGRESS</b>
+
+📱 <b>App:</b> ${appDisplayName}
+🏷️ <b>Version:</b> <code>${version}</code>
+⚙️ <b>Pipeline:</b> Jenkins Official Release Assembler
+
+<pre><code class="language-diff">
+! Flutter Engine : Compiling Native Core
+! Dependencies   : Resolving packages
+! Artifacts      : Compiling Release APK & AAB
+</code></pre>
+
+<blockquote>Stand by while official release artifacts are assembled and published to Sonatype Nexus (apk-releases).</blockquote>
+        `.trim()
+          : `
 🔵 <b>SUPER APP BUILD IN PROGRESS</b>
 
 📱 <b>App:</b> ${appDisplayName}
@@ -180,7 +199,12 @@ ${cleanIssue}
 <blockquote>Stand by while binary artifacts are assembled and published to Sonatype Nexus.</blockquote>
         `.trim();
 
-        buttons.push([{ text: '📊 View Build Progress', url: detailsUrl }]);
+        buttons.push([
+          {
+            text: '📊 View Build Progress',
+            url: isRelease ? `${baseUrl}/releases` : detailsUrl,
+          },
+        ]);
         return { text, buttons };
       }
 
@@ -190,12 +214,34 @@ ${cleanIssue}
           (metadata?.releaseVersion as string) ||
           'v0.2.1';
         const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
-        const targetFilename = `superapp-test-${version}.apk`;
+        const isRelease =
+          metadata?.buildType === 'release' ||
+          metadata?.miniAppSet === 'release';
+        const targetFilename = isRelease
+          ? 'app-release.apk'
+          : `superapp-test-${version}.apk`;
         const sandboxUrl = miniAppId
           ? `${baseUrl}/miniapps/${miniAppId}?preview=true`
           : `${baseUrl}/preview`;
 
-        const text = `
+        const text = isRelease
+          ? `
+🟢 <b>SUPER APP OFFICIAL RELEASE READY</b>
+
+📱 <b>App:</b> ${appDisplayName}
+🏷️ <b>Version:</b> <code>${version}</code>
+📦 <b>Artifact:</b> <code>${targetFilename}</code> (Optimized ARM64)
+
+<pre><code class="language-diff">
++ Architecture : 64-bit ARM (ARM64-v8a)
++ Package Size : ~25 MB (Optimized)
++ Release Tag  : ${version}
++ Repository   : Nexus (apk-releases)
+</code></pre>
+
+<blockquote>Official SuperApp release packaging is complete! Download app-release.apk from Nexus or open SuperApp Releases in Backoffice.</blockquote>
+        `.trim()
+          : `
 🟢 <b>SUPER APP TEST BUILD READY</b>
 
 📱 <b>App:</b> ${appDisplayName}
@@ -212,10 +258,17 @@ ${cleanIssue}
 <blockquote>SuperApp test binary packaging is complete! Tap the attached lean APK to install directly on Android, or launch the interactive Web Sandbox.</blockquote>
         `.trim();
 
-        buttons.push([
-          { text: '🌐 Launch Sandbox', url: sandboxUrl },
-          { text: '📋 View in Backoffice', url: detailsUrl },
-        ]);
+        buttons.push(
+          isRelease
+            ? [
+                { text: '🚀 View Releases', url: `${baseUrl}/releases` },
+                { text: '📋 View App', url: detailsUrl },
+              ]
+            : [
+                { text: '🌐 Launch Sandbox', url: sandboxUrl },
+                { text: '📋 View in Backoffice', url: detailsUrl },
+              ],
+        );
         return { text, buttons };
       }
 

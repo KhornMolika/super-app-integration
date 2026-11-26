@@ -352,16 +352,14 @@ export class ReleaseAssemblyVerificationService {
       // The test build also publishes the web Super App with this version
     }
 
-    const nexusBase = (
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      'http://localhost:8081'
-    ).replace(/\/+$/, '');
-    const minioBase = (
-      this.configService.get<string>('MINIO_PUBLIC_URL') ||
-      'http://localhost:9000'
-    ).replace(/\/+$/, '');
-    const nexusApkUrl = `${nexusBase}/repository/apk-releases/superapp/${dto.releaseVersion}/app-release.apk`;
-    const minioApkUrl = `${minioBase}/releases/superapp/${dto.releaseVersion}/app-release.apk`;
+    const backofficeBase = resolveBackofficeBaseUrl(
+      this.configService.get<string>('BACKOFFICE_BASE_URL') ||
+        this.configService.get<string>('WEBAPP_URL'),
+    );
+    const normVer = dto.releaseVersion.startsWith('v')
+      ? dto.releaseVersion
+      : `v${dto.releaseVersion}`;
+    const proxyApkUrl = `${backofficeBase}/api/download-apk?type=release&version=${encodeURIComponent(normVer)}&appName=superapp`;
 
     return {
       passed,
@@ -394,7 +392,7 @@ export class ReleaseAssemblyVerificationService {
             },
           }
         : undefined,
-      apkUrl: passed ? nexusApkUrl : undefined,
+      apkUrl: passed ? proxyApkUrl : undefined,
     };
   }
 
@@ -585,13 +583,14 @@ export class ReleaseAssemblyVerificationService {
         }
         const candidates = await this.miniappRepository.find({
           where: {
-            appStatus: AppStatus.DRAFT,
+            appStatus: In([AppStatus.DRAFT, AppStatus.LIVE]),
             integrationMethod: In(['FLUTTER_PACKAGE', 'NATIVE_SDK']),
           },
           relations: { versions: true },
         });
         for (const candidate of candidates) {
           const hasActiveVersion =
+            candidate.appStatus === AppStatus.LIVE ||
             Boolean(candidate.liveVersionId) ||
             (Array.isArray(candidate.versions) &&
               candidate.versions.some((v) => v.status === 'ACTIVE'));

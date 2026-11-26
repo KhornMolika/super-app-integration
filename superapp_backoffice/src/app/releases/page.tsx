@@ -492,7 +492,7 @@ export default function ReleasesPage() {
               </div>
               {releaseBuildStatus === 'COMPLETED' ? (
                 <a
-                  href={gate2Result.apkUrl}
+                  href={`/api/download-apk?type=release&version=${encodeURIComponent(gate2Result.releaseVersion || releaseVersion)}&appName=superapp`}
                   download={`superapp-${gate2Result.releaseVersion || releaseVersion}-release.apk`}
                   className="w-full sm:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
                 >
