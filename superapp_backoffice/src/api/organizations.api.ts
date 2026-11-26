@@ -18,6 +18,7 @@ export interface OrganizationMiniApp {
   appId: string;
   slug?: string;
   name: string;
+  logo?: string | null;
   tagline?: string;
   category?: string;
   status?: string;

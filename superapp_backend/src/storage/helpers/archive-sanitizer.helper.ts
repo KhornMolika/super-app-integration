@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Multer } from 'multer';
 import {
   dartFilesFromEntries,
+  findEntryPointCandidates,
   findWidgetCandidates,
   hasWidgetClass,
   type DartArchiveEntry,
@@ -15,6 +16,8 @@ export interface SanitizedArchiveResult {
   strippedFilesCount: number;
   parsedPubspec: any;
   widgetCandidates: string[];
+  entryPointCandidates: string[];
+  mainLibraryExists: boolean;
 }
 
 export interface InspectedArchiveResult {
@@ -33,6 +36,8 @@ export interface InspectedArchiveResult {
     environment?: Record<string, any>;
   };
   widgetCandidates: string[];
+  entryPointCandidates: string[];
+  mainLibraryExists: boolean;
   sdkWarning?: string;
 }
 
@@ -191,6 +196,8 @@ export class ArchiveSanitizerHelper {
         parsedPubspec.version = String(parsedPubspec.version).trim();
       }
 
+      const entryPointInfo = this.reachableEntryPointCandidates(keptEntries, yaml);
+
       return {
         cleanBuffer: cleanBuffer.length > 0 ? cleanBuffer : rawBuffer,
         originalSize,
@@ -199,6 +206,8 @@ export class ArchiveSanitizerHelper {
         strippedFilesCount,
         parsedPubspec,
         widgetCandidates: this.reachableWidgetCandidates(keptEntries, yaml),
+        entryPointCandidates: entryPointInfo.candidates,
+        mainLibraryExists: entryPointInfo.mainLibraryExists,
       };
     } catch (err: any) {
       this.logger.warn(
@@ -212,7 +221,25 @@ export class ArchiveSanitizerHelper {
         strippedFilesCount: 0,
         parsedPubspec,
         widgetCandidates: [],
+        entryPointCandidates: [],
+        mainLibraryExists: false,
       };
+    }
+  }
+
+  private extractPackageName(
+    entries: DartArchiveEntry[],
+    yaml: { parse(text: string): any },
+  ): string | undefined {
+    // the root pubspec is the shallowest one (not an example/ app's)
+    const rootPubspec = entries
+      .filter((e) => /(^|\/)pubspec\.yaml$/.test(e.entryName))
+      .sort((a, b) => a.entryName.split('/').length - b.entryName.split('/').length)[0];
+    try {
+      const name = yaml.parse(rootPubspec?.getData().toString('utf8') ?? '')?.name;
+      return name ? String(name).trim() : undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -229,20 +256,20 @@ export class ArchiveSanitizerHelper {
     const candidates = findWidgetCandidates(files);
     if (candidates.length === 0) return [];
 
-    // the root pubspec is the shallowest one (not an example/ app's)
-    const rootPubspec = entries
-      .filter((e) => /(^|\/)pubspec\.yaml$/.test(e.entryName))
-      .sort((a, b) => a.entryName.split('/').length - b.entryName.split('/').length)[0];
-    let packageName: string | undefined;
-    try {
-      const name = yaml.parse(rootPubspec?.getData().toString('utf8') ?? '')?.name;
-      packageName = name ? String(name).trim() : undefined;
-    } catch {
-      packageName = undefined;
-    }
+    const packageName = this.extractPackageName(entries, yaml);
     if (!packageName) return [];
 
-    return candidates.filter((c) => hasWidgetClass(files, packageName!, c));
+    return candidates.filter((c) => hasWidgetClass(files, packageName, c));
+  }
+
+  private reachableEntryPointCandidates(
+    entries: DartArchiveEntry[],
+    yaml: { parse(text: string): any },
+  ): { mainLibraryExists: boolean; candidates: string[] } {
+    const packageName = this.extractPackageName(entries, yaml);
+    if (!packageName) return { mainLibraryExists: false, candidates: [] };
+    const files = dartFilesFromEntries(entries);
+    return findEntryPointCandidates(files, packageName);
   }
 
   /**
@@ -258,6 +285,8 @@ export class ArchiveSanitizerHelper {
       strippedFilesCount,
       parsedPubspec,
       widgetCandidates,
+      entryPointCandidates,
+      mainLibraryExists,
     } = this.sanitizePackageArchive(file.buffer);
 
     const sha256 = require('crypto')
@@ -291,6 +320,8 @@ export class ArchiveSanitizerHelper {
         environment: parsedPubspec?.environment,
       },
       widgetCandidates,
+      entryPointCandidates,
+      mainLibraryExists,
       ...(sdkWarning ? { sdkWarning } : {}),
     };
   }

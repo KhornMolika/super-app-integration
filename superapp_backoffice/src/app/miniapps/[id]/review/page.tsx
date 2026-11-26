@@ -7,6 +7,7 @@ import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
+import ChangesRequestedBanner from '@/components/miniapp-detail/ChangesRequestedBanner';
 import {
   ReviewDecisionBar,
   VersionOption,
@@ -420,6 +421,18 @@ function MiniAppReviewPageContent() {
       />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 pt-[196px] space-y-6 animate-in fade-in duration-300">
+        {(miniApp.structuredFeedback?.checklist?.length > 0 || miniApp.rejectionReason) && (
+          <ChangesRequestedBanner
+            miniAppId={id}
+            status={miniApp.lifecycleStatus || miniApp.status}
+            structuredFeedback={miniApp.structuredFeedback}
+            legacyReason={miniApp.rejectionReason}
+            isOwnerOrMaintainer={false}
+            isSubmitting={false}
+            onResubmit={() => {}}
+            compact={true}
+          />
+        )}
         {/* 2. Sub-Tab Panel Content */}
         {diffLoading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-3">

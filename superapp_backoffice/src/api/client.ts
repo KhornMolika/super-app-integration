@@ -138,6 +138,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
   }
 
   const requestInit: RequestInit = {
+    cache: 'no-store',
     ...restOptions,
     headers,
     body: isFormData ? body : typeof body === 'string' ? body : body !== undefined ? JSON.stringify(body) : undefined,

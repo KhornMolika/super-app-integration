@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Textarea } from '@/components/ui/inputs';
 import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
 import { CheckIcon, EyeIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { toast } from '@/components/ui/Toast';
 import { IntegrationMethod } from '@/types/miniapp.types';
 
 export interface LegalPolicyTabFieldProps {
@@ -80,18 +81,22 @@ export default function LegalPolicyTabField({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result;
-        if (typeof text === 'string') {
-          onChangeDesc(text);
-        }
-      };
-      reader.readAsText(file);
-    } else {
-      onChangeDesc(`# ${title} (${file.name})\n\nBundled legal document attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.md') && !lowerName.endsWith('.txt')) {
+      toast.error('Only .md and .txt files are allowed.', 'Unsupported File Format');
+      e.target.value = '';
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === 'string') {
+        onChangeDesc(text);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleInsertTemplate = () => {
@@ -164,9 +169,9 @@ export default function LegalPolicyTabField({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             {isEditable && (
               <>
-                <input ref={fileInputRef} type="file" accept=".md,.txt,.pdf" onChange={handleFileUpload} className="hidden" />
+                <input ref={fileInputRef} type="file" accept=".md,.txt,text/markdown,text/plain" onChange={handleFileUpload} className="hidden" />
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
-                  Import file
+                  Import file (.md, .txt)
                 </button>
                 <button type="button" onClick={handleInsertTemplate} className="font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
                   Use a template

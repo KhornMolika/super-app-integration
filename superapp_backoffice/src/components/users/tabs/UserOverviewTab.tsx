@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { User } from '@/api/users.api';
 import { MiniApp } from '@/api/miniapps.api';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 
 export interface UserOverviewTabProps {
   user: User;
@@ -67,9 +68,7 @@ export function UserOverviewTab({
               className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 gap-4 transition-colors hover:bg-slate-100/70 dark:hover:bg-slate-800/70"
             >
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 flex items-center justify-center font-bold text-brand-600 dark:text-brand-400 shrink-0 text-sm">
-                  {app.name?.[0]?.toUpperCase() || 'A'}
-                </div>
+                <AppLogoAvatar logo={app.logo} name={app.name} size="md" className="w-10 h-10" />
                 <div className="min-w-0 space-y-0.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">

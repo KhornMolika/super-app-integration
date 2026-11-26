@@ -163,8 +163,13 @@ export default function ChangesRequestedBanner({
     );
   };
 
-  // Only checked (resolved) items count as addressed and unlock resubmission
-  const isAddressed = (item: StructuredChecklistItem) => Boolean(item.resolved);
+  // Both checkbox and a meaningful resolution note (>= 5 chars) are required to unlock resubmission
+  const hasValidNote = (item: StructuredChecklistItem) =>
+    (item.resolutionNote || '').trim().length >= 5;
+  const isAddressed = (item: StructuredChecklistItem) =>
+    isReviewOrHistory
+      ? Boolean(item.resolved)
+      : Boolean(item.resolved) && hasValidNote(item);
 
   const addressedCount = checklistState.filter(isAddressed).length;
   const totalCount = checklistState.length;
@@ -413,13 +418,20 @@ export default function ChangesRequestedBanner({
                                     </p>
                                   ) : null
                                 ) : isOwnerOrMaintainer ? (
-                                  <input
-                                    type="text"
-                                    value={item.resolutionNote || ''}
-                                    onChange={(e) => updateResolutionNote(item.id, e.target.value)}
-                                    placeholder="Add brief resolution note..."
-                                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 transition-colors"
-                                  />
+                                  <div className="space-y-1">
+                                    <input
+                                      type="text"
+                                      value={item.resolutionNote || ''}
+                                      onChange={(e) => updateResolutionNote(item.id, e.target.value)}
+                                      placeholder="Explain what was fixed (min 5 characters)..."
+                                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 transition-colors"
+                                    />
+                                    {item.resolved && !hasValidNote(item) && (
+                                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                        Add a resolution note (at least 5 characters) to unlock resubmission.
+                                      </p>
+                                    )}
+                                  </div>
                                 ) : null}
                               </div>
                             </div>
@@ -678,14 +690,19 @@ export default function ChangesRequestedBanner({
 
                       {/* Developer Resolution / Rationale Note */}
                       {isOwnerOrMaintainer && (
-                        <div className="pt-1">
+                        <div className="pt-1 space-y-1">
                           <input
                             type="text"
                             value={item.resolutionNote || ''}
                             onChange={(e) => updateResolutionNote(item.id, e.target.value)}
-                            placeholder="Add developer note, commit hash, or justification (e.g. Fixed in commit abc123)..."
+                            placeholder="Explain what was fixed (min 5 chars, e.g. commit hash or config change)..."
                             className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-brand-500 focus:outline-none transition-colors"
                           />
+                          {item.resolved && !hasValidNote(item) && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                              Add a resolution note (at least 5 characters) explaining what was fixed.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -700,7 +717,7 @@ export default function ChangesRequestedBanner({
             <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span>All {totalCount} requested modifications were addressed by the developer.</span>
+                <span>Developer attested all {totalCount} items — please verify before approving.</span>
               </span>
               <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded font-mono">
                 SuperAdmin Verification Required

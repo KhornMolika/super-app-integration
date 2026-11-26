@@ -401,6 +401,16 @@ export class MiniappLifecycleHelper {
         }
         return item;
       });
+      if (['CHANGES_REQUESTED', 'REJECTED'].includes(currentStatus)) {
+        const missingNote = app.structuredFeedback.checklist.some(
+          (item: any) => !item.resolved || String(item.resolutionNote || '').trim().length < 5,
+        );
+        if (missingNote) {
+          throw new BadRequestException(
+            'Every checklist item must be marked resolved with a resolution note (at least 5 characters) before resubmitting.',
+          );
+        }
+      }
       if (app.pendingRevision?.structuredFeedback?.checklist) {
         app.pendingRevision.structuredFeedback.checklist = app.structuredFeedback.checklist;
       }

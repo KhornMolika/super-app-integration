@@ -9,6 +9,7 @@ import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel
 import { useAuth } from '@/lib/auth';
 import { SearchFilterBar } from '@/components/ui/SearchFilterBar';
 import { Pagination } from '@/components/ui/Pagination';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
 import {
   AppStatusBadge,
@@ -505,11 +506,16 @@ export default function ReleasesPage() {
                   return (
                     <tr key={app.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">
-                        <Link href={`/miniapps/${app.id}`} className="font-bold text-slate-900 dark:text-white hover:text-brand-600 transition-colors">
-                          {app.name || 'Unknown'}
-                        </Link>
-                        <div className="font-mono text-xs text-slate-400">
-                          {app.integrationConfig?.packageName || app.appId || 'ma_flutter_trust_regulator'}
+                        <div className="flex items-center gap-3">
+                          <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
+                          <div>
+                            <Link href={`/miniapps/${app.id}`} className="font-bold text-slate-900 dark:text-white hover:text-brand-600 transition-colors">
+                              {app.name || 'Unknown'}
+                            </Link>
+                            <div className="font-mono text-xs text-slate-400">
+                              {app.integrationConfig?.packageName || app.appId || 'ma_flutter_trust_regulator'}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">

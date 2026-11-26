@@ -202,6 +202,27 @@ export class FlutterPackageConfigDto {
   @IsBoolean()
   @IsOptional()
   isArchiveSubmission?: boolean;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^[A-Z][A-Za-z0-9_]*$/, {
+    message: 'entryPoint must be a valid Dart class or typedef identifier',
+  })
+  entryPoint?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  entryPointCandidates?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  gitEntryPointCandidates?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  mainLibraryExists?: boolean;
 }
 
 // Allow-lists: these values are rendered into Gradle/Swift/Kotlin/Podfile source.

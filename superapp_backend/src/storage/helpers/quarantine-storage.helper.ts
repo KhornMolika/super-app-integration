@@ -23,6 +23,8 @@ export interface UploadPackageArchiveResult {
     environment?: Record<string, any>;
   };
   widgetCandidates: string[];
+  entryPointCandidates: string[];
+  mainLibraryExists: boolean;
   sdkWarning?: string;
 }
 
@@ -61,6 +63,8 @@ export class QuarantineStorageHelper {
       strippedFilesCount,
       parsedPubspec,
       widgetCandidates,
+      entryPointCandidates,
+      mainLibraryExists,
     } = this.sanitizerHelper.sanitizePackageArchive(file.buffer);
 
     const sha256 = require('crypto')
@@ -116,6 +120,8 @@ export class QuarantineStorageHelper {
         environment: parsedPubspec?.environment,
       },
       widgetCandidates,
+      entryPointCandidates,
+      mainLibraryExists,
       ...(sdkWarning ? { sdkWarning } : {}),
     };
   }

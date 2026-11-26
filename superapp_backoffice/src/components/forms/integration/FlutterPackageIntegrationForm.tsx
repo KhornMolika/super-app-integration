@@ -57,8 +57,15 @@ export default function FlutterPackageIntegrationForm({
     };
     // Candidates come from an uploaded archive; with a Git source they are stale
     // and the validator must not block the widget class against them.
-    if (newMode === "git") updates.widgetCandidates = undefined;
-    else updates.gitWidgetCandidates = undefined;
+    if (newMode === "git") {
+      updates.widgetCandidates = undefined;
+      updates.entryPointCandidates = undefined;
+      updates.mainLibraryExists = undefined;
+    } else {
+      updates.gitWidgetCandidates = undefined;
+      updates.gitEntryPointCandidates = undefined;
+      updates.mainLibraryExists = undefined;
+    }
 
     if (onUpdateFlutterConfig) {
       onUpdateFlutterConfig(updates);
@@ -314,6 +321,19 @@ export default function FlutterPackageIntegrationForm({
           .replace(/^[\^~>=<]+/, "");
         const versionConstraint = `^${cleanPkgVer}`;
 
+        const detectedEntryCandidates: string[] = Array.isArray(data.entryPointCandidates)
+          ? data.entryPointCandidates
+          : [];
+        const currentEntry = String(flutterConfig.entryPoint || "").trim();
+        const autoEntryPoint =
+          currentEntry && detectedEntryCandidates.includes(currentEntry)
+            ? currentEntry
+            : detectedEntryCandidates.includes("MiniAppEntry")
+              ? "MiniAppEntry"
+              : detectedEntryCandidates.length === 1
+                ? detectedEntryCandidates[0]
+                : currentEntry || undefined;
+
         const updates: Record<string, any> = {
           packageName: cleanPkgName,
           versionConstraint,
@@ -325,6 +345,9 @@ export default function FlutterPackageIntegrationForm({
           isSanitized: data.isSanitized,
           isArchiveSubmission: true,
           widgetCandidates: Array.isArray(data.widgetCandidates) ? data.widgetCandidates : [],
+          entryPointCandidates: detectedEntryCandidates,
+          mainLibraryExists: data.mainLibraryExists ?? true,
+          ...(autoEntryPoint ? { entryPoint: autoEntryPoint } : {}),
           sdkWarning: data.sdkWarning || undefined,
         };
 
@@ -902,17 +925,15 @@ export default function FlutterPackageIntegrationForm({
     selectedRef,
   ]);
 
-  // Home widget classes in the Git package, searched once "Has Home widget" is
-  // ticked and the repository has validated (an archive's come with its
-  // inspection). Deploy-key repos can't be read over HTTP, so they're skipped.
-  const wantsHomeWidget = formData.homeWidget != null;
+  // Home widget & entry widget classes in the Git package, searched once
+  // the repository has validated (an archive's come with its inspection).
+  // Deploy-key repos can't be read over HTTP, so they're skipped.
   useEffect(() => {
     const url = flutterConfig.gitUrl?.trim() || "";
     const usesDeployKey =
       (isPrivateRepo && authMethod === "deploy_key") || url.startsWith("git@");
     if (
       currentMode !== "git" ||
-      !wantsHomeWidget ||
       !url ||
       usesDeployKey ||
       !gitValidationResult?.isValid ||
@@ -935,7 +956,11 @@ export default function FlutterPackageIntegrationForm({
 
     let cancelled = false;
     const timer = setTimeout(async () => {
-      update({ isScanningGitWidgets: true, gitWidgetCandidates: undefined });
+      update({
+        isScanningGitWidgets: true,
+        gitWidgetCandidates: undefined,
+        gitEntryPointCandidates: undefined,
+      });
       try {
         const res = await integrationsApi.getGitWidgetCandidates({
           url,
@@ -947,14 +972,31 @@ export default function FlutterPackageIntegrationForm({
               : undefined,
         });
         if (!cancelled) {
+          const entryList = res.entryPointCandidates ?? undefined;
+          const currentEntry = String(flutterConfig.entryPoint || "").trim();
+          const autoEntry =
+            !currentEntry && Array.isArray(entryList)
+              ? entryList.includes("MiniAppEntry")
+                ? "MiniAppEntry"
+                : entryList.length === 1
+                  ? entryList[0]
+                  : undefined
+              : undefined;
           update({
             gitWidgetCandidates: res.widgetCandidates ?? undefined,
+            gitEntryPointCandidates: entryList,
+            mainLibraryExists: res.mainLibraryExists,
+            ...(autoEntry ? { entryPoint: autoEntry } : {}),
             isScanningGitWidgets: false,
           });
         }
       } catch {
         if (!cancelled) {
-          update({ gitWidgetCandidates: undefined, isScanningGitWidgets: false });
+          update({
+            gitWidgetCandidates: undefined,
+            gitEntryPointCandidates: undefined,
+            isScanningGitWidgets: false,
+          });
         }
       }
     }, 400);
@@ -966,7 +1008,6 @@ export default function FlutterPackageIntegrationForm({
     };
   }, [
     currentMode,
-    wantsHomeWidget,
     gitValidationResult,
     flutterConfig.gitUrl,
     flutterConfig.gitPath,
@@ -1095,6 +1136,117 @@ export default function FlutterPackageIntegrationForm({
           />
         </div>
       )}
+
+      {/* Entry Widget (Root EntryPoint) Configuration & Auto-Check */}
+      {(() => {
+        const entryCandidates =
+          currentMode === "git"
+            ? flutterConfig?.gitEntryPointCandidates
+            : flutterConfig?.entryPointCandidates;
+        const currentEntry = (flutterConfig?.entryPoint || "").trim();
+        const effectiveEntry = currentEntry || "MiniAppEntry";
+        const pkgLabel = (flutterConfig?.packageName || "").trim() || "your_package";
+        const hasScan = Array.isArray(entryCandidates);
+        const isMissingMainLib = flutterConfig?.mainLibraryExists === false && hasScan;
+        const isEntryFound = hasScan && !isMissingMainLib && entryCandidates.includes(effectiveEntry);
+        const entryError = allErrors["integrationConfigFlutter.entryPoint"];
+
+        return (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Entry Widget Class
+                </label>
+                <p className="text-xs text-slate-500">
+                  Root widget exported by <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px]">lib/{pkgLabel}.dart</code>. Defaults to <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px]">MiniAppEntry</code>.
+                </p>
+              </div>
+              {hasScan && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    isEntryFound
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border border-amber-200"
+                  }`}
+                >
+                  {isEntryFound
+                    ? `✓ ${effectiveEntry} verified`
+                    : isMissingMainLib
+                      ? `Missing lib/${pkgLabel}.dart`
+                      : `${effectiveEntry} not found`}
+                </span>
+              )}
+            </div>
+
+            <input
+              type="text"
+              name="entryPoint"
+              value={flutterConfig?.entryPoint || ""}
+              onChange={handleFlutterChange}
+              disabled={!isEditable}
+              placeholder="MiniAppEntry"
+              className={`w-full rounded-lg border px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 ${
+                entryError
+                  ? "border-red-300 focus:ring-red-200"
+                  : "border-slate-200 focus:border-emerald-500 focus:ring-emerald-100"
+              } disabled:bg-slate-50 disabled:text-slate-500`}
+            />
+
+            {hasScan && entryCandidates.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-500 mr-1">Detected:</span>
+                {entryCandidates.map((cand) => {
+                  const selected = effectiveEntry === cand;
+                  return (
+                    <button
+                      key={cand}
+                      type="button"
+                      disabled={!isEditable}
+                      onClick={() =>
+                        handleFlutterChange({
+                          target: { name: "entryPoint", value: cand },
+                        } as any)
+                      }
+                      className={`rounded-md px-2 py-0.5 font-mono text-xs border transition ${
+                        selected
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {cand}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {hasScan && !isEntryFound && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {isMissingMainLib ? (
+                  <>
+                    Main library <code>lib/{pkgLabel}.dart</code> was not found. Ask the MiniApp developer to export <code>MiniAppEntry</code> from <code>lib/{pkgLabel}.dart</code>.
+                  </>
+                ) : entryCandidates.length > 0 ? (
+                  <>
+                    <code>{effectiveEntry}</code> was not found in <code>lib/{pkgLabel}.dart</code>. Select a detected widget above or ask the MiniApp developer to add{" "}
+                    <code>typedef MiniAppEntry = {entryCandidates[0]};</code>.
+                  </>
+                ) : (
+                  <>
+                    No exported Flutter Widget was detected in <code>lib/{pkgLabel}.dart</code>. The MiniApp package must export <code>MiniAppEntry</code> (e.g.{" "}
+                    <code>typedef MiniAppEntry = YourEntryWidget;</code>).
+                  </>
+                )}
+              </div>
+            )}
+
+            {entryError && (
+              <p className="text-xs font-medium text-red-600">{entryError}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Reusable Container AST Injection & Resolution Section */}
       <FlutterContainerIntegrationSection

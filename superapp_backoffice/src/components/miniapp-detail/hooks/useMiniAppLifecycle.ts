@@ -293,7 +293,7 @@ export function useMiniAppLifecycle({
           ? 'MiniApp restored as a draft.'
           : res?.message || 'MiniApp status successfully updated!';
       toast.success(msg, 'Lifecycle Updated');
-      fetchApp();
+      await fetchApp();
       if ((action === 'approve' || action === 'submit') && setActiveTab) {
         setActiveTab('versions');
       }
