@@ -47,6 +47,12 @@ export interface VersionDiffResult {
         target: string;
         changed: boolean;
       };
+      sourceType?: { base: string; target: string; changed: boolean };
+      gitUrl?: { base: string; target: string; changed: boolean };
+      gitBranch?: { base: string; target: string; changed: boolean };
+      gitRef?: { base: string; target: string; changed: boolean };
+      commitSha?: { base: string; target: string; changed: boolean };
+      packageVersion?: { base: string; target: string; changed: boolean };
     };
     permissions: {
       added: Array<{
@@ -162,31 +168,31 @@ export class VersionDiffHelper {
       target.integrationConfigDeepLink ||
       {};
 
-    if (
-      baseConfig.productionUrl !== targetConfig.productionUrl &&
-      targetConfig.productionUrl !== undefined
-    )
-      return true;
-    if (
-      baseConfig.stagingUrl !== targetConfig.stagingUrl &&
-      targetConfig.stagingUrl !== undefined
-    )
-      return true;
-    if (
-      baseConfig.urlScheme !== targetConfig.urlScheme &&
-      targetConfig.urlScheme !== undefined
-    )
-      return true;
-    if (
-      baseConfig.packageName !== targetConfig.packageName &&
-      targetConfig.packageName !== undefined
-    )
-      return true;
-    if (
-      baseConfig.versionConstraint !== targetConfig.versionConstraint &&
-      targetConfig.versionConstraint !== undefined
-    )
-      return true;
+    const securityConfigKeys = [
+      'productionUrl',
+      'stagingUrl',
+      'urlScheme',
+      'packageName',
+      'versionConstraint',
+      'sourceType',
+      'gitUrl',
+      'repoUrl',
+      'gitBranch',
+      'gitRef',
+      'gitPath',
+      'commitSha',
+      'lockedCommitSha',
+      'packageStoragePath',
+      'version',
+    ] as const;
+    for (const key of securityConfigKeys) {
+      if (
+        targetConfig[key] !== undefined &&
+        baseConfig[key] !== targetConfig[key]
+      ) {
+        return true;
+      }
+    }
 
     // Allowed domains check
     const baseDomains: string[] = Array.isArray(baseConfig.allowedDomains)
@@ -335,6 +341,29 @@ export class VersionDiffHelper {
       };
     }
 
+    const sourceDiffFields: Array<[string, keyof typeof integrationDiff]> = [
+      ['sourceType', 'sourceType'],
+      ['gitUrl', 'gitUrl'],
+      ['repoUrl', 'gitUrl'],
+      ['gitBranch', 'gitBranch'],
+      ['gitRef', 'gitRef'],
+      ['commitSha', 'commitSha'],
+      ['lockedCommitSha', 'commitSha'],
+      ['version', 'packageVersion'],
+    ];
+    for (const [cfgKey, diffKey] of sourceDiffFields) {
+      if (
+        targetConfig[cfgKey] !== undefined &&
+        baseConfig[cfgKey] !== targetConfig[cfgKey]
+      ) {
+        integrationDiff[diffKey] = {
+          base: baseConfig[cfgKey] || '',
+          target: targetConfig[cfgKey] || '',
+          changed: true,
+        };
+      }
+    }
+
     // Allowed Domains Diff
     const normalizeDomains = (domains: any): string[] => {
       if (Array.isArray(domains))
@@ -469,6 +498,12 @@ export class VersionDiffHelper {
       Boolean(integrationDiff.urlScheme?.changed) ||
       Boolean(integrationDiff.flutterPackageName?.changed) ||
       Boolean(integrationDiff.flutterVersionConstraint?.changed) ||
+      Boolean(integrationDiff.sourceType?.changed) ||
+      Boolean(integrationDiff.gitUrl?.changed) ||
+      Boolean(integrationDiff.gitBranch?.changed) ||
+      Boolean(integrationDiff.gitRef?.changed) ||
+      Boolean(integrationDiff.commitSha?.changed) ||
+      Boolean(integrationDiff.packageVersion?.changed) ||
       integrationDiff.allowedDomains.added.length > 0 ||
       integrationDiff.allowedDomains.removed.length > 0 ||
       permissionsDiff.added.length > 0 ||

@@ -166,8 +166,12 @@ export function phoneBuildOf(header: unknown): PhoneBuild {
   return typeof v === 'string' && ['debug', 'test'].includes(v.trim().toLowerCase()) ? 'debug' : 'release';
 }
 
-/** Stages of an unreleased version that test builds carry. */
-export const TEST_BUILD_STAGES: readonly string[] = [VersionStage.TESTING, VersionStage.TEST_PASSED];
+/** Stages of an unreleased version that test builds carry (including ACTIVE awaiting official release). */
+export const TEST_BUILD_STAGES: readonly string[] = [
+  VersionStage.TESTING,
+  VersionStage.TEST_PASSED,
+  'ACTIVE',
+];
 
 /**
  * Whether a phone of this build may list and open the app: the official

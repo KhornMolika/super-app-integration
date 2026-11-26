@@ -540,18 +540,23 @@ function MiniAppsContent() {
       {
         key: 'availability',
         header: 'Status',
-        width: 'w-[14%]',
+        width: 'w-[10%]',
         className: 'whitespace-nowrap',
         sortable: true,
-        cell: (app) => {
-          const hasStagedRevision = Boolean((app as any).pendingRevision);
-          return (
-            <div className="flex flex-col items-start gap-1">
-              <AppStatusBadge app={app} />
-              {hasStagedRevision && <VersionStageBadge app={app} empty={null} />}
-            </div>
-          );
-        },
+        cell: (app) => <AppStatusBadge app={app} />,
+      },
+      {
+        key: 'stage',
+        header: 'Stage',
+        width: 'w-[11%]',
+        className: 'whitespace-nowrap',
+        sortable: false,
+        cell: (app) => (
+          <VersionStageBadge
+            app={app}
+            empty={<span className="text-xs text-slate-400">-</span>}
+          />
+        ),
       },
       {
         key: 'checks',

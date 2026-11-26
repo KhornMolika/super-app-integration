@@ -8,7 +8,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository, In } from 'typeorm';
-import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import {
+  AppStatus,
+  MiniApp,
+  MiniAppAvailabilityStatus,
+} from '../../miniapps/entities/miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
 import { SuperAppCapability } from '../../super-app/entities/super-app-capability.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
@@ -306,26 +310,27 @@ export class ReleaseAssemblyVerificationService {
           if (appRecord?.ownerId) {
             await this.notificationsService.createNotification(
               appRecord.ownerId,
-              'SuperApp Build in Progress',
-              `SuperApp test build (${dto.releaseVersion}) has been triggered on Jenkins for MiniApp "${appRecord.name}". Artifacts will be available upon assembly completion.`,
+              'SuperApp Release Build in Progress',
+              `SuperApp official release build (${dto.releaseVersion}) has been triggered on Jenkins for MiniApp "${appRecord.name}". Artifacts will be available upon assembly completion.`,
               'BUILD_STARTED',
               appRecord.id,
               {
                 releaseVersion: dto.releaseVersion,
                 version: dto.releaseVersion,
-                buildType: testApkBuildMode(),
-        miniAppSet: 'test',
+                buildType: 'release',
+                miniAppSet: 'release',
               },
             );
           }
         } catch (_) {}
       }
 
-      // Trigger Jenkins SuperApp build pipeline
+      // Trigger Jenkins SuperApp Official Release build pipeline
       const jenkinsBuildRes = await this.jenkinsService.triggerSuperAppBuild({
         appName: 'superapp',
         releaseVersion: dto.releaseVersion,
-        buildType: testApkBuildMode(),
+        buildType: 'release',
+        miniAppSet: 'release',
         codegenMrIid: latestCodegenMrIid(releaseConfigs),
       });
 
@@ -356,8 +361,8 @@ export class ReleaseAssemblyVerificationService {
       this.configService.get<string>('MINIO_PUBLIC_URL') ||
       'http://localhost:9000'
     ).replace(/\/+$/, '');
-    const nexusApkUrl = `${nexusBase}/repository/apk-test-builds/superapp/${dto.releaseVersion}/app-debug.apk`;
-    const minioApkUrl = `${minioBase}/releases/superapp/${dto.releaseVersion}/app-debug.apk`;
+    const nexusApkUrl = `${nexusBase}/repository/apk-releases/superapp/${dto.releaseVersion}/app-release.apk`;
+    const minioApkUrl = `${minioBase}/releases/superapp/${dto.releaseVersion}/app-release.apk`;
 
     return {
       passed,
@@ -534,13 +539,57 @@ export class ReleaseAssemblyVerificationService {
     if (isSuccess) {
       await this.superAppWebService?.refreshNow(true);
       await this.markVersionPublished(body.releaseVersion);
+      const isReleaseBuild =
+        body.buildType === 'release' || body.repoName === 'apk-releases';
+      if (isReleaseBuild) {
+        if (body.releaseVersion) {
+          const clean = String(body.releaseVersion).trim().replace(/^v/, '');
+          if (clean) {
+            const manifestPath = path.resolve(process.cwd(), 'data/super_app_release.json');
+            try {
+              const existing = fs.existsSync(manifestPath)
+                ? JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+                : {};
+              existing.superAppVersion = clean;
+              existing.releasedAt = new Date().toISOString();
+              fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+              fs.writeFileSync(manifestPath, JSON.stringify(existing, null, 2) + '\n', 'utf-8');
+            } catch (e: any) {
+              this.logger.warn(`Could not update super_app_release.json: ${e?.message}`);
+            }
+          }
+        }
+        const candidates = await this.miniappRepository.find({
+          where: {
+            appStatus: AppStatus.DRAFT,
+            integrationMethod: In(['FLUTTER_PACKAGE', 'NATIVE_SDK']),
+          },
+          relations: { versions: true },
+        });
+        for (const candidate of candidates) {
+          const hasActiveVersion =
+            Boolean(candidate.liveVersionId) ||
+            (Array.isArray(candidate.versions) &&
+              candidate.versions.some((v) => v.status === 'ACTIVE'));
+          if (!hasActiveVersion) continue;
+          candidate.appStatus = AppStatus.LIVE;
+          candidate.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
+          candidate.integrationConfig = {
+            ...(candidate.integrationConfig || {}),
+            superAppReleaseVersion: body.releaseVersion,
+          };
+          await this.miniappRepository.save(candidate);
+        }
+      }
       const buildingApps = await this.resolveBuildingApps(body);
 
-      // Every app in this build is now under test
-      const inProgress = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
-      await applyLifecycle(this.miniappRepository, inProgress, 'TESTING');
-      for (const id of inProgress) {
-        await this.runs?.recordBuild(id, { status: 'COMPLETED' });
+      if (!isReleaseBuild) {
+        // Every app in this test build is now under test
+        const inProgress = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
+        await applyLifecycle(this.miniappRepository, inProgress, 'TESTING');
+        for (const id of inProgress) {
+          await this.runs?.recordBuild(id, { status: 'COMPLETED' });
+        }
       }
 
       const repoName =

@@ -87,7 +87,7 @@ def syncMiniApps() {
             SELF=$(cat /etc/hostname)
             if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
             else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
-            docker run --rm $MOUNT -w "$WORKSPACE" -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+            docker run --rm $MOUNT -w "$WORKSPACE" -e WORKSPACE -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                 "$FLUTTER_IMAGE" bash -ec '
                     dart run "$MOBILE_DIR/tool/sync_miniapps.dart" "$WORKSPACE/build-miniapps.json" "$MOBILE_DIR"
                     chown -R "$HOST_UID:$HOST_GID" "$MOBILE_DIR/pubspec.yaml" "$MOBILE_DIR/lib" 2>/dev/null || true

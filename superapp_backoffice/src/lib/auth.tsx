@@ -27,9 +27,10 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'audit_log:read', 'settings:manage'
   ],
   PLATFORM_ADMIN: [
-    'miniapp:read', 'miniapp:suspend', 'issue:resolve',
+    'miniapp:read', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
+    'miniapp_permission:approve', 'issue:resolve',
     'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
-    'super_app:read',
+    'super_app:read', 'super_app:manage',
     'user:read', 'user:manage',
     'role:read',
     'permission:read', 'permission:manage',

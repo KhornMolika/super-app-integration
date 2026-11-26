@@ -31,9 +31,30 @@ export default function ReleasesPage() {
   const [ecosystemStatus, setEcosystemStatus] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [releaseVersionFilter, setReleaseVersionFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+
+  const releaseVersionOptions = useMemo(() => {
+    const versions = new Set<string>();
+    let hasPending = false;
+    for (const app of apps) {
+      const ver = app.integrationConfig?.superAppReleaseVersion;
+      if (ver) {
+        versions.add(String(ver));
+      } else {
+        hasPending = true;
+      }
+    }
+    const sorted = Array.from(versions).sort((a, b) =>
+      b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }),
+    );
+    return [
+      { value: 'ALL', label: 'All Versions' },
+      ...(hasPending ? [{ value: 'PENDING', label: 'Pending Official Release' }] : []),
+      ...sorted.map((v) => ({ value: v, label: v })),
+    ];
+  }, [apps]);
 
   const filteredApps = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -49,16 +70,17 @@ export default function ReleasesPage() {
       if (methodFilter !== 'ALL' && app.integrationMethod !== methodFilter) {
         return false;
       }
-      if (statusFilter !== 'ALL') {
-        const appStatus = appStatusOf(app);
-        const stage = versionStageOf(app);
-        if (appStatus !== statusFilter && stage !== statusFilter) {
+      if (releaseVersionFilter !== 'ALL') {
+        const saReleaseVer = app.integrationConfig?.superAppReleaseVersion || '';
+        if (releaseVersionFilter === 'PENDING') {
+          if (saReleaseVer) return false;
+        } else if (saReleaseVer !== releaseVersionFilter) {
           return false;
         }
       }
       return true;
     });
-  }, [apps, searchQuery, methodFilter, statusFilter]);
+  }, [apps, searchQuery, methodFilter, releaseVersionFilter]);
 
   const paginatedApps = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -68,8 +90,9 @@ export default function ReleasesPage() {
   const fetchNextVersion = () => {
     superAppApi.getNextVersion()
       .then(data => {
-        if (data?.nextVersion) {
-          setReleaseVersion(data.nextVersion);
+        const ver = (data as any)?.nextReleaseVersion || data?.nextVersion;
+        if (ver) {
+          setReleaseVersion(ver);
         }
       })
       .catch(() => {});
@@ -79,17 +102,18 @@ export default function ReleasesPage() {
     superAppApi.getEcosystemStatus()
       .then(data => setEcosystemStatus(data))
       .catch(() => {});
-    miniappsApi.getAll()
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Filter to show Live apps or candidates in Approved/Testing stages
-          setApps(data.filter(app => {
+    miniappsApi.getAll({ limit: 100 })
+      .then((res) => {
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        // Only Live apps and apps with an Active (approved for release) version stage
+        // are eligible for Official SuperApp Release assembly.
+        setApps(
+          list.filter((app) => {
             const status = appStatusOf(app);
-            if (status === 'LIVE') return true;
             const stage = versionStageOf(app);
-            return stage === 'APPROVED' || stage === 'TESTING' || stage === 'TEST_PASSED';
-          }));
-        }
+            return status === 'LIVE' || stage === 'ACTIVE';
+          }),
+        );
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
@@ -137,18 +161,19 @@ export default function ReleasesPage() {
   return (
     <div className="w-full min-w-0 space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              SuperApp Release Pipeline
+              SuperApp Releases
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
-              Release Verification
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+              Official Assembly
             </span>
           </div>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Verify mini-app packages, validate security checksums, and assemble official SuperApp releases.
+            Verify approved MiniApp packages, validate checksums, and assemble official SuperApp releases.
           </p>
         </div>
 
@@ -158,35 +183,35 @@ export default function ReleasesPage() {
           <Link
             href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
             className="h-10 px-3.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-2 shadow-2xs shrink-0 whitespace-nowrap"
-            title="Compare official live and candidate release manifests"
+            title="Compare official live and target release manifests"
           >
             <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
-            <span>Compare SA Releases (SA vs SA)</span>
+            <span>Compare Releases</span>
           </Link>
 
-          {/* 2. Candidate Version Input Pill */}
-          <div className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700 flex items-center gap-2 shrink-0 shadow-2xs">
+          {/* 2. Target Version Input Pill */}
+          <label className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/15 flex items-center gap-2 shrink-0 shadow-2xs transition-all">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
-              Candidate Version:
+              Target Version
             </span>
             <input
               type="text"
               value={releaseVersion}
               onChange={e => setReleaseVersion(e.target.value)}
               className="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white w-18 outline-none text-center"
-              title="Candidate staging release version tag"
+              title="Target release version tag"
             />
-          </div>
+          </label>
 
-          {/* 3. Run Gate 2 & Assemble Test Build Primary Button */}
+          {/* 3. Verify & Build Release Primary Button */}
           <button
             type="button"
             onClick={handleRunGate2}
             disabled={isAssembling}
             className="h-10 px-4 rounded-xl text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 dark:bg-brand-600 dark:hover:bg-brand-500 shadow-sm hover:shadow transition-all flex items-center gap-2 shrink-0 whitespace-nowrap disabled:opacity-50 cursor-pointer"
-            title="Runs Gate 2 verification and triggers Jenkins superapp-test-build to assemble candidate staging APK"
+            title="Verify MiniApp checksums/permissions and assemble the SuperApp release build"
           >
             {isAssembling ? (
               <>
@@ -194,14 +219,14 @@ export default function ReleasesPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Running Gate 2 & Assembling...</span>
+                <span>Verifying &amp; Building...</span>
               </>
             ) : (
               <>
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Run Gate 2 & Assemble Test Build</span>
+                <span>Verify &amp; Build Release</span>
               </>
             )}
           </button>
@@ -241,25 +266,25 @@ export default function ReleasesPage() {
           </div>
         </div>
 
-        {/* Card 2: Next SA Candidate Assembly */}
+        {/* Card 2: Next Official Release Queue */}
         <div className="p-5 rounded-2xl border border-accent-200/80 dark:border-accent-800/60 bg-gradient-to-br from-accent-50/70 via-white to-accent-50/20 dark:from-accent-950/30 dark:via-slate-900 dark:to-slate-900 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-accent-100 text-accent-800 dark:bg-accent-900/60 dark:text-accent-300">
               <DotBadge color="bg-accent-500" />
-              <span>CANDIDATE STAGING ASSEMBLY</span>
+              <span>QUEUED FOR NEXT RELEASE</span>
             </span>
-            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-test-build</span>
+            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">superapp-release-build</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
               {releaseVersion}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Staging release assembled via Gate 2 to package {apps.length} approved MiniApp updates for sandbox pre-testing.
+              Target official release packaging {apps.length} Live &amp; Stage: Active MiniApp(s) for production distribution.
             </p>
           </div>
           <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Staging: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Staged</strong></span>
+            <span className="text-slate-500">Queue: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Ready</strong></span>
             <Link
               href={`/releases/compare?base=${encodeURIComponent(officialVer)}&target=${encodeURIComponent(releaseVersion)}`}
               className="text-xs font-bold text-accent-700 dark:text-accent-400 hover:underline flex items-center gap-1 cursor-pointer"
@@ -311,14 +336,14 @@ export default function ReleasesPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-slate-900 dark:text-slate-100">
-                    Candidate Staging Assembly & Gate 2 Verification
+                    Release Verification &amp; Official Assembly
                   </h3>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 font-bold">
-                    superapp-test-build
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
+                    superapp-release-build
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Target Candidate: {gate2Result.releaseVersion} • Pipeline: Candidate Staging Test Build • Timestamp: {gate2Result.timestamp}
+                  Target Release: {gate2Result.releaseVersion} • Pipeline: Official Release Build • Timestamp: {gate2Result.timestamp}
                 </p>
               </div>
             </div>
@@ -370,23 +395,23 @@ export default function ReleasesPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    SuperApp Candidate Test APK Ready
-                    <span className="px-2 py-0.5 text-xs font-mono font-bold bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 rounded-full">
-                      {releaseVersion} (Staging Candidate) • superapp-test-build
+                    Official Release APK Queued
+                    <span className="px-2 py-0.5 text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
+                      {gate2Result.releaseVersion || releaseVersion} • apk-releases
                     </span>
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Compiled via <strong>superapp-test-build</strong> pipeline with approved candidate MiniApps and native bridges. Ready for MA Manager & SA Admin dual staging testing.
+                    Building via <strong>superapp-release-build</strong> with verified Live &amp; Stage: Active MiniApps. Download becomes available in Nexus once Jenkins finishes.
                   </p>
                 </div>
               </div>
               <a
                 href={gate2Result.apkUrl}
-                download={`superapp-${releaseVersion}-arm64.apk`}
+                download={`superapp-${gate2Result.releaseVersion || releaseVersion}-release.apk`}
                 className="w-full sm:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                <span>Download Candidate Test APK (~28 MB ARM64)</span>
+                <span>Download Release APK</span>
               </a>
             </div>
           )}
@@ -410,10 +435,10 @@ export default function ReleasesPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                {filteredApps.filter((a) => appStatusOf(a) === 'LIVE').length} Active (Release Ready)
+                {filteredApps.filter((a) => appStatusOf(a) === 'LIVE' || versionStageOf(a) === 'ACTIVE').length} Active (Release Ready)
               </span>
               <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-                {filteredApps.filter((a) => appStatusOf(a) !== 'LIVE').length} In Staging
+                {filteredApps.filter((a) => appStatusOf(a) !== 'LIVE' && versionStageOf(a) !== 'ACTIVE').length} In Staging
               </span>
               <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                 {filteredApps.length} Total Queued
@@ -448,29 +473,23 @@ export default function ReleasesPage() {
                 align: 'right',
               },
               {
-                id: 'status',
-                label: 'Status',
-                value: statusFilter,
+                id: 'releaseVersion',
+                label: 'Release Version',
+                value: releaseVersionFilter,
                 onChange: (val) => {
-                  setStatusFilter(val);
+                  setReleaseVersionFilter(val);
                   setCurrentPage(1);
                 },
-                options: [
-                  { value: 'ALL', label: 'All Statuses' },
-                  { value: 'LIVE', label: 'Live' },
-                  { value: 'APPROVED', label: 'Approved' },
-                  { value: 'TESTING', label: 'Testing' },
-                  { value: 'TEST_PASSED', label: 'Test Passed' },
-                ],
-                dropdownWidth: 'w-48',
+                options: releaseVersionOptions,
+                dropdownWidth: 'w-56',
                 align: 'right',
               },
             ]}
-            isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL' || statusFilter !== 'ALL'}
+            isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL' || releaseVersionFilter !== 'ALL'}
             onResetFilters={() => {
               setSearchQuery('');
               setMethodFilter('ALL');
-              setStatusFilter('ALL');
+              setReleaseVersionFilter('ALL');
               setCurrentPage(1);
             }}
           />

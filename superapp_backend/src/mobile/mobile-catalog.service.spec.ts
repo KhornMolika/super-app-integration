@@ -149,7 +149,11 @@ describe('MobileCatalogService.list', () => {
     await new MobileCatalogService(repo).list({ limit: 20, offset: 0, build: 'debug' } as any);
     const [sql, params] = calls.where[0];
     expect(sql).toContain('m.appStatus = :live OR (m.appStatus = :draft AND EXISTS');
-    expect(params).toEqual({ live: 'LIVE', draft: 'DRAFT', testStages: ['TESTING', 'TEST_PASSED'] });
+    expect(params).toEqual({
+      live: 'LIVE',
+      draft: 'DRAFT',
+      testStages: ['TESTING', 'TEST_PASSED', 'ACTIVE'],
+    });
   });
 
   it('lists live apps by default (no build given) and returns catalog items', async () => {

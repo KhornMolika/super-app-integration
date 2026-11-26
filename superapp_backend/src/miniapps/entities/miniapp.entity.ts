@@ -384,10 +384,13 @@ export class MiniApp {
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
     );
     const working = revisionRowOf(rows);
+    const activeRow = rows.find((r) => r.status === 'ACTIVE');
     if (this.pendingRevision === undefined) {
       this.pendingRevision = working?.revision ?? null;
     }
-    if (this.versionStage === undefined) this.versionStage = working?.status ?? null;
+    if (this.versionStage === undefined) {
+      this.versionStage = working?.status ?? (activeRow ? 'ACTIVE' : null);
+    }
     const serving = servingRowOf(rows);
     if (serving && this.currentReleaseVersion === undefined) this.currentReleaseVersion = serving.version;
     if (serving && this.integrationConfig === undefined) {

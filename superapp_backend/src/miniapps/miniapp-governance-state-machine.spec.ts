@@ -303,18 +303,13 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
       // Promote App A to ACTIVE via helper.activate
       const activated = await helper.activate(appA, 'sa-admin-1', mockLogActivityFn);
 
-      expect(mockJenkinsService.triggerSuperAppBuild).toHaveBeenCalledWith(
-        expect.objectContaining({
-          releaseVersion: '1.2.0',
-          appName: 'superapp',
-          buildType: 'release',
-        }),
-      );
-      expect(activated.availabilityStatus).toBe(MiniAppAvailabilityStatus.PRODUCTION);
+      expect(mockJenkinsService.triggerSuperAppBuild).not.toHaveBeenCalled();
+      expect(activated.appStatus).toBe('DRAFT');
+      expect(activated.versionStage).toBe('ACTIVE');
       expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
         expect.anything(),
         'MiniApp Live & Activated',
-        expect.stringContaining('granted final approval and production release build is live'),
+        expect.stringContaining('granted final approval and is now ACTIVE'),
         'MINIAPP_ACTIVATED',
         'app-tested-passed',
       );

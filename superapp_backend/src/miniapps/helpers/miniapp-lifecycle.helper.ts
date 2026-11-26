@@ -16,6 +16,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import {
+  AppStatus,
   MiniApp,
   MiniAppLifecycleStatus,
   MiniAppAvailabilityStatus,
@@ -2088,51 +2089,34 @@ export class MiniappLifecycleHelper {
           : `App must have passed testing to activate (current status: ${app.lifecycleStatus || currentStatus})`,
       );
     }
-    // Activating starts the production release build, which reads the package from Nexus
+    // Activating marks the app/version ACTIVE so it is ready for the Official SuperApp Release.
     await this.assertPackageInNexus(app, 'activate', false);
 
-    const releaseVersion =
-      await this.superAppService.getAndRegisterNextVersion();
-    app.integrationConfig = {
-      ...(app.integrationConfig || {}),
-      superAppReleaseVersion: releaseVersion,
-    };
-    await this.miniappRepository.save(app);
-    await persistAppVersions(this.miniappRepository, app);
-
-    const isCompiled = app.integrationMethod === 'FLUTTER_PACKAGE' || app.integrationMethod === 'NATIVE_SDK';
-    if (isCompiled) {
-      try {
-        this.logger.log(
-          `Triggering Jenkins Production Release build for MiniApp ${app.name} (${app.id}) with version ${releaseVersion} (miniAppSet=release)...`,
-        );
-        await this.jenkinsService.triggerSuperAppBuild({
-          releaseVersion,
-          appName: 'superapp',
-          buildType: 'release',
-          miniAppSet: 'release',
-        });
-      } catch (err: any) {
-        this.logger.error(
-          `Error triggering Jenkins production release build: ${err.message}`,
-        );
-      }
-    } else {
-      this.logger.log(
-        `MiniApp ${app.name} (${app.id}) uses dynamic integration (${app.integrationMethod || 'WEBVIEW'}). SuperApp APK recompilation skipped; active in catalog immediately.`,
-      );
-    }
-
+    const method = String(app.integrationMethod || '').toUpperCase();
+    const isCompiled = method === 'FLUTTER_PACKAGE' || method === 'NATIVE_SDK';
     app.lifecycleStatus = MiniAppLifecycleStatus.ACTIVE;
-    app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
+    if (isCompiled) {
+      // Compiled packages keep appStatus=DRAFT while versionStage=ACTIVE until
+      // an Official SuperApp Release build bundles them and marks the app LIVE.
+      app.appStatus = AppStatus.DRAFT;
+      app.versionStage = 'ACTIVE';
+    } else {
+      app.appStatus = AppStatus.LIVE;
+      app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
+    }
     await this.miniappRepository.save(app);
     await persistAppVersions(this.miniappRepository, app);
+
+    const activeVersion =
+      app.currentReleaseVersion ||
+      (app.integrationConfig as any)?.version ||
+      '1.0.0';
 
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
         'MiniApp Live & Activated',
-        `MiniApp "${app.name}" has been granted final approval and production release build is live in the SuperApp catalog.`,
+        `MiniApp "${app.name}" has been granted final approval and is now ACTIVE in the SuperApp catalog.`,
         'MINIAPP_ACTIVATED',
         app.id,
       );
@@ -2144,7 +2128,7 @@ export class MiniappLifecycleHelper {
       await this.mailService.sendMiniAppActivatedEmail(
         targetLiveEmail,
         app.name || app.appId,
-        releaseVersion,
+        activeVersion,
         `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
@@ -2153,8 +2137,8 @@ export class MiniappLifecycleHelper {
       id,
       actorId,
       'STATUS_CHANGE',
-      'MiniApp Activated (Production Release)',
-      `Final approval granted. Production release build (${releaseVersion}, release) triggered in Jenkins and app is ACTIVE in SuperApp catalog.`,
+      'MiniApp Activated',
+      `Final approval granted. Version ${activeVersion} is now ACTIVE in the SuperApp catalog.`,
       'ACTIVATE_MINI_APP',
       null,
       app,

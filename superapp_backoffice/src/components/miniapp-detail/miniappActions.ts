@@ -59,6 +59,8 @@ export interface MiniAppAllowedActions {
   reject: boolean;
   startTesting: boolean;
   retryBuild: boolean;
+  /** Re-trigger Test Build while already in TESTING (e.g., SuperApp host changed). */
+  rebuildTestBuild: boolean;
   /** TESTING -> TEST_PASSED (the test build works). */
   passTesting: boolean;
   /** TEST_PASSED -> production release build -> ACTIVE. */
@@ -115,7 +117,7 @@ export function getAllowedActions(
   const status = (app.status || 'DRAFT').toUpperCase();
   const availability = (app.availabilityStatus || '').toUpperCase();
   const phase = getMiniAppPhase(app);
-  const isSuper = user.role === 'SUPER_ADMIN';
+  const isSuper = user.role === 'SUPER_ADMIN' || user.role === 'PLATFORM_ADMIN';
   const isOwner = Boolean(user.userId && app.ownerId && user.userId === app.ownerId);
   const access = user.access ?? 'VIEW';
   // Role permission AND access level on this app (owner / collaborator role / org admin)
@@ -148,6 +150,7 @@ export function getAllowedActions(
     reject: phase === 'review' && canReject,
     startTesting: phase === 'approved' && canApprove,
     retryBuild: phase === 'build-failed' && canApprove,
+    rebuildTestBuild: phase === 'testing' && canApprove,
     passTesting: phase === 'testing' && canApprove,
     activate: phase === 'test-passed' && canApprove,
     publishRevision: isLive && hasRevision && canApprove && !scanFailed,

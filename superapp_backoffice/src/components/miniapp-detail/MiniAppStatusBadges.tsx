@@ -83,6 +83,7 @@ const STAGE: Record<string, { label: string; tone: Tone; pulse?: boolean }> = {
   APPROVED: { label: 'Approved', tone: 'progress' },
   TESTING: { label: 'Testing', tone: 'progress' },
   TEST_PASSED: { label: 'Test passed', tone: 'progress' },
+  ACTIVE: { label: 'Active', tone: 'success' },
 };
 
 const OLD_LIFECYCLE_STAGE: Record<string, string> = {

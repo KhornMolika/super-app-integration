@@ -20,7 +20,8 @@ export class SuperAppController {
   @Get('next-version')
   async getNextVersion() {
     const nextVersion = await this.superAppService.getNextSuggestedVersion();
-    return { nextVersion };
+    const nextReleaseVersion = this.superAppService.getNextOfficialReleaseVersion();
+    return { nextVersion, nextReleaseVersion };
   }
 
   @Get('releases/history')

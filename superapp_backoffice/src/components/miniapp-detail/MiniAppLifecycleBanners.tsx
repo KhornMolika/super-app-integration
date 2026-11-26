@@ -679,6 +679,18 @@ export default function MiniAppLifecycleBanners({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!isDynamicMethod && actions.rebuildTestBuild && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onLifecycleAction('start-testing')}
+                disabled={isSubmitting}
+                className="text-sm px-4 py-2 font-semibold flex items-center gap-1.5 border-accent-300 dark:border-accent-700 text-accent-800 dark:text-accent-200 hover:bg-accent-100/70 dark:hover:bg-accent-900/50"
+              >
+                <RefreshIcon className="w-4 h-4" />
+                <span>Rebuild Test Build</span>
+              </Button>
+            )}
             {actions.passTesting && (
               <Button
                 type="button"
@@ -710,7 +722,7 @@ export default function MiniAppLifecycleBanners({
               <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1 leading-relaxed">
                 {isDynamicMethod
                   ? `${dynamicLabel} sandbox testing was verified. Activating publishes the MiniApp directly to the SuperApp catalog.`
-                  : 'The test build was verified. Activating starts the production release build and puts the MiniApp in the SuperApp catalog.'}
+                  : 'The test build was verified. Activating marks this MiniApp as Active and ready to be bundled in the next Official SuperApp Release.'}
               </p>
             </div>
           </div>

@@ -231,6 +231,29 @@ export class SuperAppService implements OnApplicationBootstrap {
     return this.computeNextVersion(currentVer);
   }
 
+  /** Next version for Official SuperApp Releases, separate from test-build versions. */
+  getNextOfficialReleaseVersion(): string {
+    return this.computeNextVersion(this.getOfficialReleaseVersion());
+  }
+
+  /** Persists the latest completed Official SuperApp Release version to super_app_release.json. */
+  recordOfficialReleaseVersion(version: string): void {
+    const clean = String(version || '').trim().replace(/^v/, '');
+    if (!clean) return;
+    const manifestPath = path.resolve(process.cwd(), 'data/super_app_release.json');
+    try {
+      const existing = fs.existsSync(manifestPath)
+        ? JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+        : {};
+      existing.superAppVersion = clean;
+      existing.releasedAt = new Date().toISOString();
+      fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+      fs.writeFileSync(manifestPath, JSON.stringify(existing, null, 2) + '\n', 'utf-8');
+    } catch (e: any) {
+      this.logger.warn(`Could not update super_app_release.json: ${e?.message}`);
+    }
+  }
+
   getOfficialReleaseVersion(): string {
     try {
       const mobileDir = this.configService.get<string>('MOBILE_APP_DIR');
