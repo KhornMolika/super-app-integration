@@ -655,14 +655,12 @@ export class MiniappMutationHelper {
       );
     }
 
-    // Live, testing or suspended (only those can be suspended): edits become a revision
+    // Live or suspended (only live apps can be suspended): edits become a staged revision.
+    // Unreleased apps in TESTING / TEST_PASSED update the draft directly to IN_REVIEW.
     const isLive =
       isMiniAppLive(existing) ||
       (existing as any).status === 'ACTIVE' ||
-      existing.availabilityStatus === MiniAppAvailabilityStatus.SUSPENDED ||
-      existing.lifecycleStatus === 'TESTING' ||
-      (existing as any).status === 'TESTING' ||
-      existing.lifecycleStatus === 'TEST_PASSED';
+      existing.availabilityStatus === MiniAppAvailabilityStatus.SUSPENDED;
 
     // Unchanged input keeps its backend-set verification: the client never
     // sends `verifiedClass`, so the stored row (or open revision) wins.
