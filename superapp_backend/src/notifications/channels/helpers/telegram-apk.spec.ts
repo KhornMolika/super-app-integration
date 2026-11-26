@@ -69,6 +69,15 @@ describe('TelegramApiHelper.sendApkDocument', () => {
     expect(JSON.parse(calls[2].init.body).text).toContain('https://app/dl');
   });
 
+  it('prefers NEXUS_INTERNAL_URL over public NEXUS_BASE_URL for in-cluster fetches', async () => {
+    process.env.NEXUS_BASE_URL = 'https://app.fintechcenterfsa.com/nexus';
+    process.env.NEXUS_INTERNAL_URL = 'http://nexus:8081';
+    const calls = mockFetch({ status: 404 }, { status: 200, bytes: 1024 * 1024 });
+    const ok = await TelegramApiHelper.sendApkDocument('BOT', '42', 'https://app/dl', 'v1.0.6', 'Super App');
+    expect(ok).toBe(true);
+    expect(calls[0].url).toBe(ARM64);
+  });
+
   it('refuses a missing or odd version', async () => {
     const calls = mockFetch({ status: 200, bytes: 5000 });
     expect(await TelegramApiHelper.sendApkDocument('BOT', '42', '', '', 'A')).toBe(false);

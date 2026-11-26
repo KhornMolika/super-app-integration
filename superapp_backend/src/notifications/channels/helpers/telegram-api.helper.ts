@@ -1,4 +1,5 @@
 import { resolveAppUrl } from '../../../common/utils/network.utils';
+import { nexusApiBaseUrl } from '../../../integrations/nexus/nexus-url';
 import {
   TelegramInlineButton,
   TelegramSendResult,
@@ -466,7 +467,10 @@ export class TelegramApiHelper {
     filename: string,
     logger?: TelegramLogger,
   ): Promise<{ apk?: Buffer<ArrayBuffer>; tooLargeBytes?: number }> {
-    const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
+    const nexusBase =
+      process.env.NEXUS_INTERNAL_URL || process.env.NEXUS_BASE_URL
+        ? nexusApiBaseUrl((k) => process.env[k])
+        : (process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
     const nexusUser = process.env.NEXUS_ADMIN_USER || process.env.NEXUS_USER || 'admin';
     const nexusPass = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
     const headers: Record<string, string> = nexusPass

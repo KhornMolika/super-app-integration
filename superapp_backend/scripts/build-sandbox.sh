@@ -47,8 +47,8 @@ cd "$MOBILE_DIR"
 echo "Resolving Flutter dependencies..."
 "$FLUTTER" pub get
 
-echo "Running: flutter build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons"
-"$FLUTTER" build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons
+echo "Running: flutter build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons --dart-define=SUPERAPP_BUILD=debug"
+"$FLUTTER" build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons --dart-define=SUPERAPP_BUILD=debug
 
 echo "Syncing build artifacts to $DEST_DIR..."
 mkdir -p "$DEST_DIR"

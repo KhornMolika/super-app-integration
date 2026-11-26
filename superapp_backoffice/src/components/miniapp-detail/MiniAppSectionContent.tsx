@@ -26,6 +26,8 @@ interface MiniAppSectionContentProps {
   canEdit?: boolean;
   canPublish?: boolean;
   onStartEdit?: () => void;
+  canStartNewVersion?: boolean;
+  onStartNewVersion?: () => void;
   handleWebViewChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleFlutterChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   onUpdateFlutterConfig: (updates: Record<string, any>, extraData?: any) => void;
@@ -51,6 +53,8 @@ export function MiniAppSectionContent({
   canEdit = false,
   canPublish = false,
   onStartEdit,
+  canStartNewVersion = false,
+  onStartNewVersion,
   handleWebViewChange,
   handleFlutterChange,
   onUpdateFlutterConfig,
@@ -197,6 +201,8 @@ export function MiniAppSectionContent({
             ownerName={formData.ownerName || (formData as any)?.owner?.name || (formData as any)?.owner?.fullName}
             ownerEmail={formData.ownerEmail || (formData as any)?.owner?.email}
             teamName={formData.teamName}
+            canStartNewVersion={canStartNewVersion}
+            onStartNewVersion={onStartNewVersion}
             integrationMethod={formData.integrationMethod}
             integrationConfig={formData.integrationConfig}
           />

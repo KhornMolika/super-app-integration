@@ -67,6 +67,8 @@ export interface VersionHistoryTabProps {
   ownerEmail?: string;
   teamName?: string;
   onOpenReviewDiff?: () => void;
+  canStartNewVersion?: boolean;
+  onStartNewVersion?: () => void;
   integrationMethod?: string;
   integrationConfig?: any;
 }
@@ -166,6 +168,8 @@ export default function VersionHistoryTab({
   ownerEmail,
   teamName,
   onOpenReviewDiff,
+  canStartNewVersion = false,
+  onStartNewVersion,
   integrationMethod,
   integrationConfig,
 }: VersionHistoryTabProps) {
@@ -586,6 +590,18 @@ export default function VersionHistoryTab({
               Historical record of package releases, staging builds, and draft revisions for {miniAppName}.
             </p>
           </div>
+          {canStartNewVersion && onStartNewVersion && (
+            <button
+              type="button"
+              onClick={onStartNewVersion}
+              className="h-9 px-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors self-start sm:self-auto"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>New Version</span>
+            </button>
+          )}
         </div>
 
         {/* Row 2: Action & Filter Toolbar (Separate row so Compare Diff and Stage Filter never stack awkwardly) */}

@@ -47,6 +47,7 @@ export class ApkDownloadController {
       : `superapp-test-${normVer}-arm64-v8a.apk`;
 
     const nexusBase = (
+      process.env.NEXUS_INTERNAL_URL ||
       process.env.NEXUS_BASE_URL ||
       process.env.NEXUS_URL ||
       'http://localhost:8081'
