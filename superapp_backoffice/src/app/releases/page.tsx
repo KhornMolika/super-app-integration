@@ -27,6 +27,11 @@ export default function ReleasesPage() {
   const [releaseVersion, setReleaseVersion] = useState('v0.0.3');
   const [isAssembling, setIsAssembling] = useState(false);
   const [gate2Result, setGate2Result] = useState<any>(null);
+  const [releaseBuildStages, setReleaseBuildStages] = useState<Record<string, any> | null>(null);
+  const [releaseBuildStatus, setReleaseBuildStatus] = useState<'BUILDING' | 'COMPLETED' | 'FAILED' | null>(null);
+  const [releaseBuildError, setReleaseBuildError] = useState<string | null>(null);
+  const [attestationOpen, setAttestationOpen] = useState(false);
+  const [copiedDigest, setCopiedDigest] = useState(false);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [ecosystemStatus, setEcosystemStatus] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -121,6 +126,36 @@ export default function ReleasesPage() {
     fetchNextVersion();
   }, []);
 
+  useEffect(() => {
+    if (releaseBuildStatus !== 'BUILDING') return;
+    const trackedId = gate2Result?.verifiedApps?.[0]?.id;
+    if (!trackedId) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const app = await miniappsApi.getById(trackedId);
+        if (app?.buildStages) {
+          setReleaseBuildStages(app.buildStages);
+        }
+        const bStatus = String(app?.buildStatus || '').toUpperCase();
+        const publishDone =
+          String(app?.buildStages?.publish?.status || '').toUpperCase() === 'COMPLETED';
+        if (bStatus === 'COMPLETED' || publishDone) {
+          setReleaseBuildStatus('COMPLETED');
+          superAppApi.getEcosystemStatus().then(setEcosystemStatus).catch(() => {});
+          fetchNextVersion();
+        } else if (bStatus === 'FAILED') {
+          setReleaseBuildStatus('FAILED');
+          setReleaseBuildError((app as any)?.buildError || 'Release build failed in Jenkins.');
+        }
+      } catch {
+        // Ignore transient poll errors while Jenkins is building
+      }
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [releaseBuildStatus, gate2Result]);
+
   const handleRunGate2 = async () => {
     setIsAssembling(true);
     try {
@@ -137,6 +172,14 @@ export default function ReleasesPage() {
 
       const data = await superAppApi.verifyReleaseAssembly(payload);
       setGate2Result(data);
+      if (data?.buildTriggered) {
+        setReleaseBuildStages(data.buildStages || null);
+        setReleaseBuildStatus('BUILDING');
+        setReleaseBuildError(null);
+      } else {
+        setReleaseBuildStages(null);
+        setReleaseBuildStatus(data?.passed ? 'COMPLETED' : 'FAILED');
+      }
       if (data?.success || data?.status === 'ASSEMBLY_STARTED') {
         fetchNextVersion();
       }
@@ -358,33 +401,73 @@ export default function ReleasesPage() {
             </div>
           </div>
 
-          {/* Verified Checksum Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Verified Nexus Artifacts</div>
-              <div className="space-y-2">
-                {gate2Result.verifiedApps?.map((app: any) => (
-                  <div key={app.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-200 dark:border-slate-700/50 last:border-0">
-                    <span className="font-medium text-slate-800 dark:text-slate-200">{app.packageName}</span>
-                    <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                      <CheckIcon className="w-3 h-3" />
-                      <span>Digest Matched</span>
-                    </span>
-                  </div>
-                ))}
+          {/* Release Build Steps */}
+          {releaseBuildStages && (
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Jenkins Release Build Steps
+                </span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  releaseBuildStatus === 'COMPLETED'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : releaseBuildStatus === 'FAILED'
+                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                      : 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
+                }`}>
+                  {releaseBuildStatus === 'COMPLETED'
+                    ? 'Completed'
+                    : releaseBuildStatus === 'FAILED'
+                      ? 'Failed'
+                      : 'Building...'}
+                </span>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { id: 'preflight', fallbackName: '1. Pre-Flight & Source Checkout' },
+                  { id: 'compile', fallbackName: '2. Compile Release APK & AAB' },
+                  { id: 'publish', fallbackName: '3. Publish to Nexus (apk-releases)' },
+                ].map(({ id, fallbackName }) => {
+                  const s = releaseBuildStages?.[id] || {};
+                  const st = String(s.status || 'PENDING').toUpperCase();
+                  const isDone = st === 'COMPLETED' || st === 'SUCCESS';
+                  const isRunning = st === 'RUNNING' || st === 'IN_PROGRESS';
+                  const isFailed = st === 'FAILED';
+                  return (
+                    <div
+                      key={id}
+                      className={`p-3 rounded-lg border text-xs ${
+                        isDone
+                          ? 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/60 dark:bg-emerald-950/30'
+                          : isRunning
+                            ? 'border-sky-200 dark:border-sky-800/60 bg-sky-50/60 dark:bg-sky-950/30'
+                            : isFailed
+                              ? 'border-rose-200 dark:border-rose-800/60 bg-rose-50/60 dark:bg-rose-950/30'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                        <span className="truncate">{s.name || fallbackName}</span>
+                        <span className={`shrink-0 text-[10px] font-bold uppercase ${
+                          isDone ? 'text-emerald-600' : isRunning ? 'text-sky-600' : isFailed ? 'text-rose-600' : 'text-slate-400'
+                        }`}>
+                          {st}
+                        </span>
+                      </div>
+                      {s.details && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                          {s.details}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {releaseBuildError && (
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{releaseBuildError}</p>
+              )}
             </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Signed Release Manifest Digest</div>
-              <div className="font-mono text-xs text-accent-600 dark:text-accent-400 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
-                SHA256: {gate2Result.manifest?.integrityDigest}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">
-                Consolidated Permissions: {gate2Result.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Candidate APK Build Status & Download Button */}
           {gate2Result.apkUrl && (
@@ -395,24 +478,32 @@ export default function ReleasesPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    Official Release APK Queued
+                    {releaseBuildStatus === 'COMPLETED' ? 'Official Release APK Ready' : 'Official Release APK Building...'}
                     <span className="px-2 py-0.5 text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
                       {gate2Result.releaseVersion || releaseVersion} • apk-releases
                     </span>
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Building via <strong>superapp-release-build</strong> with verified Live &amp; Stage: Active MiniApps. Download becomes available in Nexus once Jenkins finishes.
+                    {releaseBuildStatus === 'COMPLETED'
+                      ? <>Compiled via <strong>superapp-release-build</strong> and published to Nexus <strong>apk-releases</strong>.</>
+                      : <>Building via <strong>superapp-release-build</strong> with verified Live &amp; Stage: Active MiniApps. Download unlocks when Jenkins finishes.</>}
                   </p>
                 </div>
               </div>
-              <a
-                href={gate2Result.apkUrl}
-                download={`superapp-${gate2Result.releaseVersion || releaseVersion}-release.apk`}
-                className="w-full sm:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                <span>Download Release APK</span>
-              </a>
+              {releaseBuildStatus === 'COMPLETED' ? (
+                <a
+                  href={gate2Result.apkUrl}
+                  download={`superapp-${gate2Result.releaseVersion || releaseVersion}-release.apk`}
+                  className="w-full sm:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  <span>Download Release APK</span>
+                </a>
+              ) : (
+                <span className="w-full sm:w-auto px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed">
+                  <span>{releaseBuildStatus === 'FAILED' ? 'Build Failed' : 'Building in Jenkins...'}</span>
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -493,6 +584,133 @@ export default function ReleasesPage() {
               setCurrentPage(1);
             }}
           />
+
+          {/* Collapsible Manifest & Checksum Attestation (shown only when filtered by a Release Version) */}
+          {releaseVersionFilter !== 'ALL' && releaseVersionFilter !== 'PENDING' && (() => {
+            const matchingResult = gate2Result?.releaseVersion === releaseVersionFilter ? gate2Result : null;
+            const artifactRows: Array<{ id: string; packageName: string; verified: boolean }> =
+              matchingResult?.verifiedApps?.length
+                ? matchingResult.verifiedApps.map((a: any) => ({
+                    id: a.id,
+                    packageName: a.packageName,
+                    verified: a.digestMatched !== false,
+                  }))
+                : filteredApps.map((a) => ({
+                    id: a.id,
+                    packageName: a.integrationConfig?.packageName || a.appId,
+                    verified: true,
+                  }));
+            const sortedArtifacts = [...artifactRows].sort((a, b) => Number(a.verified) - Number(b.verified));
+            const digest: string | undefined = matchingResult?.manifest?.integrityDigest;
+            const permissions: string[] = matchingResult?.manifest?.consolidatedPermissions?.length
+              ? matchingResult.manifest.consolidatedPermissions
+              : Array.from(
+                  new Set(
+                    filteredApps.flatMap((a) =>
+                      Array.isArray(a.permissions)
+                        ? a.permissions.map((p: any) => (typeof p === 'string' ? p : p?.type)).filter(Boolean)
+                        : [],
+                    ),
+                  ),
+                );
+            const verifiedCount = sortedArtifacts.filter((a) => a.verified).length;
+            const visiblePerms = permissions.slice(0, 8);
+            const extraPerms = permissions.length - visiblePerms.length;
+
+            return (
+              <div className="mt-4 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/50 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAttestationOpen((v) => !v)}
+                  className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-left hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
+                      <CheckIcon className="w-3.5 h-3.5" />
+                      <span>{verifiedCount}/{sortedArtifacts.length} Artifacts Verified</span>
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                    <span className="font-mono text-slate-600 dark:text-slate-300">
+                      Release {releaseVersionFilter}
+                    </span>
+                    {digest && (
+                      <>
+                        <span className="text-slate-300 dark:text-slate-700">•</span>
+                        <span className="font-mono text-slate-500 dark:text-slate-400">
+                          sha256:{digest.slice(0, 8)}…{digest.slice(-6)}
+                        </span>
+                      </>
+                    )}
+                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      {permissions.length} Permission{permissions.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {attestationOpen ? 'Hide details ▲' : 'Attestation details ▼'}
+                  </span>
+                </button>
+
+                {attestationOpen && (
+                  <div className="border-t border-slate-200/80 dark:border-slate-700/80 p-4 space-y-3 bg-white/80 dark:bg-slate-900/80">
+                    <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900">
+                      {sortedArtifacts.map((art) => (
+                        <div key={art.id} className="px-3 py-2 flex items-center justify-between text-xs">
+                          <span className="font-mono font-medium text-slate-800 dark:text-slate-200 truncate">
+                            {art.packageName}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 font-mono text-[11px] font-semibold shrink-0 ${
+                            art.verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                          }`}>
+                            <CheckIcon className="w-3 h-3" />
+                            <span>{art.verified ? 'Digest Matched' : 'Mismatch'}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {digest && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+                        <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">
+                          sha256:{digest}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(`sha256:${digest}`);
+                            setCopiedDigest(true);
+                            setTimeout(() => setCopiedDigest(false), 1500);
+                          }}
+                          className="px-2 py-0.5 rounded text-[11px] font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+                        >
+                          {copiedDigest ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    )}
+
+                    {permissions.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-1">
+                          Permissions:
+                        </span>
+                        {visiblePerms.map((perm) => (
+                          <span
+                            key={perm}
+                            className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700/70"
+                          >
+                            {perm}
+                          </span>
+                        ))}
+                        {extraPerms > 0 && (
+                          <span className="text-[11px] text-slate-500 font-medium">+{extraPerms} more</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">

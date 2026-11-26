@@ -233,6 +233,19 @@ export class SuperAppService implements OnApplicationBootstrap {
 
   /** Next version for Official SuperApp Releases, separate from test-build versions. */
   getNextOfficialReleaseVersion(): string {
+    const manifestPath = path.resolve(process.cwd(), 'data/super_app_release.json');
+    try {
+      if (fs.existsSync(manifestPath)) {
+        const json = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        if (!json?.releasedAt) {
+          return 'v1.0.0';
+        }
+      } else {
+        return 'v1.0.0';
+      }
+    } catch (_) {
+      return 'v1.0.0';
+    }
     return this.computeNextVersion(this.getOfficialReleaseVersion());
   }
 

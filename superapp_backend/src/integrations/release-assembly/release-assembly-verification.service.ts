@@ -292,8 +292,7 @@ export class ReleaseAssemblyVerificationService {
 
       for (const appDto of dto.miniApps) {
         try {
-          // Approved and in this build: the build run says it is building
-          await applyLifecycle(this.miniappRepository, appDto.id, 'BUILDING');
+          // Record the release build run without resetting the MiniApp's ACTIVE version stage.
           await this.runs?.recordBuild(appDto.id, {
             status: 'BUILDING',
             stages: initialBuildStages,
@@ -373,6 +372,28 @@ export class ReleaseAssemblyVerificationService {
       conflicts,
       manifest,
       buildTriggered: passed,
+      buildStages: passed
+        ? {
+            preflight: {
+              id: 'preflight',
+              name: '1. Pre-Flight & Source Checkout',
+              status: 'RUNNING',
+              details: `Verifying dependency checksums and manifest digest for ${dto.releaseVersion}.`,
+            },
+            compile: {
+              id: 'compile',
+              name: '2. Compile Release APK & AAB',
+              status: 'PENDING',
+              details: 'Assembling Flutter SuperApp container and compiling release binary.',
+            },
+            publish: {
+              id: 'publish',
+              name: '3. Publish to Nexus (apk-releases)',
+              status: 'PENDING',
+              details: 'Uploading compiled release APK artifact to Sonatype Nexus.',
+            },
+          }
+        : undefined,
       apkUrl: passed ? nexusApkUrl : undefined,
     };
   }
@@ -397,8 +418,11 @@ export class ReleaseAssemblyVerificationService {
         updatedAt: new Date().toISOString(),
       };
       app.buildStages = { ...currentStages };
+      const isAlreadyActive =
+        String(app.lifecycleStatus || '').toUpperCase() === 'ACTIVE' ||
+        String(app.versionStage || '').toUpperCase() === 'ACTIVE';
       if (body.status === 'FAILED') {
-        app.lifecycleStatus = 'BUILD_FAILED';
+        if (!isAlreadyActive) app.lifecycleStatus = 'BUILD_FAILED';
         app.buildStatus = 'FAILED';
         app.buildError =
           body.details ||
@@ -408,7 +432,7 @@ export class ReleaseAssemblyVerificationService {
         body.stageId === 'publish' &&
         (body.status === 'COMPLETED' || body.status === 'SUCCESS')
       ) {
-        app.lifecycleStatus = 'TESTING';
+        if (!isAlreadyActive) app.lifecycleStatus = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildError = undefined;
       }

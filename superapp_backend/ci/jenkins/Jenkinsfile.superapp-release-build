@@ -447,17 +447,9 @@ pipeline {
                                         | curl -sSf -K - --upload-file "$1" "$2" > /dev/null
                                 }
 
-                                # 1. Upload Primary Release APK (superapp-release-<version>.apk) - lean ~25 MB
-                                upload "$APK" "$APK_URL"
-                                echo "Uploaded $APK_URL (lean ARM64 ~25 MB)"
-
-                                # 2. app-release.apk alias for direct download
+                                # 1. Upload Primary Release APK (app-release.apk) - lean ARM64 ~25 MB
                                 upload "$APK" "${APK_URL%/*}/app-release.apk"
-                                echo "Uploaded ${APK_URL%/*}/app-release.apk"
-
-                                # 3. Explicit arm64 named copy
-                                upload "$APK" "${APK_URL%.apk}-arm64-v8a.apk"
-                                echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
+                                echo "Uploaded ${APK_URL%/*}/app-release.apk (lean ARM64 ~25 MB)"
 
                                 # 3. Upload Android App Bundle (.aab)
                                 if [ -s "$AAB" ]; then

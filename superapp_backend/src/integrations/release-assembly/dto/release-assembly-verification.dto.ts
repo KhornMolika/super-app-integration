@@ -73,6 +73,7 @@ export interface ReleaseAssemblyAuditResult {
     integrityDigest: string;
   };
   buildTriggered?: boolean;
+  buildStages?: Record<string, any>;
   apkUrl?: string;
 }
 
