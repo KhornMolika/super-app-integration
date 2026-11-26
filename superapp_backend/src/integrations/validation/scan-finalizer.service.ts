@@ -130,7 +130,7 @@ export class ScanFinalizerService {
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
       if (
-        !hasPendingRevision &&
+        (!hasPendingRevision || app.appStatus !== 'LIVE') &&
         initialStatuses.includes(app.lifecycleStatus)
       ) {
         app.lifecycleStatus = 'IN_REVIEW';

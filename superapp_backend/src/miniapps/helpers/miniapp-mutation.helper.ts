@@ -987,6 +987,7 @@ export class MiniappMutationHelper {
     }
 
     data.lifecycleStatus = 'SUBMITTED';
+    data.pendingRevision = null;
 
     const merged = this.miniappRepository.merge(existing, data);
     // merge() copies columns only; the integration lives on the version rows
