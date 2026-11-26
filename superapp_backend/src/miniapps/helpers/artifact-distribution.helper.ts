@@ -330,7 +330,7 @@ export class ArtifactDistributionHelper {
         }
 
         this.logger.warn(
-          `Artifact "${downloadFilename}" not found on Nexus (${nexusUrl}) or local disk.`,
+          `Artifact "${downloadFilename}" not found on Nexus (${candidateUrls.join(', ')}) or local disk.`,
         );
         res?.setHeader?.('Content-Type', 'application/json');
         return res?.status?.(404)?.json?.({
