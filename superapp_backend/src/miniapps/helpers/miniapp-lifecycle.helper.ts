@@ -1752,7 +1752,7 @@ export class MiniappLifecycleHelper {
           `Test build compilation (${releaseVersion}) initiated for staged revision of "${app.name}". Live version remains active.`,
           'BUILD_STARTED',
           app.id,
-          { releaseVersion, version: releaseVersion, buildType: testBuildType },
+          { releaseVersion, version: releaseVersion, buildType: testBuildType, miniAppSet: 'test' },
         );
       }
 
@@ -1938,6 +1938,7 @@ export class MiniappLifecycleHelper {
           releaseVersion,
           version: releaseVersion,
           buildType: testBuildType,
+          miniAppSet: 'test',
         },
       );
     }

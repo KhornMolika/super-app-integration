@@ -58,9 +58,17 @@ export function revisionRowOf<T extends { status?: string | null }>(rows: T[] | 
   return rows.find((r) => isInProgressStage(r.status));
 }
 
-/** The row an app serves: its ACTIVE row, else the row being worked on. */
-export function servingRowOf<T extends { status?: string | null }>(rows: T[] | null | undefined): T | undefined {
+/** The row an app serves: its ACTIVE row, else the row being worked on.
+ *  When preferTesting is true (debug/sandbox), a TESTING or TEST_PASSED revision takes precedence. */
+export function servingRowOf<T extends { status?: string | null }>(
+  rows: T[] | null | undefined,
+  preferTesting = false,
+): T | undefined {
   if (!Array.isArray(rows)) return undefined;
+  if (preferTesting) {
+    const testing = rows.find((r) => r.status === 'TESTING' || r.status === 'TEST_PASSED');
+    if (testing) return testing;
+  }
   return rows.find((r) => r.status === 'ACTIVE') ?? revisionRowOf(rows);
 }
 

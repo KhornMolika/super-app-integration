@@ -64,12 +64,31 @@ export class BuildMiniAppsService {
     const byPackage = new Map<string, string>();
 
     for (const app of apps) {
-      const excluded = buildExclusionReason(app, buildType);
+      const rev = (app as any).pendingRevision;
+      const revStage = String(
+        rev?.revisionStatus || (app as any).versionStage || '',
+      ).toUpperCase();
+      const useTestRevision =
+        buildType === 'debug' &&
+        rev &&
+        ['TESTING', 'TEST_PASSED', 'BUILDING', 'BUILDING_STAGE_1', 'BUILDING_STAGE_2'].includes(revStage) &&
+        String(rev.validationStatus || '').toUpperCase() !== 'FAILED';
+      const effectiveApp = useTestRevision
+        ? ({
+            ...app,
+            integrationMethod: rev.integrationMethod ?? app.integrationMethod,
+            integrationConfig: rev.integrationConfig ?? app.integrationConfig,
+            homeWidget: rev.homeWidget !== undefined ? rev.homeWidget : app.homeWidget,
+            validationStatus: rev.validationStatus ?? app.validationStatus,
+          } as MiniApp)
+        : app;
+
+      const excluded = buildExclusionReason(effectiveApp, buildType);
       if (excluded) {
         skipped.push({ appId: app.appId, reason: excluded });
         continue;
       }
-      const r = miniAppDependencyOf(app, gateway);
+      const r = miniAppDependencyOf(effectiveApp, gateway);
       if ('skip' in r) {
         skipped.push({ appId: app.appId, reason: r.skip });
         continue;
@@ -87,7 +106,7 @@ export class BuildMiniAppsService {
         packageName: r.packageName,
         dependency: r.dependency,
       });
-      registry.push({ packageName: r.packageName, app });
+      registry.push({ packageName: r.packageName, app: effectiveApp });
     }
 
     return { packages, skipped, registryDart: renderMiniAppRegistry(registry) };

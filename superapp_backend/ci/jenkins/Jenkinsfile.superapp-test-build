@@ -545,7 +545,8 @@ pipeline {
             script {
                 postJson(callbackBase(), [
                     appName: params.APP_NAME, releaseVersion: params.RELEASE_VERSION, status: 'COMPLETED',
-                    buildType: params.BUILD_TYPE, apkUrl: apkUrl(), filename: apkName(), repoName: 'apk-test-builds',
+                    buildType: params.BUILD_TYPE, miniAppSet: params.MINIAPP_SET,
+                    apkUrl: apkUrl(), filename: apkName(), repoName: 'apk-test-builds',
                 ])
             }
         }

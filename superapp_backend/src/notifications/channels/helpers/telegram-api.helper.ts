@@ -432,7 +432,7 @@ export class TelegramApiHelper {
       const form = new FormData();
       form.append('chat_id', chatId);
       const downloadLink = /^https:\/\//.test(apkUrlOrPath || '')
-        ? `\n📥 <a href="${TelegramApiHelper.escapeHtml(apkUrlOrPath)}">Nexus Artifact Download</a>`
+        ? `\n📥 <a href="${TelegramApiHelper.escapeHtml(apkUrlOrPath)}">Download APK</a>`
         : '';
       form.append(
         'caption',

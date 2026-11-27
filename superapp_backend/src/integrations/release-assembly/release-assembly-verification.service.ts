@@ -562,7 +562,11 @@ export class ReleaseAssemblyVerificationService {
       await this.superAppWebService?.refreshNow(true);
       await this.markVersionPublished(body.releaseVersion);
       const isReleaseBuild =
-        body.buildType === 'release' || body.repoName === 'apk-releases';
+        body.miniAppSet === 'release' ||
+        body.repoName === 'apk-releases' ||
+        (body.buildType === 'release' &&
+          body.repoName !== 'apk-test-builds' &&
+          body.miniAppSet !== 'test');
       if (isReleaseBuild) {
         if (body.releaseVersion) {
           const clean = String(body.releaseVersion).trim().replace(/^v/, '');
@@ -660,7 +664,8 @@ export class ReleaseAssemblyVerificationService {
         sharedNexusUrl = sanitizedNexusUrl;
 
         // Standardized Backoffice download proxy URL: enforces standardized filename across all channels
-        const finalApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
+        const downloadType = isReleaseBuild ? 'release' : 'test';
+        const finalApkUrl = `${backofficeBase}/api/download-apk?type=${downloadType}&version=${encodeURIComponent(normVersion)}&appName=superapp`;
         sharedFinalApkUrl = finalApkUrl;
 
         const currentStages = app.buildStages || {};
@@ -816,7 +821,8 @@ export class ReleaseAssemblyVerificationService {
           this.configService.get<string>('BACKOFFICE_BASE_URL') ||
             this.configService.get<string>('WEBAPP_URL'),
         );
-        const standaloneApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
+        const downloadType = isReleaseBuild ? 'release' : 'test';
+        const standaloneApkUrl = `${backofficeBase}/api/download-apk?type=${downloadType}&version=${encodeURIComponent(normVersion)}&appName=superapp`;
 
         const fallbackApps = await this.miniappRepository.find({
           order: { updatedAt: 'DESC' },

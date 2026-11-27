@@ -164,9 +164,7 @@ ${cleanIssue}
           (metadata?.version as string) ||
           (metadata?.releaseVersion as string) ||
           'v1.0.0';
-        const isRelease =
-          metadata?.buildType === 'release' ||
-          metadata?.miniAppSet === 'release';
+        const isRelease = metadata?.miniAppSet === 'release';
         const text = isRelease
           ? `
 🔵 <b>SUPER APP RELEASE BUILD IN PROGRESS</b>
@@ -181,7 +179,7 @@ ${cleanIssue}
 ! Artifacts      : Compiling Release APK & AAB
 </code></pre>
 
-<blockquote>Stand by while official release artifacts are assembled and published to Sonatype Nexus (apk-releases).</blockquote>
+<blockquote>Stand by while official release artifacts are assembled and published.</blockquote>
         `.trim()
           : `
 🔵 <b>SUPER APP BUILD IN PROGRESS</b>
@@ -196,7 +194,7 @@ ${cleanIssue}
 ! Artifacts      : Generating Android APK & Web Sandbox
 </code></pre>
 
-<blockquote>Stand by while binary artifacts are assembled and published to Sonatype Nexus.</blockquote>
+<blockquote>Stand by while binary artifacts are assembled and published.</blockquote>
         `.trim();
 
         buttons.push([
@@ -214,9 +212,7 @@ ${cleanIssue}
           (metadata?.releaseVersion as string) ||
           'v0.2.1';
         const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
-        const isRelease =
-          metadata?.buildType === 'release' ||
-          metadata?.miniAppSet === 'release';
+        const isRelease = metadata?.miniAppSet === 'release';
         const targetFilename = isRelease
           ? 'app-release.apk'
           : `superapp-test-${version}.apk`;
@@ -236,10 +232,10 @@ ${cleanIssue}
 + Architecture : 64-bit ARM (ARM64-v8a)
 + Package Size : ~25 MB (Optimized)
 + Release Tag  : ${version}
-+ Repository   : Nexus (apk-releases)
++ Distribution : Official Release
 </code></pre>
 
-<blockquote>Official SuperApp release packaging is complete! Download app-release.apk from Nexus or open SuperApp Releases in Backoffice.</blockquote>
+<blockquote>Official SuperApp release packaging is complete! Download app-release.apk or open SuperApp Releases in Backoffice.</blockquote>
         `.trim()
           : `
 🟢 <b>SUPER APP TEST BUILD READY</b>
@@ -281,7 +277,7 @@ ${cleanIssue}
         const cleanReason =
           errors.length > 0
             ? errors.map((l) => `- Error        : ${l}`).join('\n')
-            : '- Error        : Fastlane packaging or Nexus publish failed';
+            : '- Error        : Release packaging or artifact publish failed';
 
         const text = `
 🔴 <b>SUPER APP BUILD ERROR</b>

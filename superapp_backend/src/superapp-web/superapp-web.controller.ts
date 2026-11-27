@@ -120,8 +120,8 @@ export class SuperAppWebController {
       body = Buffer.from(body.toString('utf8').replace(/<base href="[^"]*"\s*\/?>/i, `<base href="${base}">`));
       res.set('Cache-Control', 'no-cache');
     } else {
-      // Names are not content-hashed: short cache, revalidated after a new build
-      res.set('Cache-Control', 'public, max-age=300');
+      // Names are not content-hashed: prevent stale main.dart.js after a new build
+      res.set('Cache-Control', 'no-cache');
     }
     res.status(200).send(body);
   }

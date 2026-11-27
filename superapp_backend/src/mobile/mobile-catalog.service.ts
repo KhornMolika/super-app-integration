@@ -380,7 +380,10 @@ export class MobileCatalogService {
     // Capabilities and integration come from the version each app serves
     // (the app's own columns until that version holds an integration); the
     // item phones get keeps its shape.
-    const served = await this.versions?.servingVersions(rows.map((r) => r.id));
+    const served = await this.versions?.servingVersions(
+      rows.map((r) => r.id),
+      ...(build === 'debug' ? [{ preferTesting: true }] : []),
+    );
     for (const r of rows) {
       const v = served?.get(r.id);
       r.capabilities = (v?.capabilities ?? r.capabilities ?? []) as any;

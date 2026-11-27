@@ -618,7 +618,7 @@ export class MailTemplateHelper {
           </a>
         </div>
         <p style="margin: 12px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.4;">
-          Hosted via the Sonatype Nexus trusted binary repository. Includes native bridge emulation, biometric validation, and hardware permissions testing.
+          Includes native bridge emulation, biometric validation, and hardware permissions testing.
         </p>
       </div>
 

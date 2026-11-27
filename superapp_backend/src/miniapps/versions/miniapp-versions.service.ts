@@ -481,11 +481,15 @@ export class MiniAppVersionsService {
    * else the row being worked on): capabilities and integration.
    * integration is null when that row does not hold one yet.
    */
-  async servingVersions(miniAppIds: string[]): Promise<
+  async servingVersions(
+    miniAppIds: string[],
+    options?: { preferTesting?: boolean },
+  ): Promise<
     Map<
       string,
       {
         versionId: string;
+        version?: string;
         /** The served row's status: ACTIVE, or the stage of the unreleased version. */
         status: string;
         capabilities: unknown[];
@@ -503,7 +507,10 @@ export class MiniAppVersionsService {
     });
     const serving = new Map<string, MiniAppVersion>();
     for (const id of ids) {
-      const row = servingRowOf(rows.filter((r) => r.miniAppId === id));
+      const row = servingRowOf(
+        rows.filter((r) => r.miniAppId === id),
+        Boolean(options?.preferTesting),
+      );
       if (row) serving.set(id, row);
     }
     if (!serving.size) return out;
@@ -516,6 +523,7 @@ export class MiniAppVersionsService {
     for (const [miniAppId, row] of serving) {
       out.set(miniAppId, {
         versionId: row.id,
+        version: row.version,
         status: row.status,
         capabilities: caps.filter((c) => c.versionId === row.id).map((c) => c.declaration),
         integration:

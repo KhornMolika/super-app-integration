@@ -40,15 +40,6 @@ export class ArtifactDistributionHelper {
     const activeTest =
       app.activeTestVersion || app.integrationConfig?.gitBranch || 'develop';
 
-    const draftVer =
-      (app.pendingRevision
-        ? app.pendingRevision.version || 'v1.1.0-draft'
-        : null);
-
-    // Real version rows only (MiniAppVersionsService keeps them), newest first.
-    // A row in a stage (DRAFT ... TEST_PASSED) is the version being prepared;
-    // a revision's reviewStatus is its own review state. Nothing is made up
-    // when an app has no rows.
     const iso = (d: unknown) =>
       d ? (d instanceof Date ? d.toISOString() : String(d)) : null;
     const rows: any[] = Array.isArray(app.versions) ? [...app.versions] : [];
@@ -57,6 +48,20 @@ export class ArtifactDistributionHelper {
         new Date(b.createdAt || 0).getTime() -
         new Date(a.createdAt || 0).getTime(),
     );
+
+    const revConstraint = app.pendingRevision?.integrationConfig?.versionConstraint;
+    const revConstraintVer =
+      typeof revConstraint === 'string'
+        ? revConstraint.replace(/^[\^~>=<]+/, '').trim()
+        : null;
+    const draftVer = app.pendingRevision
+      ? app.pendingRevision.version ||
+        app.pendingRevision.packageVersion ||
+        app.pendingRevision.integrationConfig?.packageVersion ||
+        revConstraintVer ||
+        rows.find((v) => v.status !== 'ACTIVE' && v.status !== 'PREVIOUS')?.version ||
+        'v1.1.0-draft'
+      : null;
 
     const defaultDeveloper =
       (app.owner as any)?.name ||

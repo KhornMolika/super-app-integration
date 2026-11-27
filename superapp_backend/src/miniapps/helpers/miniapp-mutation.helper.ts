@@ -806,8 +806,28 @@ export class MiniappMutationHelper {
           d.alertTelegramChatId ?? d.teamTelegramChatId;
       }
       const existingRev = existing.pendingRevision || {};
+      const resolvedRevConfig =
+        data.integrationMethod === 'FLUTTER_PACKAGE' ||
+        existing.integrationMethod === 'FLUTTER_PACKAGE'
+          ? secureFlutterIntegrationConfig(
+              data.integrationConfig,
+              existingRev.integrationConfig ?? existing.integrationConfig,
+            )
+          : (data.integrationConfig ??
+            existingRev.integrationConfig ??
+            existing.integrationConfig);
+      const resolvedRevVersion =
+        (data as any).version ||
+        resolvedRevConfig?.packageVersion ||
+        (typeof resolvedRevConfig?.versionConstraint === 'string'
+          ? resolvedRevConfig.versionConstraint.replace(/^[\^~>=<]+/, '').trim()
+          : undefined) ||
+        existingRev.version ||
+        existingRev.packageVersion ||
+        undefined;
       const revisionData = {
         ...existingRev,
+        ...(resolvedRevVersion ? { version: resolvedRevVersion } : {}),
         name: d.name ?? existingRev.name ?? existing.name,
         tagline:
           d.tagline ??
@@ -880,16 +900,7 @@ export class MiniappMutationHelper {
           data.integrationMethod ??
           existingRev.integrationMethod ??
           existing.integrationMethod,
-        integrationConfig:
-          data.integrationMethod === 'FLUTTER_PACKAGE' ||
-          existing.integrationMethod === 'FLUTTER_PACKAGE'
-            ? secureFlutterIntegrationConfig(
-                data.integrationConfig,
-                existingRev.integrationConfig ?? existing.integrationConfig,
-              )
-            : (data.integrationConfig ??
-              existingRev.integrationConfig ??
-              existing.integrationConfig),
+        integrationConfig: resolvedRevConfig,
         permissions:
           data.permissions ??
           data.capabilities ??
