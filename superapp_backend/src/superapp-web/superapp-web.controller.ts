@@ -118,7 +118,7 @@ export class SuperAppWebController {
         ? requested
         : req.path.startsWith('/api/') ? '/api/superapp-web/' : '/superapp-web/';
       body = Buffer.from(body.toString('utf8').replace(/<base href="[^"]*"\s*\/?>/i, `<base href="${base}">`));
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Cache-Control', 'no-cache');
       res.set('CDN-Cache-Control', 'no-store');
     } else {
       // Names are not content-hashed: prevent Cloudflare (4h default JS TTL) and browser from serving stale main.dart.js
