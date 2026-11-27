@@ -76,6 +76,8 @@ export class BuildMiniAppsService {
       const effectiveApp = useTestRevision
         ? ({
             ...app,
+            lifecycleStatus: app.lifecycleStatus,
+            buildStatus: app.buildStatus,
             integrationMethod: rev.integrationMethod ?? app.integrationMethod,
             integrationConfig: rev.integrationConfig ?? app.integrationConfig,
             homeWidget: rev.homeWidget !== undefined ? rev.homeWidget : app.homeWidget,

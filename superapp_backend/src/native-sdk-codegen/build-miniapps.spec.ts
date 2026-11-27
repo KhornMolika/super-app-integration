@@ -137,6 +137,32 @@ describe('BuildMiniAppsService.plan', () => {
     expect(r.skipped).toEqual([]);
   });
 
+  it('includes a LIVE MiniApp entity with a TESTING pendingRevision (preserves lifecycleStatus getter)', async () => {
+    class EntityLike {
+      id = 'uuid-trust';
+      appId = 'ma_flutter_trust_regulator';
+      name = 'Trust Regulator';
+      appStatus = 'LIVE';
+      versionStage = 'TESTING';
+      integrationMethod = 'FLUTTER_PACKAGE';
+      integrationConfig = { sourceType: 'ARTIFACT', packageName: 'ma_flutter_trust_regulator', nexusPublishedVersion: '1.1.2' };
+      pendingRevision = {
+        revisionStatus: 'TESTING',
+        integrationMethod: 'FLUTTER_PACKAGE',
+        integrationConfig: { sourceType: 'ARTIFACT', packageName: 'ma_flutter_trust_regulator', nexusPublishedVersion: '1.1.3' },
+      };
+      get lifecycleStatus() {
+        return 'ACTIVE';
+      }
+    }
+    const { svc } = serviceWith([new EntityLike()]);
+    const r = await svc.plan('debug');
+    expect(r.skipped).toEqual([]);
+    expect(r.packages).toHaveLength(1);
+    expect(r.packages[0].appId).toBe('ma_flutter_trust_regulator');
+    expect((r.packages[0].dependency as any).version).toBe('1.1.3');
+  });
+
   it('with no mini apps, the registry registers nothing', async () => {
     const { svc } = serviceWith([]);
     const r = await svc.plan();
