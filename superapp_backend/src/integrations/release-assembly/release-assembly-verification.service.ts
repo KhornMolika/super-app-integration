@@ -699,6 +699,26 @@ export class ReleaseAssemblyVerificationService {
           allCompletedStages[k].status = 'COMPLETED';
         }
 
+        if (isReleaseBuild) {
+          app.buildStatus = 'COMPLETED';
+          app.buildStages = allCompletedStages;
+          app.buildError = null as any;
+          await this.miniappRepository.save(app);
+          await this.runs?.syncBuildFromApp(app, {
+            buildType: 'release',
+          });
+
+          this.notificationsService.emitBuildCompleted({
+            miniAppId: app.id,
+            appName: body.appName || app.name,
+            releaseVersion: effectiveVersion,
+            buildType: 'release',
+            apkUrl: finalApkUrl,
+            status: 'ACTIVE',
+          });
+          continue;
+        }
+
         app.lifecycleStatus = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildStages = allCompletedStages;
@@ -789,10 +809,14 @@ export class ReleaseAssemblyVerificationService {
       if (buildingApps.length > 0) {
         const primaryApp = buildingApps[0];
         const aggregatedNames = buildingApps.map((a) => a.name).filter(Boolean).join(', ');
-        const broadcastTitle = `🚀 SuperApp Test Build Ready (${sharedEffectiveVersion})`;
-        const broadcastMsg = buildingApps.length > 1
-          ? `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for testing (${buildingApps.length} apps: ${aggregatedNames}).`
-          : `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for download.`;
+        const broadcastTitle = isReleaseBuild
+          ? `🚀 SuperApp Release Ready (${sharedEffectiveVersion})`
+          : `🚀 SuperApp Test Build Ready (${sharedEffectiveVersion})`;
+        const broadcastMsg = isReleaseBuild
+          ? `SuperApp official release (${sharedEffectiveVersion}) is published and ready for download.`
+          : buildingApps.length > 1
+            ? `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published and ready for testing (${buildingApps.length} apps: ${aggregatedNames}).`
+            : `SuperApp test build (${sharedEffectiveVersion}, ${body.buildType || 'release'}) is published and ready for download.`;
 
         await this.notificationsService.notifyAdmins(
           broadcastTitle,
@@ -807,6 +831,7 @@ export class ReleaseAssemblyVerificationService {
             apkUrl: sharedFinalApkUrl,
             nexusApkUrl: sharedNexusUrl,
             buildType: body.buildType || 'release',
+            miniAppSet: isReleaseBuild ? 'release' : 'test',
             teamTelegramChatId:
               primaryApp?.alertTelegramChatId ||
               (primaryApp as any)?.teamTelegramChatId,
@@ -1060,7 +1085,12 @@ export class ReleaseAssemblyVerificationService {
    */
   private monitorJenkinsReleaseBuild(miniAppIds: string[], releaseVersion: string, queueId?: number) {
     // Only the run this trigger queued: lastBuild can still be an older (e.g. aborted) run
-    const tracker = this.jenkinsService.trackTestBuild({ queueId, releaseVersion, triggeredAt: Date.now() });
+    const tracker = this.jenkinsService.trackTestBuild({
+      queueId,
+      releaseVersion,
+      triggeredAt: Date.now(),
+      jobName: 'superapp-release-build',
+    });
     let polls = 0;
     // The Jenkinsfile aborts itself after 60 minutes; allow for time in the queue
     const maxPolls = 420; // 420 * 10s = 70 minutes
@@ -1150,7 +1180,12 @@ export class ReleaseAssemblyVerificationService {
         },
       };
 
-      app.lifecycleStatus = 'BUILD_FAILED' as any;
+      const isLiveApp =
+        app.appStatus === AppStatus.LIVE ||
+        String(app.lifecycleStatus || '').toUpperCase() === 'ACTIVE';
+      if (!isLiveApp) {
+        app.lifecycleStatus = 'BUILD_FAILED' as any;
+      }
       app.buildStatus = 'FAILED';
       app.buildError = errorMessage;
       app.buildStages = stages;

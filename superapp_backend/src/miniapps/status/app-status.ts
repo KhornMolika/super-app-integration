@@ -145,6 +145,7 @@ export function lifecycleOf(input: {
   if (status === AppStatus.LIVE) return 'ACTIVE';
   if (status === AppStatus.SUSPENDED && input.everLive) return 'ACTIVE';
   const stage = up(input.stage) || VersionStage.DRAFT;
+  if (stage === 'ACTIVE') return 'ACTIVE';
   if (stage === VersionStage.APPROVED) {
     const build = up(input.buildStatus);
     if (BUILD_RUNNING.has(build)) return 'BUILDING';

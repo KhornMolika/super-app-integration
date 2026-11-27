@@ -30,6 +30,9 @@ const RESERVED_PACKAGES = new Set([
 /** The Dart package name of a mini app. */
 export function canonicalPackageNameOf(miniApp: PackageSource): string {
   const cfg = miniApp.integrationConfig || {};
+  if (typeof cfg.nexusPublishedPackage === 'string' && cfg.nexusPublishedPackage.trim() !== '') {
+    return cfg.nexusPublishedPackage.trim().replace(/-/g, '_').toLowerCase();
+  }
   if (typeof cfg.packageName === 'string' && cfg.packageName.trim() !== '') {
     return cfg.packageName.trim().replace(/-/g, '_').toLowerCase();
   }
@@ -38,7 +41,7 @@ export function canonicalPackageNameOf(miniApp: PackageSource): string {
     const match = String(gitUrl).match(/[\/:]([^\/:]+?)(\.git)?$/);
     if (match && match[1]) return match[1].replace(/-/g, '_').toLowerCase();
   }
-  return (miniApp.name || miniApp.appId || 'miniapp').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  return (miniApp.appId || miniApp.name || 'miniapp').toLowerCase().replace(/[^a-z0-9_]/g, '_');
 }
 
 /**
@@ -55,12 +58,15 @@ export function pubspecHostedUrlFor(gateway: string | undefined, requested?: str
   return usable ? r.replace(/\/+$/, '') : g;
 }
 
-/** ^1.0.0 for a bare version; ranges and "any" are kept. */
+/** ^1.0.0 for a bare version; ranges and "any" are kept. Strips leading 'v'. */
 export function normalizeVersionConstraint(ver?: string): string {
   if (!ver || !String(ver).trim()) return '^1.0.0';
   const trimmed = String(ver).trim();
-  if (/^[\^~>=<]/.test(trimmed) || trimmed === 'any') return trimmed;
-  return `^${trimmed}`;
+  if (trimmed === 'any') return trimmed;
+  if (/^[\^~>=<]/.test(trimmed)) {
+    return trimmed.replace(/^([\^~>=<]+\s*)v(?=\d)/i, '$1');
+  }
+  return `^${trimmed.replace(/^v(?=\d)/i, '')}`;
 }
 
 const SAFE_REF = /^[A-Za-z0-9._\/-]{1,200}$/;

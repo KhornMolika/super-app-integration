@@ -85,6 +85,11 @@ export class BuildMiniAppsService {
           } as MiniApp)
         : app;
 
+      if (effectiveApp.integrationMethod !== 'FLUTTER_PACKAGE') {
+        skipped.push({ appId: app.appId, reason: `integrationMethod changed to ${effectiveApp.integrationMethod}` });
+        continue;
+      }
+
       const excluded = buildExclusionReason(effectiveApp, buildType);
       if (excluded) {
         skipped.push({ appId: app.appId, reason: excluded });

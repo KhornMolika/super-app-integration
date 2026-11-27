@@ -301,6 +301,27 @@ describe('ReleaseAssemblyVerificationService', () => {
       expect(res).toEqual({ success: true });
     });
 
+    it('keeps ACTIVE apps as ACTIVE (never downgrades to TESTING) on release build callback', async () => {
+      const res = await service.handleBuildCallback({
+        appName: 'superapp',
+        releaseVersion: 'v1.0.0',
+        status: 'COMPLETED',
+        buildType: 'release',
+        miniAppSet: 'release',
+        repoName: 'apk-releases',
+        apkUrl: 'http://nexus/app-release.apk',
+      });
+      expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
+        expect.objectContaining({
+          miniAppId: 'app-1',
+          buildType: 'release',
+          status: 'ACTIVE',
+        }),
+      );
+      expect(mailService.sendTestBuildReadyEmail).not.toHaveBeenCalled();
+      expect(res).toEqual({ success: true });
+    });
+
     it('transitions BUILDING apps to BUILD_FAILED on a failed build with diagnostics', async () => {
       const res = await service.handleBuildCallback({
         appName: 'superapp',
@@ -331,6 +352,27 @@ describe('ReleaseAssemblyVerificationService', () => {
           error: 'APK build error',
         }),
       );
+      expect(res).toEqual({ success: true });
+    });
+
+    it('keeps ACTIVE apps as ACTIVE (never downgrades to TESTING) on release build callback', async () => {
+      const res = await service.handleBuildCallback({
+        appName: 'superapp',
+        releaseVersion: 'v1.0.0',
+        status: 'COMPLETED',
+        buildType: 'release',
+        miniAppSet: 'release',
+        repoName: 'apk-releases',
+        apkUrl: 'http://nexus/app-release.apk',
+      });
+      expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
+        expect.objectContaining({
+          miniAppId: 'app-1',
+          buildType: 'release',
+          status: 'ACTIVE',
+        }),
+      );
+      expect(mailService.sendTestBuildReadyEmail).not.toHaveBeenCalled();
       expect(res).toEqual({ success: true });
     });
   });

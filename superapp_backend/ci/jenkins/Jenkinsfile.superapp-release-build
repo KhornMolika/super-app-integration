@@ -74,28 +74,24 @@ def syncMiniApps() {
             rm -f "$LIST"
             code=$(curl -sS --max-time 30 -o "$LIST" -w '%{http_code}' \
                 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MINIAPPS_LIST_URL") || code=error
-            if [ "$code" = "404" ]; then
-                echo "WARNING: this backend has no build-miniapps yet: building with the mini apps committed in super-app"
-                rm -f "$LIST"; exit 0
-            elif [ "$code" != "200" ]; then
+            if [ "$code" != "200" ]; then
                 echo "Could not read the mini app list from $MINIAPPS_LIST_URL (HTTP $code)"; exit 1
             fi
             if [ ! -f "$MOBILE_DIR/tool/sync_miniapps.dart" ]; then
-                echo "WARNING: this super-app branch has no tool/sync_miniapps.dart: building with its committed mini apps"
-                exit 0
+                echo "ERROR: $MOBILE_DIR/tool/sync_miniapps.dart is missing on branch; refusing to build stale committed mini apps"; exit 1
             fi
             SELF=$(cat /etc/hostname)
             if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
             else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
             docker run --rm $MOUNT -w "$WORKSPACE" -e WORKSPACE -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                 "$FLUTTER_IMAGE" bash -ec '
-                    dart run "$MOBILE_DIR/tool/sync_miniapps.dart" "$WORKSPACE/build-miniapps.json" "$MOBILE_DIR"
+                    dart run "$MOBILE_DIR/tool/sync_miniapps.dart" --strict "$WORKSPACE/build-miniapps.json" "$MOBILE_DIR"
                     chown -R "$HOST_UID:$HOST_GID" "$MOBILE_DIR/pubspec.yaml" "$MOBILE_DIR/lib" 2>/dev/null || true
                 '
             echo "Mini app packages synchronized for release build."
-            rm -f "$LIST"
         '''
     }
+    if (fileExists('build-miniapps.json')) archiveArtifacts artifacts: 'build-miniapps.json', fingerprint: true
 }
 
 def nativeSdkManifestUrl() {
@@ -151,11 +147,26 @@ def withPrivateGitDeps(Closure body) {
             const data = JSON.parse(fs.readFileSync(dir + '/git-credentials.json', 'utf8'));
             let sshConfig = '', gitConfig = '';
             (data.credentials || []).forEach((c, i) => {
+                const rawUrl = c.repoUrl || c.repositoryUrl || '';
+                if (!rawUrl) return;
+                if (c.type === 'token' && c.token) {
+                    const host = c.host || 'github.com';
+                    const repoPath = c.path || rawUrl.replace(/^https?:\\/\\/[^\\/]+\\//, '');
+                    gitConfig += `[url "https://oauth2:${encodeURIComponent(c.token)}@${host}/${repoPath}"]\\n\\tinsteadOf = ${rawUrl}\\n`;
+                    return;
+                }
+                if (!c.privateKey) return;
                 const keyFile = dir + '/key_' + i;
                 fs.writeFileSync(keyFile, c.privateKey, { mode: 0o600 });
-                sshConfig += `Host dep-${i}\\n  HostName ${c.host || 'github.com'}\\n  User git\\n  IdentityFile ${keyFile}\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile ${dir}/known_hosts\\n\\n`;
-                const repoPath = c.repositoryUrl.replace(/^https?:\\/\\/[^\\/]+\\//, '').replace(/\\.git$/, '');
-                gitConfig += `[url "dep-${i}:${repoPath}.git"]\\n\\tinsteadOf = ${c.repositoryUrl}\\n`;
+                const host = c.host || 'github.com';
+                const hostLines = [`Host dep-${i}`];
+                if (host === 'github.com') hostLines.push('  HostName ssh.github.com', '  Port 443');
+                else if (host === 'gitlab.com') hostLines.push('  HostName altssh.gitlab.com', '  Port 443');
+                else hostLines.push(`  HostName ${host}`);
+                hostLines.push('  User git', `  IdentityFile ${keyFile}`, '  IdentitiesOnly yes', '  StrictHostKeyChecking accept-new', `  UserKnownHostsFile ${dir}/known_hosts`, '');
+                sshConfig += hostLines.join('\\n');
+                const repoPath = (c.path || rawUrl.replace(/^https?:\\/\\/[^\\/]+\\//, '').replace(/\\.git$/, '')).replace(/\\.git$/, '');
+                gitConfig += `[url "dep-${i}:${repoPath}.git"]\\n\\tinsteadOf = ${rawUrl}\\n`;
             });
             fs.appendFileSync(dir + '/ssh_config', sshConfig);
             fs.appendFileSync(dir + '/gitconfig', gitConfig);
@@ -447,7 +458,9 @@ pipeline {
                                         | curl -sSf -K - --upload-file "$1" "$2" > /dev/null
                                 }
 
-                                # 1. Upload Primary Release APK (app-release.apk) - lean ARM64 ~25 MB
+                                # 1. Upload Primary Release APK (versioned + app-release.apk alias) - lean ARM64 ~25 MB
+                                upload "$APK" "$APK_URL"
+                                echo "Uploaded $APK_URL (lean ARM64 ~25 MB)"
                                 upload "$APK" "${APK_URL%/*}/app-release.apk"
                                 echo "Uploaded ${APK_URL%/*}/app-release.apk (lean ARM64 ~25 MB)"
 

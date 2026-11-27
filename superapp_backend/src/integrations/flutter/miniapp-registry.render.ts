@@ -53,6 +53,8 @@ const FIXED_ENTRIES: Record<string, (prefix: string) => string> = {
     `${p}.MiniAppEntry(onExit: () => safePop(context), userName: 'Super App VIP Member', userTier: 'Gold Elite')`,
   ma_flutter_kyc: (p) =>
     `${p}.KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))`,
+  ma_flutter_trust_regulator: (p) =>
+    `${p}.TrustRegulatorAppEntry(onExit: () => safePop(context))`,
 };
 
 export function renderMiniAppRegistry(entries: RegistryEntry[]): string {

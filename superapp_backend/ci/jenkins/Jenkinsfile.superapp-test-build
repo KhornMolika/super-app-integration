@@ -103,15 +103,11 @@ def syncMiniApps() {
             rm -f "$LIST"
             code=$(curl -sS --max-time 30 -o "$LIST" -w '%{http_code}' \
                 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MINIAPPS_LIST_URL") || code=error
-            if [ "$code" = "404" ]; then
-                echo "WARNING: this backend has no build-miniapps yet: building with the mini apps committed in super-app"
-                rm -f "$LIST"; exit 0
-            elif [ "$code" != "200" ]; then
+            if [ "$code" != "200" ]; then
                 echo "Could not read the mini app list from $MINIAPPS_LIST_URL (HTTP $code)"; exit 1
             fi
             if [ ! -f "$MOBILE_DIR/tool/sync_miniapps.dart" ]; then
-                echo "WARNING: this super-app branch has no tool/sync_miniapps.dart: building with its committed mini apps"
-                exit 0
+                echo "ERROR: $MOBILE_DIR/tool/sync_miniapps.dart is missing on branch; refusing to build stale committed mini apps"; exit 1
             fi
             SELF=$(cat /etc/hostname)
             if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
@@ -119,7 +115,7 @@ def syncMiniApps() {
             docker run --rm $MOUNT -w "$WORKSPACE" -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                 "$FLUTTER_IMAGE" bash -ec '
                     trap "chown -R $HOST_UID:$HOST_GID $MOBILE_DIR 2>/dev/null || true" EXIT
-                    dart "$MOBILE_DIR/tool/sync_miniapps.dart" build-miniapps.json "$MOBILE_DIR"
+                    dart "$MOBILE_DIR/tool/sync_miniapps.dart" --strict build-miniapps.json "$MOBILE_DIR"
                 '
         '''
     }

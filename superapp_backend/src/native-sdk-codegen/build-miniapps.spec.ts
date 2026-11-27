@@ -163,6 +163,32 @@ describe('BuildMiniAppsService.plan', () => {
     expect((r.packages[0].dependency as any).version).toBe('1.1.3');
   });
 
+  it('normalizes v-prefixed versionConstraint and emits TrustRegulatorAppEntry for ma_flutter_trust_regulator', async () => {
+    const { lifecycleOf } = require('../miniapps/status/app-status');
+    expect(lifecycleOf({ appStatus: 'DRAFT', stage: 'ACTIVE' })).toBe('ACTIVE');
+
+    const { svc } = serviceWith([
+      {
+        id: 'uuid-tr',
+        appId: 'ma_flutter_trust_regulator',
+        name: 'Flutter Artifact',
+        appStatus: 'LIVE',
+        lifecycleStatus: 'ACTIVE',
+        integrationMethod: 'FLUTTER_PACKAGE',
+        integrationConfig: {
+          sourceType: 'ARTIFACT',
+          versionConstraint: 'v1.0.0',
+        },
+      },
+    ]);
+    const r = await svc.plan('release');
+    expect(r.skipped).toEqual([]);
+    expect(r.packages).toHaveLength(1);
+    expect(r.packages[0].packageName).toBe('ma_flutter_trust_regulator');
+    expect((r.packages[0].dependency as any).version).toBe('^1.0.0');
+    expect(r.registryDart).toContain('ma_flutter_trust_regulator.TrustRegulatorAppEntry');
+  });
+
   it('with no mini apps, the registry registers nothing', async () => {
     const { svc } = serviceWith([]);
     const r = await svc.plan();

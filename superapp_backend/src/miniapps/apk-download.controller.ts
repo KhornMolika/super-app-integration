@@ -118,21 +118,23 @@ export class ApkDownloadController {
       }
     }
 
-    // Local disk fallback
-    const localFallbackPath = path.resolve(
-      process.cwd(),
-      '../superapp_backoffice/public/superapp-test.apk',
-    );
-    if (fs.existsSync(localFallbackPath)) {
-      const stats = fs.statSync(localFallbackPath);
-      const buf = fs.readFileSync(localFallbackPath);
-      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${standardizedFilename}"`,
+    // Local disk fallback (test builds only — never serve superapp-test.apk for type=release)
+    if (!isRelease) {
+      const localFallbackPath = path.resolve(
+        process.cwd(),
+        '../superapp_backoffice/public/superapp-test.apk',
       );
-      res.setHeader('Content-Length', stats.size);
-      return res.send(buf);
+      if (fs.existsSync(localFallbackPath)) {
+        const stats = fs.statSync(localFallbackPath);
+        const buf = fs.readFileSync(localFallbackPath);
+        res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${standardizedFilename}"`,
+        );
+        res.setHeader('Content-Length', stats.size);
+        return res.send(buf);
+      }
     }
 
     // Real artifact check: If not found on Nexus or disk, return 404
